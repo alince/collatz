@@ -2,7 +2,7 @@
 
 A formal-methods and computational number-theory research suite combining **Lean 4** pure-kernel theorem proving (zero external dependencies, zero `sorry`, zero `native_decide`, zero custom axioms), a **zero-dependency Python** analytical/verification library, and a **portable C23** native 2-adic Hensel search kernel (`_hensel_fast.c`).
 
-For full derivations and theorem-by-theorem mathematical exposition, see [`MATHEMATICAL_FINDINGS.md`](MATHEMATICAL_FINDINGS.md).
+For full derivations and theorem-by-theorem mathematical exposition, see [`collatz_analysis/MATHEMATICAL_FINDINGS.md`](collatz_analysis/MATHEMATICAL_FINDINGS.md).
 
 ---
 
