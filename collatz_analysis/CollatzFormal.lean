@@ -1,0 +1,14 @@
+/-
+  CollatzFormal.lean
+  Root umbrella module importing all kernel-verified submodules of the
+  collatz_analysis Lean 4.35.0 Proof Suite (zero external dependencies,
+  zero sorry, zero native_decide, zero custom axioms).
+-/
+
+import CollatzFormal.Core
+import CollatzFormal.RationalLogSlabs
+import CollatzFormal.Survivors
+import CollatzFormal.BoostMechanisms
+import CollatzFormal.HenselBridge93To96
+import CollatzFormal.Survivors97To99
+

@@ -1,0 +1,14 @@
+.lake/
+__pycache__/
+*.py[cod]
+*$py.class
+*.dll
+*.so
+*.dylib
+*.o
+*.obj
+*.lib
+*.exp
+.pytest_cache/
+*.bak
+*.tmp
