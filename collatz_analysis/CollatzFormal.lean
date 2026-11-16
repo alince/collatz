@@ -11,4 +11,7 @@ import CollatzFormal.Survivors
 import CollatzFormal.BoostMechanisms
 import CollatzFormal.HenselBridge93To96
 import CollatzFormal.Survivors97To99
+import CollatzFormal.CSFullConjecture
+import CollatzFormal.CSWave3Synthesis
+
 

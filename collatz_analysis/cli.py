@@ -274,11 +274,52 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"  - Thm 30: Disjoint in-degree-0 Syracuse forest & mixing    : {t30['global_forest_injectivity_verified']} ({t30['forest_nodes_checked']} nodes) & primitive Fourier decay={t30['primitive_fourier_decay_verified']}")
     print(f"  - Thm 31: 2-vertex (x_(1), x_(2)) split on m=97..99 (u=1)  : C23==Python={t31['c23_vs_python_two_vertex_bit_exact']}, UpperExit(r<=2) certified={t31['upper_strip_certified_all_m97_99']}")
 
+    from . import cs_forest_transfer, cs_lp_cycles, cs_sat_lyapunov
+
+    cs_ft = cs_forest_transfer.verify_all_weight_primitive_root_and_exact_division()
+    cs_w3 = cs_forest_transfer.verify_wave3_one_generator_bijection_and_range_equivalence()
+    cs_disc = cs_lp_cycles.verify_first_block_discreteness_separation()
+    cs_t10 = cs_lp_cycles.verify_two_block_m1_potential_obstruction_witnesses()
+    cs_t11 = cs_lp_cycles.verify_hercher_subdouble_merger_separation()
+    cs_sieve = cs_sat_lyapunov.compute_sieved_survival_counts()["mod373248"]
+    cs_pump = cs_sat_lyapunov.construct_self_congruent_syracuse_pumping_witness(
+        exp2_A=9, exp3_B=6, s_blocks=4, min_growth_G=4
+    )
+    cs_dfa = cs_sat_lyapunov.refute_arbitrary_dfa_on_one_equation(
+        8, lambda q, b: (2 * q + int(b)) % 8, 0, [0, 3, 5]
+    )
+    cs_ut = cs_sat_lyapunov.verify_all_dim_coord_monotone_upper_tri_collapse(max_dim_test=4)
+    cs_tri = cs_sat_lyapunov.witness_triadic_parametric_exclusion(3, 0)
+    print(f"\n[CS Full-Conjecture Campaign (Waves 1–3)] Sieves, First-Hit Bijection & Obstructions:")
+    print(
+        f"  - Track 1: Mod-96 (8/96), 1-blk q0>=17 GCD lock & 2-blk Brox: "
+        f"M1 Z-gap={cs_disc['violates_z_discreteness_dichotomy']}, "
+        f"2-blk M1 sep={cs_t10['witness_251_separated_by_z_and_23D'] and cs_t10['witness_287_separated_by_z_and_23D']}, "
+        f"Hercher partner={cs_t11['all_3x1_mergers_ok']}"
+    )
+    print(
+        f"  - Track 2: Mod-373248 sieve, 3^w DFA barrier & d>=1 collapse: "
+        f"{cs_sieve[0]:,}/{cs_sieve[1]:,} = {cs_sieve[2]} ({100.0 * cs_sieve[0] / cs_sieve[1]:.4f}%), "
+        f"pumping={cs_pump['survives_mod373248_start'] and cs_pump['survives_mod373248_end']}, "
+        f"DFA refuted={cs_dfa['dfa_refuted']}, d>=1 collapse={cs_ut['all_dim_superdiagonal_identity_collapse']}, "
+        f"triadic k=3={cs_tri['coalesces_3k10_0']}"
+    )
+    print(
+        f"  - Track 3: All-w Hensel dlog & x=1 unique first-hit range   : "
+        f"totient lift={cs_ft['exact_pow2_totient_lifting_verified']}, "
+        f"bijected={cs_w3['t314_roundtrip_bijection_verified']} ({cs_w3['odd_integers_bijected_count']} odds, "
+        f"{cs_w3['sieved_mod373248_integers_checked']} Mod-373248 w>=3)"
+    )
+
     lean4 = verify_lean4_kernel_proofs()
     print(f"\n[Lean 4 Kernel Verification] CollatzFormal.lean Live Compiler & #print axioms Audit:")
     if lean4["lean_available"]:
         print(f"  - Lean 4 toolchain version                               : {lean4['lean_version']}")
-        print(f"  - Theorems kernel-checked & audited via #print axioms    : {lean4['theorems_audited']} ({lean4['axiom_free_theorem_count']} completely axiom-free)")
+        print(
+            f"  - Modular Lean 4 files & theorems audited (#print axioms): "
+            f"{len(lean4['lean_files'])} files, {lean4['theorems_audited']} theorems "
+            f"({lean4['axiom_free_theorem_count']} completely axiom-free)"
+        )
         print(f"  - Observed foundational axioms across all theorems       : {lean4['all_axioms_observed']}")
         print(f"  - Zero `sorryAx` / zero warnings / pure kernel verified  : {lean4['zero_sorry_verified']} / {lean4['zero_warnings_verified']} / {lean4['pure_kernel_verified']} ({lean4['elapsed_ms']:.1f} ms)")
     else:
