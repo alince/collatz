@@ -377,6 +377,8 @@ class TestFrontierReductionsAndNoGoTheorems(unittest.TestCase):
                 "all_next_tier_mechanisms_verified"
             ]
         )
+        self.assertTrue(report["wave4_whole_space_campaign"]["passed"])
+        self.assertTrue(report["wave5_whole_space_campaign"]["passed"])
 
 
 class TestBoostObstructionsTheorems15To18(unittest.TestCase):

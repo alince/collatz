@@ -1,0 +1,618 @@
+{
+  "schema_version": "1.0",
+  "description": "Permanent self-improving adversarial witness bank for whole-space Collatz proof exploration (Z+ high-glide/antagonism seeds, M1 = Q_(2)+ rational cycles, M2 = Z- negative cycles/roots, M3 supercritical multipliers, and extreme log_2(3) / Pade approximations). Every new candidate lemma, functional, measure, or operator bound must pass 100% of applicable witnesses.",
+  "domains": {
+    "z_pos_high_glide": [
+      {
+        "witness_id": "ZPOS_N27_MOD373248_MIN",
+        "seed": 27,
+        "compressed_steps_to_1": 70,
+        "odd_weight": 41,
+        "peak_odd": 3077,
+        "peak_compressed": 4616,
+        "kills_mechanisms": [
+          "k=0 truncated 3-adic dlog quotient (27 % 3 == 0)",
+          "monotone backward-tree growth on exactBackwardQuotient 1 u q",
+          "short-horizon k <= 40 contraction"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_SYRACUSE_17_TO_13_CORE3_JUMP",
+        "seed": 17,
+        "next_odd": 13,
+        "compressed_steps": 2,
+        "core3_seed_plus_1": 2,
+        "core3_next_plus_1": 14,
+        "phi_diamond_seed": 72,
+        "phi_diamond_next": 2744,
+        "kills_mechanisms": [
+          "single-shift nonlocal core3(x + 1) Lyapunov functionals on true 3x + 1",
+          "evolutionary top Syracuse valuation candidate core3(x+1)*(core3(x+1)*core2(x+1)+1)"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_EVEN_PEAK_8_TO_4_V3_WIPEOUT",
+        "seed": 8,
+        "next_compressed": 4,
+        "v3_seed_plus_1": 2,
+        "v3_next_plus_1": 0,
+        "kills_mechanisms": [
+          "compressed-step v_3(x + 1) retention across glide-peak halving (3^m - 1 -> (3^m - 1)/2)"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_EXCURSION_2005_TO_2429",
+        "seed": 2005,
+        "steps": 41,
+        "target": 2429,
+        "kills_mechanisms": [
+          "naive K=0 inverse-forest contraction without prefix-splitting collapse"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_MERSENNE_2_POW_20_SUB_1",
+        "seed": 1048575,
+        "glide_odd_steps": 20,
+        "glide_peak": 3486784400,
+        "kills_mechanisms": [
+          "coercive / univariate polynomial / 1D SOS Lyapunovs at horizon r <= 20",
+          "radial Hardy / Bergman transfer-operator contractions (||B^r||_{H_0(w)} > 1)"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_MERSENNE_2_POW_50_SUB_1",
+        "seed": 1125899906842623,
+        "glide_odd_steps": 50,
+        "survives_mod1296": true,
+        "kills_mechanisms": [
+          "deterministic finite-horizon mod-3^B equidistribution (pins 50 - B steps to -1 mod 3^B)",
+          "bounded-horizon r <= 49 ranking certificates inside IsSurvivingMod1296Class"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_SYRACUSE_9_TO_7_V2_JUMP",
+        "seed": 9,
+        "next_odd": 7,
+        "compressed_steps": 2,
+        "v2_pow_seed_plus_1": 2,
+        "v2_pow_next_plus_1": 8,
+        "coprime23_seed_plus_1": 5,
+        "coprime23_next_plus_1": 1,
+        "kills_mechanisms": [
+          "non-monotone coercive 2-adic valuation potentials such as V(x) = 4^{v_2(x+1)} * (x+1) (40 -> 512)",
+          "positive-exponent (2^{v_2(x+1)})^a * (3^{v_3(x+1)})^b * core_{2,3}(x+1)^c potentials when combined with {7->11, 17->13}"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_SYRACUSE_97_TO_73_COPRIME_CORE_DROP",
+        "seed": 97,
+        "next_odd": 73,
+        "compressed_steps": 2,
+        "v2_pow_seed_plus_1": 2,
+        "v2_pow_next_plus_1": 2,
+        "coprime23_seed_plus_1": 49,
+        "coprime23_next_plus_1": 37,
+        "kills_mechanisms": [
+          "non-coercive negative-exponent Laurent valuation monomials in core_{2,3}(x + 1) (forces gamma > 0 via 37^gamma < 49^gamma)"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_MOD373248_MIN_WEIGHT6_184111",
+        "seed": 184111,
+        "compressed_steps_to_1": 27,
+        "odd_weight": 6,
+        "core_word": [1, 1, 1, 1, 0, 1, 0, 1],
+        "q_index": 0,
+        "survives_mod373248": true,
+        "kills_mechanisms": [
+          "over-pruning hypotheses claiming Mod373248UniqueFirstHitRangeProp requires parityWeight(u) >= 7 (sharp floor is w = 6)",
+          "over-pruning hypotheses claiming Mod373248UniqueFirstHitRangeProp requires |u| >= 9 (sharp length floor is |u| = 8)"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_GEOM_85_VALUATION_CONSTANCY",
+        "seed": 85,
+        "sibling_seed": 5461,
+        "compressed_steps_to_1": 8,
+        "odd_weight": 1,
+        "core_word": [1],
+        "q_index": 3,
+        "v2_pow_seed": 1,
+        "v3_pow_seed": 1,
+        "v2_pow_seed_plus_1": 2,
+        "v3_pow_seed_plus_1": 1,
+        "kills_mechanisms": [
+          "non-radial Berg-Meinardus preimage weights depending only on (v_2(n), v_3(n), v_2(n+1), v_3(n+1), n mod P) via infinite 4-adic spine sum w(z_j) <= w(4)",
+          "Nat-valued positive preimage-superharmonic weights w : N_{>=3} -> N_{>0}"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_SYRACUSE_3_TO_5_POS_2TERM_KILLER",
+        "seed": 3,
+        "next_odd": 5,
+        "compressed_steps": 1,
+        "v2_pow_seed_plus_1": 4,
+        "v2_pow_next_plus_1": 2,
+        "v3_pow_seed_plus_1": 1,
+        "v3_pow_next_plus_1": 3,
+        "coprime23_seed_plus_1": 1,
+        "coprime23_next_plus_1": 1,
+        "kills_mechanisms": [
+          "positive 2-term valuation sum 5 * 3^{v_3(x+1)} + 3 * core_3(x+1) that survives all four Wave 4 witnesses {7->11, 9->7, 17->13, 97->73} yet jumps 17 -> 21 at 3 -> 5"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_SYRACUSE_13_TO_5_V3_REBOUND",
+        "seed": 13,
+        "next_odd": 5,
+        "compressed_steps": 3,
+        "v2_pow_seed_plus_1": 2,
+        "v2_pow_next_plus_1": 2,
+        "v3_pow_seed_plus_1": 1,
+        "v3_pow_next_plus_1": 3,
+        "coprime23_seed_plus_1": 7,
+        "coprime23_next_plus_1": 1,
+        "kills_mechanisms": [
+          "glide-contractive 2-term Laurent valuation sums (-3,-2,-2) + lambda*(5,3,2) surviving both unbounded Mersenne glides and {7, 9, 17, 97}"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_SYRACUSE_73_TO_55_DYADIC_JUMP",
+        "seed": 73,
+        "next_odd": 55,
+        "compressed_steps": 2,
+        "v2_pow_seed_plus_1": 2,
+        "v2_pow_next_plus_1": 8,
+        "v3_pow_seed_plus_1": 1,
+        "v3_pow_next_plus_1": 1,
+        "coprime23_seed_plus_1": 37,
+        "coprime23_next_plus_1": 7,
+        "kills_mechanisms": [
+          "1-term Laurent valuation monomials on solvable cousin T_diamond2 when paired with {7->11, 17->13, 97->73} (forces 49^gamma < 37^gamma for gamma >= 1)"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_COUSIN_DIAMOND2_53_ODD_POW3_JUMP",
+        "seed": 53,
+        "cousin_diamond2_next": 40,
+        "core3_seed_plus_1": 2,
+        "phi_diamond2_seed": 629858,
+        "phi_diamond2_next": 68922,
+        "kills_mechanisms": [
+          "partial signed Int / rational Q_(6) extensions of T_diamond2 omitting the third Syracuse-jump cone (x >= 17 and core3(x + 1) == 2) on odd powers of 3 where x % 16 == 5 != 1 (gives 80 instead of 40 at x = 53)"
+        ]
+      }
+    ],
+    "m1_q2_pos": [
+      {
+        "witness_id": "M1_19_OVER_5_ONE_BLOCK",
+        "x0": "19/5",
+        "numerator": 19,
+        "denominator": 5,
+        "period_k": 5,
+        "weight_w": 3,
+        "m_blocks": 1,
+        "parity_vector": [1, 1, 1, 0, 0],
+        "kills_mechanisms": [
+          "bounded-modulus mod (2^A * 3^B) LP / Farkas cycle certificates",
+          "valuation-archimedean inequality 2^{v_2(x+1)} <= x + 1 (8 > 24/5)",
+          "Hercher subdouble merger without Z+ well-ordering (19/5 -> 7/5 -> 1/5 < 1)"
+        ]
+      },
+      {
+        "witness_id": "M1_29_OVER_5_TWO_BLOCK",
+        "x0": "29/5",
+        "numerator": 29,
+        "denominator": 5,
+        "period_k": 5,
+        "weight_w": 3,
+        "m_blocks": 2,
+        "parity_vector": [1, 0, 1, 1, 0],
+        "kills_mechanisms": [
+          "2-block modular potential certificates ignoring Z-integrality at prime p = 5"
+        ]
+      },
+      {
+        "witness_id": "M1_251_OVER_13_POTENTIAL",
+        "x0": "251/13",
+        "x1": "439/13",
+        "numerator": 251,
+        "denominator": 13,
+        "period_k": 8,
+        "weight_w": 5,
+        "m_blocks": 2,
+        "parity_vector": [1, 1, 1, 0, 1, 1, 0, 0],
+        "kills_mechanisms": [
+          "pure Q_{>0} 2-block reciprocal-potential telescoping without Z-divisibility or W >= 6"
+        ]
+      },
+      {
+        "witness_id": "M1_287_OVER_13_CUBIC",
+        "x0": "287/13",
+        "x1": "331/13",
+        "numerator": 287,
+        "denominator": 13,
+        "period_k": 8,
+        "weight_w": 5,
+        "m_blocks": 2,
+        "parity_vector": [1, 1, 0, 1, 1, 1, 0, 0],
+        "kills_mechanisms": [
+          "Dual Brox Cubic Squeeze at W = 5 without 23*D < 3^W or D | H0"
+        ]
+      },
+      {
+        "witness_id": "M1_10561_OVER_1631_BOTH_CONTRACT",
+        "x0": "10561/1631",
+        "numerator": 10561,
+        "denominator": 1631,
+        "period_k": 13,
+        "weight_w": 8,
+        "m_blocks": 2,
+        "parity_vector": [1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0],
+        "kills_mechanisms": [
+          "first-block 2^(w1 + a1) < 3^w1 dichotomy without integer gap x1 - x0 >= 1"
+        ]
+      },
+      {
+        "witness_id": "M1_17_OVER_35_SHARED_FACTOR_GCD5",
+        "x0": "17/35",
+        "numerator": 17,
+        "denominator": 35,
+        "period_k": 8,
+        "weight_w": 4,
+        "m_blocks": 2,
+        "spiral_params": [2, 1, 2, 3],
+        "denom_gap": 175,
+        "brox_h0": 65,
+        "brox_h1": 95,
+        "gcd_d_h0_h1": 5,
+        "kills_mechanisms": [
+          "uncoupled 2-block carry-GCD hypothesis gcd(H0, H1) <= 2^{gcd(a1, a2)} - 1"
+        ]
+      },
+      {
+        "witness_id": "M1_919_OVER_233_BAND_SHARED_FACTOR_GCD7",
+        "x0": "919/233",
+        "numerator": 919,
+        "denominator": 233,
+        "period_k": 13,
+        "weight_w": 8,
+        "m_blocks": 2,
+        "spiral_params": [7, 1, 1, 4],
+        "denom_gap": 1631,
+        "brox_h0": 63,
+        "brox_h1": 34853,
+        "gcd_d_h0_h1": 7,
+        "kills_mechanisms": [
+          "in-band (21,22) uncoupled 2-block hypothesis gcd(D, H0, H1) == 1"
+        ]
+      },
+      {
+        "witness_id": "M1_COUSIN_DIAMOND_1_OVER_7",
+        "x0": "1/7",
+        "numerator": 1,
+        "denominator": 7,
+        "system": "T_diamond",
+        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "kills_mechanisms": [
+          "proofs of T_diamond global convergence omitting Z-discreteness at 0 < x <= 2, x % 6 == 2"
+        ]
+      },
+      {
+        "witness_id": "M1_211_OVER_13_ONE_BLOCK_D13",
+        "x0": "211/13",
+        "numerator": 211,
+        "denominator": 13,
+        "period_k": 8,
+        "weight_w": 5,
+        "m_blocks": 1,
+        "parity_vector": [1, 1, 1, 1, 1, 0, 0, 0],
+        "kills_mechanisms": [
+          "antipodal-order prime exclusion claims p nmid D (at p = 13 where 2^6 == -1 mod 13 and 2^2 + 3^2 == 13) omitting Z-integrality D | (2^a1 - 1)"
+        ]
+      },
+      {
+        "witness_id": "M1_COUSIN_DIAMOND2_1_OVER_7",
+        "x0": "1/7",
+        "numerator": 1,
+        "denominator": 7,
+        "system": "T_diamond2",
+        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "kills_mechanisms": [
+          "proofs of T_diamond2 global convergence omitting Z-discreteness at 0 < x <= 2"
+        ]
+      }
+    ],
+    "m2_z_neg": [
+      {
+        "witness_id": "M2_NEG1_UNIT_CYCLE",
+        "seed": -1,
+        "period_k": 1,
+        "weight_w": 1,
+        "denom_gap": -1,
+        "orbit": [-1],
+        "kills_mechanisms": [
+          "sign-blind 2-adic / 3-adic backward congruence proofs",
+          "v_3(x + 1) / core_3(x + 1) potentials without x + 1 > 0 positivity guard"
+        ]
+      },
+      {
+        "witness_id": "M2_NEG5_UNIT_3CYCLE",
+        "seed": -5,
+        "period_k": 3,
+        "weight_w": 2,
+        "denom_gap": -1,
+        "orbit": [-5, -7, -10],
+        "kills_mechanisms": [
+          "unit-denominator |2^K - 3^W| = 1 cycle uniqueness without 2^K > 3^W sign check"
+        ]
+      },
+      {
+        "witness_id": "M2_NEG17_NONUNIT_11CYCLE",
+        "seed": -17,
+        "period_k": 11,
+        "weight_w": 7,
+        "denom_gap": -139,
+        "carry": 2363,
+        "orbit": [-17, -25, -37, -55, -82, -41, -61, -91, -136, -68, -34],
+        "kills_mechanisms": [
+          "sign-blind carry-divisibility (2^K - 3^W) | C_K(v) cycle impossibility claims"
+        ]
+      },
+      {
+        "witness_id": "M2_NEG43_GARDEN_OF_EDEN",
+        "seed": -43,
+        "kills_mechanisms": [
+          "predecessor-tree cycle-root assumptions ignoring in-degree-0 Syracuse roots"
+        ]
+      }
+    ],
+    "m3_supercritical": [
+      {
+        "witness_id": "M3_5X1_SEED5_PREPERIODIC",
+        "seed": 5,
+        "multiplier_q": 5,
+        "target_cycle_seed": 13,
+        "kills_mechanisms": [
+          "minimal non-descending counterexample arguments omitting log_2(q) < 2"
+        ]
+      },
+      {
+        "witness_id": "M3_5X1_CYCLE13_ONE_BLOCK",
+        "seed": 13,
+        "multiplier_q": 5,
+        "period_k": 7,
+        "weight_w": 3,
+        "denom_gap": 3,
+        "kills_mechanisms": [
+          "primitive-root-mod-q^w + 2^K > q^W cycle impossibility claims",
+          "Hercher subdouble entry-merger on q != 3 (partner 6 reaches 1 instead of merging)"
+        ]
+      },
+      {
+        "witness_id": "M3_5X1_SEED7_DIVERGENT",
+        "seed": 7,
+        "multiplier_q": 5,
+        "kills_mechanisms": [
+          "positivity + Z-integrality arguments omitting archimedean contraction log_2(3) < 2"
+        ]
+      },
+      {
+        "witness_id": "M3_COUSIN_DIAMOND_7X1_CYCLE5",
+        "seed": 5,
+        "multiplier_q": 7,
+        "system": "T_diamond_q7",
+        "orbit": [5, 18, 9, 32, 10],
+        "kills_mechanisms": [
+          "T_diamond nonlocal convergence claims omitting q = 3 carry-shift alignment"
+        ]
+      },
+      {
+        "witness_id": "M3_COUSIN_DIAMOND2_7X1_CYCLE5",
+        "seed": 5,
+        "multiplier_q": 7,
+        "system": "T_diamond2_q7",
+        "orbit": [5, 18, 9, 32, 10],
+        "kills_mechanisms": [
+          "T_diamond2 2-term valuation convergence claims omitting q = 3 carry-shift alignment"
+        ]
+      }
+    ],
+    "log2_3_convergents": [
+      {
+        "witness_id": "CONV_K8_W5_D13",
+        "K": 8,
+        "W": 5,
+        "gap_sign": 1,
+        "abs_gap": 13,
+        "kills_mechanisms": [
+          "23 * D < 3^W bound if applied blindly at W = 5 (299 > 243)"
+        ]
+      },
+      {
+        "witness_id": "CONV_K19_W12_NEG7153",
+        "K": 19,
+        "W": 12,
+        "gap_sign": -1,
+        "abs_gap": 7153,
+        "kills_mechanisms": [
+          "two-sided |2^K - 3^W| gap claims ignoring sign alternation of convergents"
+        ]
+      },
+      {
+        "witness_id": "CONV_K65_W41",
+        "K": 65,
+        "W": 41,
+        "gap_sign": 1,
+        "abs_gap": 420491770248316829,
+        "kills_mechanisms": [
+          "naive constant-ratio 2^K - 3^W >= c * 2^K bounds (D / 2^K ≈ 1.14e-2)"
+        ]
+      },
+      {
+        "witness_id": "CONV_K485_W306",
+        "K": 485,
+        "W": 306,
+        "gap_sign": 1,
+        "kills_mechanisms": [
+          "low-precision floating-point linear-form bounds"
+        ]
+      },
+      {
+        "witness_id": "CONV_K24727_W15601",
+        "K": 24727,
+        "W": 15601,
+        "gap_sign": 1,
+        "even_diff_half": 4563,
+        "kills_mechanisms": [
+          "bounded-gcd 2-block carry heuristics ignoring 2^((K-W)/2) - 1 | gcd(H0, H1) at a1 = a2"
+        ]
+      },
+      {
+        "witness_id": "PADE_SMOOTH_PAIR_1_4_AND_1_3_N6",
+        "a1": "1/4",
+        "a2": "1/3",
+        "degree_n": 6,
+        "type1_height_bits": 45,
+        "type1_rem_log2": -36.248056,
+        "type2_err_log2": 3.399551,
+        "kills_mechanisms": [
+          "asymmetric 1-variable simultaneous Type-II Hermite-Pade approximants to (1, log(4/3), log(3/2)) without Baker extrapolation (even first minimum lambda_1 exceeds 2^3.39 > 1 at n = 6)"
+        ]
+      },
+      {
+        "witness_id": "PADE_SYMMETRIC_1_3_AND_NEG_1_3_STEPLINE_AND_N55_EXPLOSION",
+        "a1": "1/3",
+        "a2": "-1/3",
+        "degree_n": 6,
+        "type1_height_bits": 27,
+        "type1_rem_log2": -30.384139,
+        "type2_err_log2": -9.994457,
+        "type2_offdiag_n1_n_err_log2": 10.657662,
+        "type2_offdiag_n_n1_err_log2": 14.647988,
+        "stepline_casorati_det_nonzero": true,
+        "diag_n55_err_log2_gt_zero": true,
+        "kills_mechanisms": [
+          "naive low-degree n <= 35 extrapolation at folded {2,3}-smooth basis (1/3, -1/3): diagonal (n, n) appears convergent for n <= 35 (2^-9.99 at n = 6, 2^-21.17 at n = 18), but step-line (n+1, n) explodes (+10.66 bits at n = 6), Type-I height overtakes remainder decay at n = 8, and odd-prime lcm(1,3,..,2n-1) ~ e^(2n) drives even diagonal (n, n) to diverge (+7.08 bits at n = 55)"
+        ]
+      },
+      {
+        "witness_id": "BEUKERS_RHIN_2D_CONST_ELIM_N5_AND_NONSEP_EXPLOSION",
+        "beukers_degree_n": 5,
+        "rem1_log2": -9.768584,
+        "rem2_log2": -14.366672,
+        "hom_elim_err_log2": 3.44367,
+        "integral_2d_log2": -27.796603,
+        "nonsep_2d_err_log2": 18.554515,
+        "kills_mechanisms": [
+          "2-variable Beukers-Rhin Euler integral approximants on [0,1]^2 and inhomogeneous constant-term elimination between convergent 1-logarithm Legendre-Pade forms without Gelfond-Baker-Laurent 2^r*3^s multiplicative extrapolation"
+        ]
+      }
+    ]
+  },
+  "falsified_hypotheses": [
+    {
+      "hypothesis_id": "W4_H1_RADIAL_HARDY_BERGMAN_CONTRACTION",
+      "branch": "P1.1",
+      "statement": "There exists a radial positive Borel measure nu on the unit disk D (giving non-increasing moments w_n > 0, including decaying rational Bergman/exponential moments w_n -> 0) and iterate r >= 1 such that the Berg-Meinardus transfer operator satisfies ||B^r||_{H_0(w)} <= 1.",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_MERSENNE_2_POW_20_SUB_1",
+      "failure_diagnosis": "For every r >= 1, n_odd = 2^(r+1) - 1 < m_r = 3^r * 2 - 1 and n_even = 2^r * m_r avoid {1,2} and collide at m_r, forcing w(n_odd) + w(n_even) >= w(m_r) + w(n_even) > w(m_r). Proved universally for both Nat and decaying rational/Bergman weights in Wave4WholeSpace.lean (berg_meinardus_radial_hardy_norm_gt_one, berg_meinardus_rational_and_bergman_norm_gt_one)."
+    },
+    {
+      "hypothesis_id": "W4_H2_FURSTENBERG_ZERO_ENTROPY_AND_MOD3_EQUIDISTRIBUTION",
+      "branch": "P2.1",
+      "statement": "Every (x2, x3)-invariant probability measure on R/Z or deterministic long odd Collatz glide equidistributes modulo 3^B, ruling out periodic cycles via Rudolph-Host measure rigidity.",
+      "status": "FALSIFIED",
+      "minimal_witness_id": "M1_19_OVER_5_ONE_BLOCK",
+      "secondary_witness_id": "ZPOS_MERSENNE_2_POW_50_SUB_1",
+      "failure_diagnosis": "Every cycle gap D = 2^K - 3^W has gcd(D, 6) = 1, so the finite subgroup (1/D)Z/Z supports a zero-entropy atomic (x2, x3)-invariant measure escaping Rudolph's h_mu > 0 hypothesis; deterministically, n = 2^W - 1 pins W - B consecutive steps to the single residue -1 mod 3^B."
+    },
+    {
+      "hypothesis_id": "W4_H3A_SIMULTANEOUS_PADE_LOG2_LOG3_WITHOUT_BAKER",
+      "branch": "P3.1",
+      "statement": "1-variable simultaneous Type-II Hermite-Pade approximants of degree 2n to (-log(1 - a1*t), -log(1 - a2*t))|_{t=1} at {2,3}-smooth points (a1, a2) converge after clearing denominators to bound arbitrary linear forms |K*log(2) - W*log(3)| and discharge SubexponentialCubicGapProp without Baker.",
+      "status": "FALSIFIED",
+      "minimal_witness_id": "PADE_SMOOTH_PAIR_1_4_AND_1_3_N6",
+      "secondary_witness_id": "PADE_SYMMETRIC_1_3_AND_NEG_1_3_STEPLINE_AND_N55_EXPLOSION",
+      "failure_diagnosis": "At asymmetric {2,3}-smooth bases such as (1/4, 1/3), diagonal (n, n) cleared-denominator Type-II error already exceeds 2^3.39 > 1 at n = 6. At the folded {2,3}-smooth basis (1/3, -1/3) (u = t^2/9), finite-n Chebyshev dips make diagonal (n, n) error appear small for n <= 35 (2^-9.99 at n = 6, 2^-21.17 at n = 18), but step-line (n+1, n) already diverges (+10.66 bits at n = 6), Type-I height overtakes remainder decay at n = 8 (38 > 37.46 bits), and odd primes up to 2n - 1 in lcm(1,3,..,2n-1) ~ e^(2n) force even diagonal (n, n) to diverge (+7.08 bits at n = 55, +12.89 bits at n = 115)."
+    },
+    {
+      "hypothesis_id": "W4_H3B_UNCOUPLED_2BLOCK_GCD_BOUND",
+      "branch": "P3.2",
+      "statement": "For all 2-block spiral parameters with D = 2^K - 3^W > 0, 2^(w1+a1) < 3^w1, and 3^w2 < 2^(w2+a2), gcd(H0, H1) <= 2^{gcd(a1, a2)} - 1.",
+      "status": "FALSIFIED",
+      "minimal_witness_id": "M1_17_OVER_35_SHARED_FACTOR_GCD5",
+      "secondary_witness_id": "M1_919_OVER_233_BAND_SHARED_FACTOR_GCD7",
+      "failure_diagnosis": "While 2^(a1+w2)*H1 - 3^w1*H0 = D*(2^a1 - 1) forces gcd(q0, q1) | 2^{gcd(a1,a2)} - 1 when D | H0, D itself can share prime factors with H0 and H1: minimal witness (w1,a1,w2,a2) = (2,1,2,3) has D = 175, H0 = 65, H1 = 95, gcd = 5 > 1 = 2^gcd(1,3) - 1."
+    },
+    {
+      "hypothesis_id": "W4_H4_PRESBURGER_AND_COERCIVE_POLYNOMIAL_SOS",
+      "branch": "P4.1",
+      "statement": "A two-sided or one-sided infinite forward-closed Presburger-definable (ultimately periodic) predicate I separates divergent positive orbits from 1, or an eventually strictly increasing univariate ranking function V(x) (including positive-leading polynomials and 1D SOS) decreases in r steps.",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_MERSENNE_2_POW_20_SUB_1",
+      "failure_diagnosis": "Two-sided Presburger invariants collapse identically to I(1) (presburger_invariant_separator_collapse), and every one-sided forward-closed ultimately periodic set containing any x0 >= N0 provably hits 1 (one_sided_presburger_infinite_forward_hits_one, [] axioms). Mersenne glides 2^(X0+1+r) - 1 defeat every eventually strictly increasing r-step ranking function (monotone_ranking_function_r_step_impossibility)."
+    },
+    {
+      "hypothesis_id": "W4_H5_SINGLE_SHIFT_CORE3_TRANSFER_TO_TRUE_COLLATZ",
+      "branch": "P5.2",
+      "statement": "A positive polynomial combination of {x, x+1, core_2(x+1), core_3(x+1), core_2(3x+1), core_3(x)} (generalizing the exact Phi_diamond Lyapunov invariant of solvable cousin T_diamond) strictly decreases across all odd Syracuse steps on Z+.",
+      "status": "FALSIFIED",
+      "minimal_witness_id": "ZPOS_SYRACUSE_17_TO_13_CORE3_JUMP",
+      "failure_diagnosis": "Evolutionary AST synthesis reaches 207/221 = 93.7% on odd seeds (including 100% of Mersenne glides) via core_3(x+1)*(core_3(x+1)*core_2(x+1) + 1), but fails at minimal odd witness 17 -> 13 where v_2(3*17 + 1) = 2 >= 2 destroys 3^2 | (17 + 1), causing core_3(14) = 14 > 2 = core_3(18)."
+    },
+    {
+      "hypothesis_id": "W4_H5B_LAURENT_2_3_ADIC_VALUATION_MONOMIAL",
+      "branch": "P4.2",
+      "statement": "A non-monotone coercive or non-coercive rational/Laurent valuation monomial Psi(x) = (2^{v_2(x+1)})^alpha * (3^{v_3(x+1)})^beta * core_{2,3}(x+1)^gamma (alpha, beta, gamma in Z) strictly decreases across odd Syracuse steps on Z+.",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_SYRACUSE_9_TO_7_V2_JUMP",
+      "secondary_witness_id": "ZPOS_SYRACUSE_97_TO_73_COPRIME_CORE_DROP",
+      "failure_diagnosis": "On the 4-witness cycle {7->11, 9->7, 17->13, 97->73}: 97->73 forces gamma > 0 (37^gamma < 49^gamma), while 7->11 (9^beta < 4^alpha), 9->7 (4^alpha < 5^gamma), and 17->13 (7^gamma < 9^beta) chain to 7^gamma < 5^gamma, contradiction for all integer/rational exponents (syracuse_laurent_valuation_monomial_impossibility, [] axioms)."
+    },
+    {
+      "hypothesis_id": "W4_H5C_BACKWARD_QUOTIENT_TREE_MONOTONICITY",
+      "branch": "P5.3",
+      "statement": "Along the first-hit backward generator tree exactBackwardQuotient 1 (true :: true :: tail) q toward a target n in IsSurvivingMod373248Class, intermediate odd predecessors grow monotonically or remain bounded by a quadratic envelope y_i <= n^2.",
+      "status": "FALSIFIED",
+      "minimal_witness_id": "ZPOS_N27_MOD373248_MIN",
+      "secondary_witness_id": "ZPOS_MOD373248_MIN_WEIGHT6_184111",
+      "failure_diagnosis": "While q-rays (u, q) -> (u, q+1) grow strictly by 2^{2*3^{w-1}} and all core weights w <= 5 are universally excluded from IsSurvivingMod373248Class (sharp at w = 6, y = 184111), backward core-tree excursions are non-monotone: reaching n = 27 climbs to odd predecessor 3077 > 4 * 27^2 before dropping down to 27."
+    },
+    {
+      "hypothesis_id": "W5_H1_PERIODIC_AND_LAURENT_PREIMAGE_SUPERHARMONICITY",
+      "branch": "P1.2",
+      "statement": "There exists a positive rational non-radial Berg-Meinardus preimage weight w(n) = wNum(n)/wDen(n) > 0 on n >= 3 satisfying w(2m) + 1_{m == 2 mod 3} w((2m-1)/3) <= w(m) that depends either only on (v_2(n), v_3(n), v_2(n+1), v_3(n+1), n mod P) (forall P >= 1) or is the reciprocal of a finite L-term Laurent valuation sum.",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_GEOM_85_VALUATION_CONSTANCY",
+      "secondary_witness_id": "ZPOS_SYRACUSE_13_TO_5_V3_REBOUND",
+      "failure_diagnosis": "Along the 4-adic spine 4^(k+1), odd preimages z_j = (4^(3j+4) - 1)/3 (85, 5461, ...) have constant (v_2(z_j), v_3(z_j), v_2(z_j+1), v_3(z_j+1)) = (0, 0, 1, 0) and repeat mod P along an arithmetic progression, forcing divergent constant sums <= w(4); reciprocal L-term Laurent valuation weights induce strict L-term Syracuse Lyapunov sums, which are universally impossible (Wave5WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W5_H2A_MULTITERM_LAURENT_VALUATION_COMBINATIONS",
+      "branch": "P4.2",
+      "statement": "A finite positive rational combination Psi(x) = sum_{i=1}^L (p_i/q_i) * (2^{v_2(x+1)})^{alpha_i} * (3^{v_3(x+1)})^{beta_i} * core_{2,3}(x+1)^{gamma_i} (L >= 1, alpha_i, beta_i, gamma_i in Z) strictly decreases across all odd Syracuse steps on Z+.",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_SYRACUSE_3_TO_5_POS_2TERM_KILLER",
+      "secondary_witness_id": "ZPOS_SYRACUSE_13_TO_5_V3_REBOUND",
+      "failure_diagnosis": "Although 2-term combinations such as 5*3^{v_3(x+1)} + 3*core_3(x+1) and (-3,-2,-2) + lambda*(5,3,2) survive Wave 4's 4-witness set {7, 9, 17, 97} (and 2-term valuation sums globally solve T_diamond2), on true (3x+1) the 4 scalable families {97}, 2*9^B - 1, (2*4^(3j+4) - 5)/3, and 8*3^B - 1 force alpha_max <= gamma_max <= beta_max and 1 <= beta_max, causing Psi(8*3^B - 1) to increase for large B across ALL L >= 1 (syracuse_multiterm_laurent_valuation_impossibility, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W5_H2B_NON_TRIANGULAR_COORD_MONOTONE_MATRICES",
+      "branch": "P4.3",
+      "statement": "Dropping upper-triangularity allows a full non-triangular coordinatewise-monotone (forall s, i, M_s[i,i] >= 1) natural matrix interpretation in some dimension d >= 1 to orient the 6-rule Collatz SRS core {R2, R5, R7, R8, R9, R11}.",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_MERSENNE_2_POW_20_SUB_1",
+      "failure_diagnosis": "Writing M_s = I_d + E_s (E_s >= 0 entrywise), sandwiching R2 (L B1 >= L T2) and R11 (T2 R >= B1 B0 R) as L B1 R >= L T2 R >= L B1 R + L B1 E_B0 R forces E_B0 = 0, then R5, R7, R9 collapse B0 = B1 = T0 = T1 = T2 = I_d in EVERY dimension d >= 1 without any triangularity assumption, contradicting R8 (all_dim_coord_monotone_non_triangular_impossibility, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W5_H3_2D_BEUKERS_RHIN_INTEGRALS_WITHOUT_BAKER",
+      "branch": "P3.3",
+      "statement": "2-variable Beukers-Rhin Euler integral approximants on [0,1]^2 or constant-term elimination between convergent 1-logarithm Legendre-Pade forms bound homogeneous |K*log(2) - W*log(3)| and discharge SubexponentialCubicGapProp without Gelfond-Baker-Laurent multiplicative extrapolation.",
+      "status": "FALSIFIED",
+      "minimal_witness_id": "BEUKERS_RHIN_2D_CONST_ELIM_N5_AND_NONSEP_EXPLOSION",
+      "failure_diagnosis": "Non-separable 2D Euler-Rhin integrals int_0^1 int_0^1 x^n(1-x)^n y^n(1-y)^n u^(2n+1)/(1-ux)^(n+1) dx dy (u = (3+y)/6) genuinely decay exponentially (2^-6.30 at n = 1, 2^-27.80 at n = 5), yet squared lcm(1,..,3n+3)^2 * 6^n denominator growth (~9.8n bits) overtakes integral decay (~5.1n bits), driving cleared-denominator error to diverge (+3.45 bits at n = 1, +18.55 bits at n = 5, +39.91 bits at n = 8); separable 1D Legendre-Pade forms converge individually (2^-9.77 and 2^-14.37 at n = 5), but eliminating the constant term 1 injects exponential polynomial height (+3.44 bits at n = 5, +5.02 bits at n = 8)."
+    }
+  ]
+}

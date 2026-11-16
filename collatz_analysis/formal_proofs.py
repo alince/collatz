@@ -167,10 +167,31 @@ ALLOWED_LEAN4_FOUNDATIONAL_AXIOMS: frozenset[str] = frozenset(
 )
 
 
+def _pinned_elan_toolchain_bin(tool_stem: str) -> Optional[Path]:
+    """
+    Resolve the exact pinned binary in `~/.elan/toolchains/<toolchain>/bin` from
+    `lean-toolchain` if present (avoiding elan proxy hangs outside `pkg_dir`).
+    """
+    pkg_dir = Path(__file__).resolve().parent
+    tc_file = pkg_dir / "lean-toolchain"
+    exe_name = f"{tool_stem}.exe" if os.name == "nt" else tool_stem
+    if tc_file.is_file():
+        tc_raw = tc_file.read_text(encoding="utf-8").strip()
+        if tc_raw:
+            tc_dir = tc_raw.replace("/", "--").replace(":", "---")
+            pinned = Path.home() / ".elan" / "toolchains" / tc_dir / "bin" / exe_name
+            if pinned.is_file():
+                return pinned
+    return None
+
+
 def find_lean4_executable() -> Optional[Path]:
     """
-    Locate the Lean 4 compiler binary via PATH or the user's ~/.elan/bin toolchain.
+    Locate the Lean 4 compiler binary via pinned `lean-toolchain`, PATH, or `~/.elan/bin`.
     """
+    pinned = _pinned_elan_toolchain_bin("lean")
+    if pinned is not None:
+        return pinned
     which_lean = shutil.which("lean")
     if which_lean:
         return Path(which_lean)
@@ -183,8 +204,11 @@ def find_lean4_executable() -> Optional[Path]:
 
 def find_lake_executable() -> Optional[Path]:
     """
-    Locate the Lake build tool binary via PATH or the user's ~/.elan/bin toolchain.
+    Locate the Lake build tool binary via pinned `lean-toolchain`, PATH, or `~/.elan/bin`.
     """
+    pinned = _pinned_elan_toolchain_bin("lake")
+    if pinned is not None:
+        return pinned
     which_lake = shutil.which("lake")
     if which_lake:
         return Path(which_lake)
@@ -304,6 +328,10 @@ _LAKE_SEQUENTIAL_TARGETS: Tuple[str, ...] = (
     "+CollatzFormal.Survivors97To99I",
     "+CollatzFormal.Survivors97To99J",
     "+CollatzFormal.Survivors97To99",
+    "+CollatzFormal.CSFullConjecture",
+    "+CollatzFormal.CSWave3Synthesis",
+    "+CollatzFormal.Wave4WholeSpace",
+    "+CollatzFormal.Wave5WholeSpace",
     "+CollatzFormal",
 )
 
@@ -391,6 +419,7 @@ def verify_lean4_kernel_proofs(
 
     ver_proc = subprocess.run(
         [str(lean_bin), "--version"],
+        cwd=str(pkg_dir),
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -401,6 +430,7 @@ def verify_lean4_kernel_proofs(
 
     env = os.environ.copy()
     env["LEAN_JOBS"] = "2"
+    env["PATH"] = str(lean_bin.parent) + os.pathsep + env.get("PATH", "")
 
     lake_build_ok = True
     lake_diag_parts: List[str] = []
@@ -611,9 +641,15 @@ def generate_full_proof_suite_report() -> Dict[str, object]:
         verify_boost_three_line_counter_model_matrix,
         verify_next_tier_boost_counter_model_matrix,
     )
+    from .cs_cegar_redteam import (
+        run_wave4_whole_space_campaign,
+        run_wave5_whole_space_campaign,
+    )
 
     thm23_25_boost = verify_boost_three_line_counter_model_matrix()
     thm29_31_boost = verify_next_tier_boost_counter_model_matrix()
+    wave4_cert = run_wave4_whole_space_campaign()
+    wave5_cert = run_wave5_whole_space_campaign()
     lean4_cert = verify_lean4_kernel_proofs()
 
     return {
@@ -677,5 +713,7 @@ def generate_full_proof_suite_report() -> Dict[str, object]:
         },
         "theorems_23_to_25_boost_mechanisms_and_counter_model_matrix": thm23_25_boost,
         "theorems_29_to_31_next_tier_boost_and_counter_model_matrix": thm29_31_boost,
+        "wave4_whole_space_campaign": wave4_cert,
+        "wave5_whole_space_campaign": wave5_cert,
         "lean4_kernel_verification": lean4_cert,
     }

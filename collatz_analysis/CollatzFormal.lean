@@ -13,5 +13,8 @@ import CollatzFormal.HenselBridge93To96
 import CollatzFormal.Survivors97To99
 import CollatzFormal.CSFullConjecture
 import CollatzFormal.CSWave3Synthesis
+import CollatzFormal.Wave4WholeSpace
+import CollatzFormal.Wave5WholeSpace
+
 
 

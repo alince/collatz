@@ -486,5 +486,820 @@ class TestPositive3x1StressBankAndCegarGates(unittest.TestCase):
         self.assertTrue(t1_w3["t11_ok"])
 
 
+class TestWave4WholeSpaceAndWitnessBank(unittest.TestCase):
+    def test_witness_bank_schema_idempotent_append_and_rejection_gate(self) -> None:
+        import shutil
+        import tempfile
+        from collatz_analysis.cs_cegar_redteam import (
+            REQUIRED_WITNESS_DOMAINS,
+            append_falsified_hypothesis_record,
+            append_witness_to_bank,
+            default_witness_bank_path,
+            evaluate_hypothesis_against_witness_bank,
+            load_witness_bank,
+        )
+
+        bank = load_witness_bank()
+        self.assertEqual(tuple(bank["domains"].keys()), REQUIRED_WITNESS_DOMAINS)
+        self.assertGreaterEqual(len(bank["falsified_hypotheses"]), 6)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_bank = Path(tmpdir) / "witness_bank.json"
+            shutil.copyfile(default_witness_bank_path(), tmp_bank)
+
+            # Idempotent duplicate witness append returns False; new witness returns True
+            self.assertFalse(
+                append_witness_to_bank(
+                    "z_pos_high_glide",
+                    {"witness_id": "ZPOS_N27_MOD373248_MIN", "seed": 27},
+                    bank_path=tmp_bank,
+                )
+            )
+            self.assertTrue(
+                append_witness_to_bank(
+                    "z_pos_high_glide",
+                    {"witness_id": "ZPOS_SYNTHETIC_TEST_703", "seed": 703},
+                    bank_path=tmp_bank,
+                )
+            )
+            self.assertFalse(
+                append_witness_to_bank(
+                    "z_pos_high_glide",
+                    {"witness_id": "ZPOS_SYNTHETIC_TEST_703", "seed": 703},
+                    bank_path=tmp_bank,
+                )
+            )
+
+            # Invalid domain or empty witness_id raises ValueError
+            with self.assertRaises(ValueError):
+                append_witness_to_bank("unknown_domain", {"witness_id": "X"}, bank_path=tmp_bank)
+            with self.assertRaises(ValueError):
+                append_witness_to_bank("z_pos_high_glide", {"witness_id": ""}, bank_path=tmp_bank)
+
+            # Hypothesis failing on M1 is caught and recorded idempotently
+            gate_fail = evaluate_hypothesis_against_witness_bank(
+                "NaiveDenominatorEq1",
+                lambda _dom, e: int(e.get("denominator", 1)) == 1,
+                domains=("m1_q2_pos",),
+                bank_path=tmp_bank,
+                record_failure=True,
+                branch="P3",
+                statement="All positive cycles have denominator 1.",
+            )
+            self.assertFalse(gate_fail["passed"])
+            self.assertEqual(gate_fail["minimal_failure"], ("m1_q2_pos", "M1_19_OVER_5_ONE_BLOCK"))
+            self.assertFalse(
+                append_falsified_hypothesis_record(
+                    {"hypothesis_id": "NaiveDenominatorEq1", "status": "FALSIFIED"},
+                    bank_path=tmp_bank,
+                )
+            )
+
+            gate_pass = evaluate_hypothesis_against_witness_bank(
+                "WitnessIdNonEmpty",
+                lambda _dom, e: len(str(e["witness_id"])) > 0,
+                bank_path=tmp_bank,
+            )
+            self.assertTrue(gate_pass["passed"])
+
+    def test_wave4_whole_space_paradigms_and_cousin_benchmark(self) -> None:
+        from collatz_analysis.cs_cegar_redteam import (
+            core2_pos,
+            core3_pos,
+            cousin_diamond_phi,
+            cousin_diamond_step_int,
+            cousin_diamond_step_q6,
+            run_wave4_whole_space_campaign,
+        )
+
+        # Boundary checks on core2_pos, core3_pos, cousin_diamond_phi, and cousin_diamond_step_q6
+        with self.assertRaises(ValueError):
+            core3_pos(0)
+        with self.assertRaises(ValueError):
+            core2_pos(0)
+        with self.assertRaises(ValueError):
+            cousin_diamond_phi(0)
+        with self.assertRaises(ValueError):
+            cousin_diamond_step_q6(Fraction(1, 6))
+
+        self.assertEqual(cousin_diamond_step_int(1), 2)
+        self.assertEqual(cousin_diamond_step_int(2), 1)
+        self.assertEqual(cousin_diamond_step_int(8), 2)
+
+        w4 = run_wave4_whole_space_campaign()
+        self.assertTrue(w4["passed"])
+        self.assertEqual(w4["verdict"], "REDTEAM-PASSED")
+        self.assertTrue(w4["h1_berg_meinardus"]["strictly_gt_one"])
+        self.assertTrue(w4["h2_furstenberg"]["hypothesis_falsified"])
+        self.assertTrue(w4["h3_pade_and_resultant"]["pade_explosion_verified"])
+        self.assertTrue(w4["h3_pade_and_resultant"]["resultant_identities_verified"])
+        self.assertTrue(w4["h4_presburger_and_sos"]["one_sided_presburger_hits_pow2_verified"])
+        self.assertTrue(w4["h5_cousin_and_synthesis"]["cousin_holdout_verified"])
+        self.assertEqual(w4["h5_cousin_and_synthesis"]["true_syracuse_minimal_falsifier_odd"], 17)
+
+    def test_wave4_zero_pii_and_lean4_zero_axioms(self) -> None:
+        from collatz_analysis.formal_proofs import (
+            ALLOWED_LEAN4_FOUNDATIONAL_AXIOMS,
+            verify_lean4_kernel_proofs,
+        )
+
+        pkg_dir = Path(__file__).resolve().parent.parent
+        win_users_token = "Us" + "ers" + "\\"
+        win_users_fwd = "Us" + "ers/"
+        unix_home_prefix = "/" + "home" + "/"
+        for rel in (
+            "PROOF_SPACE_LEDGER.md",
+            "witness_bank.json",
+            "cs_cegar_redteam.py",
+            "CollatzFormal/Wave4WholeSpace.lean",
+        ):
+            fpath = pkg_dir / rel
+            self.assertTrue(fpath.is_file(), f"Missing expected file {rel}")
+            txt = fpath.read_text(encoding="utf-8")
+            self.assertNotIn(win_users_token, txt)
+            self.assertNotIn(win_users_fwd, txt)
+            self.assertNotIn(unix_home_prefix, txt)
+
+        res = verify_lean4_kernel_proofs()
+        self.assertTrue(res["pure_kernel_verified"])
+        self.assertGreaterEqual(res["theorems_audited"], 1379)
+        self.assertGreaterEqual(res["axiom_free_theorem_count"], 541)
+        ax_map = res["axioms_by_theorem"]
+        for thm in (
+            "berg_meinardus_radial_hardy_norm_gt_one",
+            "berg_meinardus_rational_and_bergman_norm_gt_one",
+            "berg_meinardus_weighted_bergman_and_exp_instances",
+            "presburger_invariant_separator_collapse",
+            "one_sided_presburger_infinite_forward_hits_one",
+            "no_one_sided_presburger_divergent_certificate",
+            "monotone_ranking_function_r_step_impossibility",
+            "two_block_brox_resultant_identities",
+            "two_block_quotient_mersenne_gcd_and_mod3_lock",
+            "cousin_diamond_phi_strict_descent",
+            "cousin_diamond_global_convergence",
+            "cousin_diamond_unbounded_mersenne_glide",
+            "cousin_diamond_mod_pow2_pow3_potential_impossibility",
+            "cousin_diamond_no_finite_dfa_trace_language",
+            "cousin_diamond_counter_model_and_antagonism_witnesses",
+            "syracuse_laurent_valuation_monomial_impossibility",
+            "one_generator_weight_le_five_never_surviving_mod373248",
+            "collatz_standard_iff_mod373248_unique_first_hit_weight_ge_six",
+            "mod373248_min_weight_six_witness_184111",
+        ):
+            self.assertIn(thm, ax_map)
+            self.assertTrue(
+                set(ax_map[thm]).issubset(ALLOWED_LEAN4_FOUNDATIONAL_AXIOMS),
+                f"Unexpected custom axiom in {thm}: {ax_map[thm]}",
+            )
+        self.assertEqual(ax_map["cousin_diamond_counter_model_and_antagonism_witnesses"], [])
+        self.assertEqual(ax_map["mod373248_min_weight_six_witness_184111"], [])
+
+    def test_wave4_witness_bank_referential_and_ground_truth_validation(self) -> None:
+        import json
+        import shutil
+        import tempfile
+        from collatz_analysis.cs_cegar_redteam import (
+            _dynamic_pred_coercive_v2_syracuse,
+            _dynamic_pred_core3_syracuse,
+            _dynamic_pred_pade_low_degree_extrapolation,
+            _dynamic_pred_quadratic_peak_bound,
+            _dynamic_pred_sign_blind_cycle_divisibility,
+            append_falsified_hypothesis_record,
+            default_witness_bank_path,
+            evaluate_hypothesis_against_witness_bank,
+            load_witness_bank,
+            verify_witness_bank_ground_truth,
+        )
+
+        truth = verify_witness_bank_ground_truth()
+        self.assertTrue(truth["all_witnesses_ground_truth_verified"])
+        self.assertEqual(truth["failed_witness_ids"], ())
+        self.assertGreaterEqual(truth["verified_witness_count"], 32)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_bank = Path(tmpdir) / "witness_bank.json"
+            shutil.copyfile(default_witness_bank_path(), tmp_bank)
+
+            # Dangling minimal_witness_id or secondary_witness_id must raise ValueError
+            with self.assertRaises(ValueError):
+                append_falsified_hypothesis_record(
+                    {
+                        "hypothesis_id": "DanglingRefTest",
+                        "status": "FALSIFIED",
+                        "minimal_witness_id": "NON_EXISTENT_WITNESS_ID",
+                    },
+                    bank_path=tmp_bank,
+                )
+            with self.assertRaises(ValueError):
+                append_falsified_hypothesis_record(
+                    {
+                        "hypothesis_id": "DanglingSecRefTest",
+                        "status": "FALSIFIED",
+                        "minimal_witness_id": "ZPOS_N27_MOD373248_MIN",
+                        "secondary_witness_id": "NON_EXISTENT_SECONDARY_ID",
+                    },
+                    bank_path=tmp_bank,
+                )
+
+            # Corrupting JSON on disk with dangling ID is caught by load_witness_bank
+            corrupted = json.loads(tmp_bank.read_text(encoding="utf-8"))
+            corrupted["falsified_hypotheses"].append(
+                {
+                    "hypothesis_id": "DiskCorruptedHyp",
+                    "status": "FALSIFIED",
+                    "minimal_witness_id": "MISSING_ID",
+                }
+            )
+            tmp_bank.write_text(json.dumps(corrupted), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                load_witness_bank(tmp_bank)
+
+            # Dynamic predicates catch brand-new witness IDs purely by mathematical evaluation
+            fresh_bank = Path(tmpdir) / "fresh_bank.json"
+            base = json.loads(default_witness_bank_path().read_text(encoding="utf-8"))
+            base["falsified_hypotheses"] = []
+            base["domains"]["z_pos_high_glide"] = [
+                {"witness_id": "FRESH_ID_A", "seed": 17, "kills_mechanisms": ["test"]},
+                {"witness_id": "FRESH_ID_B", "seed": 9, "kills_mechanisms": ["test"]},
+                {"witness_id": "FRESH_ID_C", "seed": 27, "kills_mechanisms": ["test"]},
+            ]
+            base["domains"]["m2_z_neg"] = [
+                {
+                    "witness_id": "FRESH_NEG_ID",
+                    "seed": -17,
+                    "orbit": [-17, -25, -37, -55, -82, -41, -61, -91, -136, -68, -34],
+                    "kills_mechanisms": ["test"],
+                }
+            ]
+            base["domains"]["log2_3_convergents"] = [
+                {
+                    "witness_id": "FRESH_PADE_ID",
+                    "a1": "1/3",
+                    "a2": "-1/3",
+                    "degree_n": 6,
+                    "kills_mechanisms": ["test"],
+                }
+            ]
+            fresh_bank.write_text(json.dumps(base), encoding="utf-8")
+
+            r1 = evaluate_hypothesis_against_witness_bank(
+                "FreshCore3", _dynamic_pred_core3_syracuse, ("z_pos_high_glide",), fresh_bank
+            )
+            self.assertEqual(r1["minimal_failure"], ("z_pos_high_glide", "FRESH_ID_A"))
+            r2 = evaluate_hypothesis_against_witness_bank(
+                "FreshCoerciveV2", _dynamic_pred_coercive_v2_syracuse, ("z_pos_high_glide",), fresh_bank
+            )
+            self.assertEqual(r2["minimal_failure"], ("z_pos_high_glide", "FRESH_ID_B"))
+            r3 = evaluate_hypothesis_against_witness_bank(
+                "FreshQuadPeak", _dynamic_pred_quadratic_peak_bound, ("z_pos_high_glide",), fresh_bank
+            )
+            self.assertEqual(r3["minimal_failure"], ("z_pos_high_glide", "FRESH_ID_C"))
+            r4 = evaluate_hypothesis_against_witness_bank(
+                "FreshSignBlind", _dynamic_pred_sign_blind_cycle_divisibility, ("m2_z_neg",), fresh_bank
+            )
+            self.assertEqual(r4["minimal_failure"], ("m2_z_neg", "FRESH_NEG_ID"))
+            r5 = evaluate_hypothesis_against_witness_bank(
+                "FreshPade", _dynamic_pred_pade_low_degree_extrapolation, ("log2_3_convergents",), fresh_bank
+            )
+            self.assertEqual(r5["minimal_failure"], ("log2_3_convergents", "FRESH_PADE_ID"))
+
+    def test_wave4_pade_folded_basis_and_boundary_guards(self) -> None:
+        import decimal
+        from collatz_analysis.cs_cegar_redteam import (
+            _dec_neg_log1m,
+            _solve_folded_symmetric_type2_diag,
+            _solve_type1_and_type2_hermite_pade,
+        )
+
+        # Domain boundary guards
+        for bad_a in (Fraction(1, 1), Fraction(-1, 1), Fraction(3, 2)):
+            with self.assertRaises(ValueError):
+                _dec_neg_log1m(bad_a)
+        with self.assertRaises(ValueError):
+            _solve_type1_and_type2_hermite_pade(Fraction(1, 3), Fraction(-1, 3), 0)
+        with self.assertRaises(ValueError):
+            _solve_type1_and_type2_hermite_pade(Fraction(0, 1), Fraction(1, 3), 2)
+        with self.assertRaises(ValueError):
+            _solve_type1_and_type2_hermite_pade(Fraction(1, 3), Fraction(1, 3), 2)
+
+        # High-|a| precision check at a = 9/10 (-log(1/10) = log(10)) where 1200-term series truncated
+        with decimal.localcontext() as ctx:
+            ctx.prec = 120
+            ln10 = decimal.Decimal(10).ln()
+            val_9_10 = _dec_neg_log1m(Fraction(9, 10), prec=120)
+            self.assertLess(abs(val_9_10 - ln10), decimal.Decimal(10) ** (-115))
+
+        # Folded symmetric {2,3}-smooth basis (1/3, -1/3): low-degree diagonal < 0, step-line & n=55 > 0
+        sym6 = _solve_type1_and_type2_hermite_pade(Fraction(1, 3), Fraction(-1, 3), 6)
+        self.assertLess(sym6["type2_err_log2"], -9.9)
+        self.assertGreater(sym6["type2_offdiag_n1_n_err_log2"], 10.0)
+        self.assertTrue(sym6["stepline_casorati_det_nonzero"])
+        sym55 = _solve_folded_symmetric_type2_diag(Fraction(1, 3), 55)
+        self.assertGreater(sym55["err_log2"], 7.0)
+
+    def test_wave4_exact_ast_large_int_laurent_barrier_and_backward_tree(self) -> None:
+        from collatz_analysis.cs_cegar_redteam import (
+            _eval_nonlocal_ast,
+            audit_syracuse_laurent_valuation_monomial_barrier,
+            cousin_diamond_step_int,
+            synthesize_and_redteam_backward_quotient_tree_invariants,
+            synthesize_nonlocal_cousin_invariant_and_redteam_collatz,
+        )
+
+        # Regression test for 2048-bit saturation bug at x = 1 << 260
+        legacy_deg4_ast = ("sq", ("sq", ("mul", ("x",), ("c3_xp1",))))
+        big_x = 1 << 260
+        self.assertLess(
+            _eval_nonlocal_ast(legacy_deg4_ast, cousin_diamond_step_int(big_x)),
+            _eval_nonlocal_ast(legacy_deg4_ast, big_x),
+        )
+        syn = synthesize_nonlocal_cousin_invariant_and_redteam_collatz()
+        self.assertEqual(syn["cousin_synthesized_node_count"], 3)
+        self.assertLess(
+            _eval_nonlocal_ast(syn["cousin_synthesized_ast"], cousin_diamond_step_int(big_x)),
+            _eval_nonlocal_ast(syn["cousin_synthesized_ast"], big_x),
+        )
+
+        laurent = audit_syracuse_laurent_valuation_monomial_barrier(max_abs_exp=6)
+        self.assertTrue(laurent["laurent_monomial_barrier_verified"])
+        self.assertEqual(laurent["laurent_surviving_triples"], 0)
+
+        tree = synthesize_and_redteam_backward_quotient_tree_invariants()
+        self.assertTrue(tree["mod512_nine_step_weight_ge6_verified"])
+        self.assertTrue(tree["weight_le_5_mod373248_disjoint_verified"])
+        self.assertTrue(tree["sharp_weight_6_witness_184111_verified"])
+        self.assertTrue(tree["q_ray_strict_growth_verified"])
+        self.assertTrue(tree["backward_tree_y_monotone_falsified"])
+
+
+class TestWave5WholeSpaceCampaign(unittest.TestCase):
+    def test_wave5_campaign_all_four_fronts_and_witness_bank(self) -> None:
+        from collatz_analysis.cs_cegar_redteam import (
+            audit_w5_front_a_nonradial_preimage_superharmonicity,
+            audit_w5_front_b_cousin_diamond2_multiterm_and_nontri_matrices,
+            audit_w5_front_c_beukers_rhin_mblock_and_antipodal_primes,
+            audit_w5_front_d_coupled_q_rays_and_pi2_calibration,
+            run_wave5_whole_space_campaign,
+        )
+
+        w5 = run_wave5_whole_space_campaign()
+        self.assertTrue(w5["passed"])
+        self.assertEqual(w5["verdict"], "REDTEAM-PASSED")
+        self.assertTrue(w5["witness_bank_ground_truth_verified"])
+        self.assertGreaterEqual(w5["witness_bank_total_entries"], 41)
+        self.assertGreaterEqual(w5["witness_bank_falsified_count"], 12)
+
+        fa = audit_w5_front_a_nonradial_preimage_superharmonicity()
+        self.assertTrue(fa["barrier_verified"])
+        self.assertTrue(fa["stopping_time_model_contraction_verified"])
+        self.assertTrue(fa["z_j_valuation_constancy_verified"])
+        self.assertTrue(fa["z_j_modular_repetition_verified"])
+
+        fb = audit_w5_front_b_cousin_diamond2_multiterm_and_nontri_matrices()
+        self.assertTrue(fb["cousin_diamond2_global_descent_verified"])
+        self.assertTrue(fb["cousin_diamond2_syracuse_witnesses_verified"])
+        self.assertEqual(fb["cousin_diamond2_single_laurent_survivors"], 0)
+        self.assertTrue(fb["cousin_diamond2_countermodels_verified"])
+        self.assertTrue(fb["cousin_diamond2_q6_matches_int_verified"])
+        self.assertTrue(fb["two_term_w4_trap_and_rebound_falsifier_verified"])
+        self.assertTrue(fb["non_triangular_sandwich_collapse_verified"])
+
+        fc = audit_w5_front_c_beukers_rhin_mblock_and_antipodal_primes()
+        self.assertTrue(fc["beukers_rhin_explosion_verified"])
+        self.assertTrue(fc["beukers_rhin_series_cross_verified"])
+        self.assertTrue(fc["mblock_resultant_identities_verified"])
+        self.assertTrue(fc["one_block_even_even_impossible_verified"])
+        self.assertEqual(fc["antipodal_prime_count_lt_300"], 28)
+        self.assertTrue(fc["antipodal_primes_and_m1_separation_verified"])
+
+        fd = audit_w5_front_d_coupled_q_rays_and_pi2_calibration()
+        self.assertTrue(fd["q_ray_affine_and_382_per_729_verified"])
+        self.assertTrue(fd["q_pos_universal_first_hit_verified"])
+        self.assertTrue(fd["length_le_7_mod373248_disjoint_verified"])
+        self.assertTrue(fd["pi2_skolem_box_and_cousin_poly_bound_verified"])
+
+    def test_wave5_boundary_guards_and_synthetic_dynamic_predicates(self) -> None:
+        import json
+        import tempfile
+        from collatz_analysis.cs_cegar_redteam import (
+            _beukers_rhin_2d_beta_series,
+            _dynamic_pred_antipodal_prime_without_z_integrality,
+            _dynamic_pred_beukers_rhin_const_elim_converges,
+            _dynamic_pred_cousin_diamond2_omits_odd_pow3_cone,
+            _dynamic_pred_glide_laurent_2term_syracuse,
+            _dynamic_pred_periodic_valuation_decay,
+            _dynamic_pred_pos_2term_valuation_syracuse,
+            _solve_beukers_rhin_2d_and_const_elimination,
+            cousin_diamond2_phi,
+            cousin_diamond2_step_int,
+            cousin_diamond2_step_q6,
+            default_witness_bank_path,
+            evaluate_hypothesis_against_witness_bank,
+        )
+
+        # Explicit boundary & error-path checks
+        for bad_q in (0, -3, 2, 4):
+            with self.assertRaises(ValueError):
+                cousin_diamond2_step_int(7, q=bad_q)
+        for bad_frac in (Fraction(1, 2), Fraction(1, 3), Fraction(5, 6)):
+            with self.assertRaises(ValueError):
+                cousin_diamond2_step_q6(bad_frac)
+        for bad_x in (0, -1, -5):
+            with self.assertRaises(ValueError):
+                cousin_diamond2_phi(bad_x)
+        with self.assertRaises(ValueError):
+            _solve_beukers_rhin_2d_and_const_elimination(0)
+        with self.assertRaises(ValueError):
+            _beukers_rhin_2d_beta_series(0)
+        with self.assertRaises(ValueError):
+            _beukers_rhin_2d_beta_series(1, terms=0)
+        with self.assertRaises(ValueError):
+            _beukers_rhin_2d_beta_series(1, prec=10)
+
+        # Regression checks for 2D Euler-Rhin integral solver vs exact Beta series (including n > 6)
+        br1 = _solve_beukers_rhin_2d_and_const_elimination(1)
+        br5 = _solve_beukers_rhin_2d_and_const_elimination(5)
+        br7 = _solve_beukers_rhin_2d_and_const_elimination(7)
+        br8 = _solve_beukers_rhin_2d_and_const_elimination(8)
+        self.assertGreater(br1["symbolic_vs_series_diff"], 0.0)
+        self.assertLess(br1["symbolic_vs_series_diff"], 1e-40)
+        self.assertGreater(br5["symbolic_vs_series_diff"], 0.0)
+        self.assertLess(br5["symbolic_vs_series_diff"], 1e-40)
+        self.assertGreater(br7["symbolic_vs_series_diff"], 0.0)
+        self.assertLess(br7["symbolic_vs_series_diff"], 1e-40)
+        self.assertGreater(br8["symbolic_vs_series_diff"], 0.0)
+        self.assertLess(br8["symbolic_vs_series_diff"], 1e-40)
+        self.assertGreater(br1["integral_2d_log2"], -6.4)
+        self.assertLess(br1["integral_2d_log2"], -6.2)
+        self.assertGreater(br5["integral_2d_log2"], -27.9)
+        self.assertLess(br5["integral_2d_log2"], -27.7)
+        self.assertGreater(br1["nonsep_2d_err_log2"], 3.4)
+        self.assertLess(br1["nonsep_2d_err_log2"], 3.5)
+        self.assertGreater(br5["nonsep_2d_err_log2"], 18.5)
+        self.assertLess(br5["nonsep_2d_err_log2"], 18.6)
+
+        # Edge values, x = 53 = 2*3^3 - 1 regression, & large-bit inputs on T_diamond2
+        self.assertEqual(cousin_diamond2_step_int(0), 0)
+        self.assertEqual(cousin_diamond2_step_int(1), 2)
+        self.assertEqual(cousin_diamond2_step_int(2), 1)
+        self.assertEqual(cousin_diamond2_step_int(-1), -1)
+        self.assertEqual(cousin_diamond2_step_int(53), 40)
+        self.assertEqual(cousin_diamond2_step_q6(Fraction(53, 1)), Fraction(40, 1))
+        big = (1 << 250) - 1
+        self.assertLess(cousin_diamond2_phi(cousin_diamond2_step_int(big)), cousin_diamond2_phi(big))
+
+        # Dynamic witness-bank predicates on brand-new synthetic witness IDs
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fresh_bank = Path(tmpdir) / "fresh_w5_bank.json"
+            base = json.loads(default_witness_bank_path().read_text(encoding="utf-8"))
+            base["falsified_hypotheses"] = []
+            base["domains"]["z_pos_high_glide"] = [
+                {
+                    "witness_id": "SYNTH_SPINE_Z",
+                    "seed": 85,
+                    "sibling_seed": 5461,
+                    "kills_mechanisms": ["test"],
+                },
+                {
+                    "witness_id": "SYNTH_POS2_3",
+                    "seed": 3,
+                    "kills_mechanisms": ["test"],
+                },
+                {
+                    "witness_id": "SYNTH_REBOUND_13",
+                    "seed": 13,
+                    "kills_mechanisms": ["test"],
+                },
+                {
+                    "witness_id": "SYNTH_ODD_POW3_53",
+                    "seed": 53,
+                    "cousin_diamond2_next": 40,
+                    "kills_mechanisms": ["test"],
+                },
+            ]
+            base["domains"]["m1_q2_pos"] = [
+                {
+                    "witness_id": "SYNTH_M1_211_13",
+                    "x0": "211/13",
+                    "m_blocks": 1,
+                    "period_k": 8,
+                    "weight_w": 5,
+                    "kills_mechanisms": ["test"],
+                }
+            ]
+            base["domains"]["log2_3_convergents"] = [
+                {
+                    "witness_id": "SYNTH_BR_N5",
+                    "beukers_degree_n": 5,
+                    "kills_mechanisms": ["test"],
+                }
+            ]
+            fresh_bank.write_text(json.dumps(base), encoding="utf-8")
+
+            r_sp = evaluate_hypothesis_against_witness_bank(
+                "SynthSpine", _dynamic_pred_periodic_valuation_decay, ("z_pos_high_glide",), fresh_bank
+            )
+            self.assertEqual(r_sp["minimal_failure"], ("z_pos_high_glide", "SYNTH_SPINE_Z"))
+
+            r_p2 = evaluate_hypothesis_against_witness_bank(
+                "SynthPos2", _dynamic_pred_pos_2term_valuation_syracuse, ("z_pos_high_glide",), fresh_bank
+            )
+            self.assertEqual(r_p2["minimal_failure"], ("z_pos_high_glide", "SYNTH_POS2_3"))
+
+            r_2t = evaluate_hypothesis_against_witness_bank(
+                "SynthTwoTerm", _dynamic_pred_glide_laurent_2term_syracuse, ("z_pos_high_glide",), fresh_bank
+            )
+            self.assertEqual(r_2t["minimal_failure"], ("z_pos_high_glide", "SYNTH_REBOUND_13"))
+
+            r_53 = evaluate_hypothesis_against_witness_bank(
+                "SynthOddPow3", _dynamic_pred_cousin_diamond2_omits_odd_pow3_cone, ("z_pos_high_glide",), fresh_bank
+            )
+            self.assertEqual(r_53["minimal_failure"], ("z_pos_high_glide", "SYNTH_ODD_POW3_53"))
+
+            r_m1 = evaluate_hypothesis_against_witness_bank(
+                "SynthM1Ant", _dynamic_pred_antipodal_prime_without_z_integrality, ("m1_q2_pos",), fresh_bank
+            )
+            self.assertEqual(r_m1["minimal_failure"], ("m1_q2_pos", "SYNTH_M1_211_13"))
+
+            r_br = evaluate_hypothesis_against_witness_bank(
+                "SynthBeukers", _dynamic_pred_beukers_rhin_const_elim_converges, ("log2_3_convergents",), fresh_bank
+            )
+            self.assertEqual(r_br["minimal_failure"], ("log2_3_convergents", "SYNTH_BR_N5"))
+
+            # Domain validation guards & disk-safety on invalid kills_mechanisms
+            from collatz_analysis.cs_cegar_redteam import (
+                append_witness_to_bank,
+                load_witness_bank,
+                verify_witness_bank_ground_truth,
+            )
+
+            with self.assertRaises(ValueError):
+                evaluate_hypothesis_against_witness_bank("EmptyDom", lambda _d, _e: True, (), fresh_bank)
+            with self.assertRaises(ValueError):
+                evaluate_hypothesis_against_witness_bank("BadDom", lambda _d, _e: True, ("bad_dom",), fresh_bank)
+
+            clean_copy = Path(tmpdir) / "clean_copy.json"
+            clean_copy.write_text(default_witness_bank_path().read_text(encoding="utf-8"), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                append_witness_to_bank(
+                    "z_pos_high_glide",
+                    {"witness_id": "BAD_EMPTY_KILLS", "seed": 5, "kills_mechanisms": []},
+                    bank_path=clean_copy,
+                )
+            # Disk copy remains loadable and uncorrupted after rejected append
+            self.assertEqual(len(load_witness_bank(clean_copy)["domains"]["z_pos_high_glide"]), 14)
+
+            # Corrupting v3_seed_plus_1, x1, m_blocks, carry, claimless entries, or unknown keys fails ground-truth
+            corrupt_data = json.loads(default_witness_bank_path().read_text(encoding="utf-8"))
+            corrupt_data["domains"]["z_pos_high_glide"][2]["v3_seed_plus_1"] = 999999
+            corrupt_data["domains"]["z_pos_high_glide"].append(
+                {"witness_id": "CLAIMLESS_ZPOS", "seed": 5, "kills_mechanisms": ["none"]}
+            )
+            corrupt_data["domains"]["z_pos_high_glide"].append(
+                {
+                    "witness_id": "UNKNOWN_KEY_ZPOS",
+                    "seed": 8,
+                    "next_compressed": 4,
+                    "unverified_extra_field": 123,
+                    "kills_mechanisms": ["none"],
+                }
+            )
+            corrupt_data["domains"]["m1_q2_pos"][2]["x1"] = "999999/13"
+            corrupt_data["domains"]["m1_q2_pos"][8]["m_blocks"] = 999999
+            corrupt_data["domains"]["m2_z_neg"][2]["carry"] = 999999
+            corrupt_path = Path(tmpdir) / "corrupt_gt.json"
+            corrupt_path.write_text(json.dumps(corrupt_data), encoding="utf-8")
+            gt_bad = verify_witness_bank_ground_truth(corrupt_path)
+            self.assertFalse(gt_bad["all_witnesses_ground_truth_verified"])
+            for expected_failed_id in (
+                "ZPOS_EVEN_PEAK_8_TO_4_V3_WIPEOUT",
+                "CLAIMLESS_ZPOS",
+                "UNKNOWN_KEY_ZPOS",
+                "M1_251_OVER_13_POTENTIAL",
+                "M1_211_OVER_13_ONE_BLOCK_D13",
+                "M2_NEG17_NONUNIT_11CYCLE",
+            ):
+                self.assertIn(expected_failed_id, gt_bad["failed_witness_ids"])
+
+    def test_wave5_zero_pii_and_lean4_zero_custom_axioms(self) -> None:
+        import re
+        from collatz_analysis.formal_proofs import (
+            ALLOWED_LEAN4_FOUNDATIONAL_AXIOMS,
+            verify_lean4_kernel_proofs,
+        )
+
+        pkg_dir = Path(__file__).resolve().parent.parent
+        win_users_token = "Us" + "ers" + "\\"
+        win_users_fwd = "Us" + "ers/"
+        unix_home_prefix = "/" + "home" + "/"
+        win_drive_bs = "C:" + "\\"
+        win_drive_fs = "C:" + "/"
+        audited_file_count = 0
+        for fpath in sorted(pkg_dir.rglob("*")):
+            if ".lake" in fpath.parts or "__pycache__" in fpath.parts or not fpath.is_file():
+                continue
+            if fpath.suffix not in (".py", ".lean", ".md", ".json", ".c"):
+                continue
+            audited_file_count += 1
+            txt = fpath.read_text(encoding="utf-8")
+            rel = str(fpath.relative_to(pkg_dir))
+            self.assertNotIn(win_users_token, txt, f"PII path token in {rel}")
+            self.assertNotIn(win_users_fwd, txt, f"PII path token in {rel}")
+            self.assertNotIn(unix_home_prefix, txt, f"PII path token in {rel}")
+            self.assertNotIn(win_drive_bs, txt, f"Drive path token in {rel}")
+            self.assertNotIn(win_drive_fs, txt, f"Drive path token in {rel}")
+        self.assertGreaterEqual(audited_file_count, 75)
+
+        res = verify_lean4_kernel_proofs()
+        self.assertTrue(res["pure_kernel_verified"])
+        self.assertEqual(len(res["lean_files"]), 54)
+        self.assertGreaterEqual(res["theorems_audited"], 1517)
+        self.assertGreaterEqual(res["axiom_free_theorem_count"], 547)
+        self.assertTrue(any(Path(p).name == "Wave5WholeSpace.lean" for p in res["lean_files"]))
+        ax_map = res["axioms_by_theorem"]
+        w5_theorems = (
+            "nat_valued_preimage_weight_impossibility",
+            "preimage_superharmonic_rational_eliminates_all_cycles",
+            "strictly_contractive_bounded_preimage_weight_implies_collatz_standard",
+            "berg_meinardus_periodic_valuation_weight_impossibility",
+            "all_dim_coord_monotone_non_triangular_impossibility",
+            "cousin_diamond2_phi_strict_descent",
+            "cousin_diamond2_global_convergence",
+            "cousinDiamond2StepInt_ofNat_eq",
+            "cousin_diamond2_unbounded_glide_and_mod_barrier",
+            "cousin_diamond2_single_laurent_monomial_impossibility",
+            "cousin_diamond2_counter_model_separation",
+            "two_term_valuation_sum_survives_w4_witnesses_yet_fails_syracuse",
+            "syracuse_multiterm_laurent_valuation_impossibility",
+            "preimage_weight_induces_strict_syracuse_lyapunov",
+            "berg_meinardus_reciprocal_multiterm_laurent_impossibility",
+            "broxSpiralCarry_eq_affineCarry_universal",
+            "m_block_brox_resultant_and_quotient_locks",
+            "m_block_cycle_induces_brox_quotients",
+            "one_block_even_even_impossibility",
+            "one_block_antipodal_order_divisor_exclusion",
+            "one_block_antipodal_prime_instances_and_m1_separation",
+            "exactBackwardQuotient_one_ray_step_law",
+            "one_generator_q_pos_always_first_hit",
+            "mod373248_ray_dyadic_pinning_and_triadic_bijection",
+            "one_generator_length_le_seven_never_surviving_mod373248",
+            "collatz_standard_iff_mod373248_unique_first_hit_len_ge_eight",
+            "pi2_skolem_box_equivalence_and_cousin_polynomial_stopping_bound",
+        )
+        for thm in w5_theorems:
+            self.assertIn(thm, ax_map)
+            self.assertTrue(
+                set(ax_map[thm]).issubset(ALLOWED_LEAN4_FOUNDATIONAL_AXIOMS),
+                f"Unexpected custom axiom in {thm}: {ax_map[thm]}",
+            )
+        # Verify literally []-axiom ground/separation theorems and choice-free theorems
+        self.assertEqual(ax_map["cousin_diamond2_counter_model_separation"], [])
+        self.assertEqual(ax_map["two_term_valuation_sum_survives_w4_witnesses_yet_fails_syracuse"], [])
+        self.assertEqual(ax_map["survivingMod512Bool_nine_gt_seven_weight_grid"], [])
+        for choice_free_thm in (
+            "nat_valued_preimage_weight_impossibility",
+            "cousin_diamond2_single_laurent_monomial_impossibility",
+            "broxSpiralCarry_eq_affineCarry_universal",
+            "m_block_brox_resultant_and_quotient_locks",
+            "m_block_cycle_induces_brox_quotients",
+            "one_block_even_even_impossibility",
+        ):
+            self.assertNotIn("Classical.choice", ax_map[choice_free_thm])
+        # Verify no Wave5 docstring falsely claims (`[]` axioms) on a non-empty-axiom theorem
+        w5_src = (pkg_dir / "CollatzFormal/Wave5WholeSpace.lean").read_text(encoding="utf-8")
+        for doc, thm_name in re.findall(r"/--\s*(.*?)\s*-/\s*theorem\s+([A-Za-z0-9_']+)\b", w5_src, flags=re.S):
+            if "`[]` axioms" in doc:
+                self.assertEqual(ax_map.get(thm_name), [], f"False []-axiom docstring on {thm_name}")
+
+    def test_cli_summary_and_trajectory_include_wave5_loop(self) -> None:
+        import contextlib
+        import io
+        from collatz_analysis.cli import main as cli_main
+
+        # 1. Trajectory mode boundary (n = 1) and nontrivial excursion (n = 27)
+        buf_t1 = io.StringIO()
+        with contextlib.redirect_stdout(buf_t1):
+            rc_t1 = cli_main(["--trajectory", "1"])
+        self.assertEqual(rc_t1, 0)
+        self.assertIn("=== Trajectory Analysis for n = 1 ===", buf_t1.getvalue())
+        self.assertIn("Total stopping time sigma_inf: 0", buf_t1.getvalue())
+
+        buf_t27 = io.StringIO()
+        with contextlib.redirect_stdout(buf_t27):
+            rc_t27 = cli_main(["--trajectory", "27"])
+        self.assertEqual(rc_t27, 0)
+        self.assertIn("=== Trajectory Analysis for n = 27 ===", buf_t27.getvalue())
+        self.assertIn("Total stopping time sigma_inf: 70", buf_t27.getvalue())
+
+        # 2. Boundary error paths on non-positive trajectory / dp-depth & conflicting CLI flags
+        for bad_n in ("0", "-5"):
+            with self.assertRaises(ValueError):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    cli_main(["--trajectory", bad_n])
+        with self.assertRaises(ValueError):
+            with contextlib.redirect_stdout(io.StringIO()):
+                cli_main(["--summary", "--dp-depth", "0"])
+        for bad_argv in (
+            ["--summary", "--trajectory", "27"],
+            ["--trajectory", "27", "--dp-depth", "50"],
+            ["--trajectory", "27", "--full-m95"],
+            ["--unknown-flag"],
+        ):
+            with self.assertRaises(SystemExit) as cm:
+                with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                    cli_main(bad_argv)
+            self.assertEqual(cm.exception.code, 2)
+
+        # 3. Full --summary run includes both Wave 4 and Wave 5 Whole-Space Proof Loop sections
+        buf_sum = io.StringIO()
+        with contextlib.redirect_stdout(buf_sum):
+            rc_sum = cli_main(["--summary", "--dp-depth", "50"])
+        self.assertEqual(rc_sum, 0)
+        out = buf_sum.getvalue()
+        self.assertEqual(out.count("Depth k =  50:"), 1)
+        self.assertIn("[Wave 4 Whole-Space Proof Loop]", out)
+        self.assertIn("[Wave 5 Whole-Space Proof Loop]", out)
+        self.assertIn(
+            "u-gate=True, ground-truth=True, verdict=REDTEAM-PASSED",
+            out,
+        )
+        self.assertIn(
+            "A=True, T_diamond2=True (1-term=0), 2-term/non-tri=True",
+            out,
+        )
+        self.assertIn(
+            "2D/m-blk=True, antipodal=True (28 primes<300), q-ray/|u|>=8/Pi2=True",
+            out,
+        )
+        self.assertLess(
+            out.index("[Wave 4 Whole-Space Proof Loop]"),
+            out.index("[Wave 5 Whole-Space Proof Loop]"),
+        )
+        self.assertLess(
+            out.index("[Wave 5 Whole-Space Proof Loop]"),
+            out.index("[Lean 4 Kernel Verification]"),
+        )
+
+        # 4. Verify lean_available == False fallback output and non-zero exit code on failed gates
+        from unittest import mock
+
+        buf_nolean = io.StringIO()
+        with mock.patch(
+            "collatz_analysis.cli.verify_lean4_kernel_proofs",
+            return_value={"lean_available": False, "static_hygiene_clean": True},
+        ), contextlib.redirect_stdout(buf_nolean):
+            rc_nolean = cli_main(["--summary", "--dp-depth", "10"])
+        self.assertEqual(rc_nolean, 0)
+        self.assertIn(
+            "Lean 4 toolchain not found on PATH / ~/.elan/bin (static hygiene clean: True)",
+            buf_nolean.getvalue(),
+        )
+
+        failed_w5 = {
+            "passed": False,
+            "verdict": "FALSIFIED",
+            "universality_gate_passed": True,
+            "witness_bank_total_entries": 41,
+            "witness_bank_falsified_count": 12,
+            "witness_bank_ground_truth_verified": True,
+            "front_a_preimage_superharmonicity": {"barrier_verified": True},
+            "front_b_cousin_diamond2_and_cones": {
+                "cousin_diamond2_global_descent_verified": True,
+                "cousin_diamond2_syracuse_witnesses_verified": False,
+                "cousin_diamond2_single_laurent_impossible_verified": True,
+                "cousin_diamond2_single_laurent_survivors": 0,
+                "cousin_diamond2_countermodels_verified": True,
+                "two_term_w4_trap_and_rebound_falsifier_verified": True,
+                "non_triangular_sandwich_collapse_verified": True,
+            },
+            "front_c_beukers_rhin_and_resultants": {
+                "beukers_rhin_explosion_verified": True,
+                "beukers_rhin_series_cross_verified": False,
+                "mblock_resultant_identities_verified": True,
+                "one_block_even_even_impossible_verified": True,
+                "antipodal_primes_and_m1_separation_verified": True,
+                "antipodal_prime_count_lt_300": 28,
+            },
+            "front_d_coupled_q_rays_and_pi2": {
+                "q_ray_affine_and_382_per_729_verified": True,
+                "q_pos_universal_first_hit_verified": True,
+                "length_le_7_mod373248_disjoint_verified": True,
+                "pi2_skolem_box_and_cousin_poly_bound_verified": True,
+            },
+        }
+        buf_fail = io.StringIO()
+        with mock.patch(
+            "collatz_analysis.cs_cegar_redteam.run_wave5_whole_space_campaign",
+            return_value=failed_w5,
+        ), mock.patch(
+            "collatz_analysis.cli.verify_lean4_kernel_proofs",
+            return_value={"lean_available": False, "static_hygiene_clean": True},
+        ), contextlib.redirect_stdout(buf_fail):
+            rc_fail = cli_main(["--summary", "--dp-depth", "10"])
+        self.assertEqual(rc_fail, 1)
+        self.assertIn("T_diamond2=False", buf_fail.getvalue())
+        self.assertIn("2D/m-blk=False", buf_fail.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()

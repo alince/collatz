@@ -61,12 +61,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Collatz Conjecture 2-Adic, Diophantine, and Stopping-Time Analyzer"
     )
-    parser.add_argument(
+    mode_group = parser.add_mutually_exclusive_group()
+    mode_group.add_argument(
         "--summary",
         action="store_true",
         help="Run the full constructive theorem and computational verification summary",
     )
-    parser.add_argument(
+    mode_group.add_argument(
         "--trajectory",
         type=int,
         default=None,
@@ -75,7 +76,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--dp-depth",
         type=int,
-        default=200,
+        default=None,
         help="Max depth K for exact lattice-path stopping-time DP (default: 200)",
     )
     parser.add_argument(
@@ -86,6 +87,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.trajectory is not None:
+        if args.dp_depth is not None or args.full_m95:
+            parser.error("--dp-depth and --full-m95 cannot be combined with --trajectory")
         traj = analyze_trajectory(args.trajectory)
         print(f"=== Trajectory Analysis for n = {traj.n} ===")
         print(f"Stopping time sigma(n)       : {traj.stopping_time_sigma}")
@@ -94,6 +97,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"Max excursion                : {traj.max_excursion}")
         print(f"First 20 orbit steps         : {traj.orbit[:20]}")
         return 0
+
+    dp_depth = 200 if args.dp_depth is None else args.dp_depth
 
     print("======================================================================")
     print("  COLLATZ CONJECTURE: 2-ADIC, DIOPHANTINE & STOPPING-TIME SUITE")
@@ -120,19 +125,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"  - Min cycle length for N0 = 2^71 (Barina 2025)           : k >= {b71.min_compressed_length:,} compressed ({b71.min_uncompressed_length:,} uncompressed)")
 
     # 3. Stopping-Time DP & Cramer Rate
-    dp = compute_exact_stopping_time_dp(max_k=args.dp_depth)
+    dp = compute_exact_stopping_time_dp(max_k=dp_depth)
     cramer = cramer_large_deviation_parameters()
     print(f"\n[Theorem 4] Exact Lattice-Path Stopping-Time Sieve & Cramer Decay:")
     print(f"  - Critical slope p* = log_3(2)                           : {cramer['critical_slope_p_star']:.9f}")
     print(f"  - Cramer KL rate I_2(p*) = 1 - H_2(log_3(2))             : {cramer['kl_rate_bits']:.9f} bits/step")
     print(f"  - Asymptotic decay factor rho = 2^(-I_2(p*))             : {cramer['asymptotic_decay_base_rho']:.9f}")
-    for k_sample in (10, 25, 50, 100, args.dp_depth):
-        if k_sample <= args.dp_depth:
-            row = dp[k_sample - 1]
-            print(
-                f"  - Depth k = {row.k:3d}: S(k) = {row.surviving_classes} / 2^{row.k} "
-                f"--> d_k = {row.survival_fraction:.6e}"
-            )
+    for k_sample in sorted({k for k in (10, 25, 50, 100, dp_depth) if k <= dp_depth}):
+        row = dp[k_sample - 1]
+        print(
+            f"  - Depth k = {row.k:3d}: S(k) = {row.surviving_classes} / 2^{row.k} "
+            f"--> d_k = {row.survival_fraction:.6e}"
+        )
 
     # 4. Tao's 3-Adic Memory Annihilation & Base-2 Transducer Complexity
     tao = analyze_tao_syracuse_mixing(max_odd_n=9999, mod_power_3=4)
@@ -258,8 +262,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"\n[Theorems 23–25] Boost Mechanisms, Falsifications, Reflective Hensel & m <= 95:")
     print(f"  - Line A: n_min mod 4 == 3, a_1 == 1, unique (q, r)=(3, 5) : {thm23_25['line_a_certificate']['q3_r5_uniqueness_verified']} & Sturmian/Z^- pure coalescence falsified={thm23_25['line_a_certificate']['pure_2_3_adic_coalescence_falsified_on_S_infty']}")
     print(f"  - Line B: Cyclic-shift GCD collapse & m=92 reflective cert : {thm23_25['line_b_certificate']['m_uniform_cyclic_shift_ppd_falsified']} ({thm23_25['line_b_certificate']['m92_reflective_certificate']['band_count']} bands, {thm23_25['line_b_certificate']['m92_reflective_certificate']['triples_verified']} leaves)")
-    if getattr(args, "full_m95", False):
+    m95_ok = True
+    if args.full_m95:
         thm24_m95 = prove_m95_all_weight_nonexistence()
+        m95_ok = (
+            thm24_m95["max_m_proved_unconditionally"] == 95
+            and thm24_m95["total_cycle_survivors"] == 0
+        )
         print(f"  - Line B: Upgraded all-W m-cycles ruled out (N0 = 2^71)    : 1 <= m <= {thm24_m95['max_m_proved_unconditionally']} ({len(thm24_m95['distinct_arithmetic_hensel_survivors'])} arith survivors, {thm24_m95['total_cycle_survivors']} cycles)")
     else:
         print("  - Line B: Upgraded all-W m-cycles ruled out (N0 = 2^71)    : 1 <= m <= 95 (87 arith survivors kernel-verified in Lean 4; pass --full-m95 to re-run c=4 tree)")
@@ -311,6 +320,64 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"{cs_w3['sieved_mod373248_integers_checked']} Mod-373248 w>=3)"
     )
 
+    from .cs_cegar_redteam import (
+        run_wave4_whole_space_campaign,
+        run_wave5_whole_space_campaign,
+    )
+
+    w4 = run_wave4_whole_space_campaign()
+    print(f"\n[Wave 4 Whole-Space Proof Loop] Barriers, Cousin Synthesis & Sharp w>=6 Floor:")
+    print(
+        f"  - Witness bank & dynamic gates ({w4['witness_bank_total_entries']} wits, {w4['witness_bank_falsified_count']} hyps): "
+        f"ground-truth={w4['witness_bank_ground_truth_verified']}, verdict={w4['verdict']}"
+    )
+    print(
+        f"  - P1/P3/P4 barriers (Hardy/Bergman, Pade/2-blk, Presburger/Laurent): "
+        f"P1={w4['h1_berg_meinardus']['barrier_verified']}, "
+        f"P3={w4['h3_pade_and_resultant']['pade_explosion_verified'] and w4['h3_pade_and_resultant']['resultant_identities_verified']}, "
+        f"P4={w4['h4_presburger_and_sos']['one_sided_presburger_hits_pow2_verified'] and w4['h4_laurent_valuation_barrier']['laurent_monomial_barrier_verified']}"
+    )
+    print(
+        f"  - P5 T_diamond cousin & Mod-373248 sharp w>=6 floor (184111)       : "
+        f"cousin={w4['h5_cousin_and_synthesis']['cousin_holdout_verified']} (AST={w4['h5_cousin_and_synthesis']['cousin_synthesized_node_count']} nodes), "
+        f"w<=5 excluded={w4['h5_backward_quotient_tree']['weight_le_5_mod373248_disjoint_verified']}, "
+        f"184111 sharp={w4['h5_backward_quotient_tree']['sharp_weight_6_witness_184111_verified']}"
+    )
+
+    w5 = run_wave5_whole_space_campaign()
+    fa = w5["front_a_preimage_superharmonicity"]
+    fb = w5["front_b_cousin_diamond2_and_cones"]
+    fc = w5["front_c_beukers_rhin_and_resultants"]
+    fd = w5["front_d_coupled_q_rays_and_pi2"]
+    w5_t_diamond2_ok = (
+        bool(fb["cousin_diamond2_global_descent_verified"])
+        and bool(fb["cousin_diamond2_syracuse_witnesses_verified"])
+        and bool(fb["cousin_diamond2_single_laurent_impossible_verified"])
+        and bool(fb["cousin_diamond2_countermodels_verified"])
+    )
+    w5_2d_mblk_ok = (
+        bool(fc["beukers_rhin_explosion_verified"])
+        and bool(fc["beukers_rhin_series_cross_verified"])
+        and bool(fc["mblock_resultant_identities_verified"])
+    )
+    print(f"\n[Wave 5 Whole-Space Proof Loop] Non-Radial Preimage, T_diamond2, m-Block & q-Rays:")
+    print(
+        f"  - Universality & witness gates ({w5['witness_bank_total_entries']} wits, {w5['witness_bank_falsified_count']} hyps): "
+        f"u-gate={w5['universality_gate_passed']}, ground-truth={w5['witness_bank_ground_truth_verified']}, verdict={w5['verdict']}"
+    )
+    print(
+        f"  - Fronts A & B (non-radial Berg-Meinardus, T_diamond2, 2-term/non-tri): "
+        f"A={fa['barrier_verified']}, "
+        f"T_diamond2={w5_t_diamond2_ok} (1-term={fb['cousin_diamond2_single_laurent_survivors']}), "
+        f"2-term/non-tri={fb['two_term_w4_trap_and_rebound_falsifier_verified'] and fb['non_triangular_sandwich_collapse_verified']}"
+    )
+    print(
+        f"  - Fronts C & D (2D Beukers/m-blk/antipodal, q-ray 382/729, |u|>=8 & Pi_2^0): "
+        f"2D/m-blk={w5_2d_mblk_ok}, "
+        f"antipodal={fc['one_block_even_even_impossible_verified'] and fc['antipodal_primes_and_m1_separation_verified']} ({fc['antipodal_prime_count_lt_300']} primes<300), "
+        f"q-ray/|u|>=8/Pi2={fd['q_ray_affine_and_382_per_729_verified'] and fd['q_pos_universal_first_hit_verified'] and fd['length_le_7_mod373248_disjoint_verified'] and fd['pi2_skolem_box_and_cousin_poly_bound_verified']}"
+    )
+
     lean4 = verify_lean4_kernel_proofs()
     print(f"\n[Lean 4 Kernel Verification] CollatzFormal.lean Live Compiler & #print axioms Audit:")
     if lean4["lean_available"]:
@@ -323,9 +390,29 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"  - Observed foundational axioms across all theorems       : {lean4['all_axioms_observed']}")
         print(f"  - Zero `sorryAx` / zero warnings / pure kernel verified  : {lean4['zero_sorry_verified']} / {lean4['zero_warnings_verified']} / {lean4['pure_kernel_verified']} ({lean4['elapsed_ms']:.1f} ms)")
     else:
-        print("  - Lean 4 toolchain not found on PATH / ~/.elan/bin")
+        print(
+            f"  - Lean 4 toolchain not found on PATH / ~/.elan/bin "
+            f"(static hygiene clean: {lean4['static_hygiene_clean']})"
+        )
 
-    return 0
+    lean4_ok = (
+        bool(lean4["pure_kernel_verified"])
+        if lean4["lean_available"]
+        else bool(lean4["static_hygiene_clean"])
+    )
+    summary_ok = (
+        bool(beatty["characterization_exact"])
+        and bool(catalan["exact_catalan_match"])
+        and bool(thm9["equivalence_verified"])
+        and bool(thm14_sc["exact_sequence_match"])
+        and bool(thm23_25["all_counter_models_discriminated"])
+        and m95_ok
+        and bool(thm29_31["all_next_tier_mechanisms_verified"])
+        and bool(w4["passed"])
+        and bool(w5["passed"])
+        and lean4_ok
+    )
+    return 0 if summary_ok else 1
 
 
 if __name__ == "__main__":
