@@ -15,6 +15,7 @@ import CollatzFormal.CSFullConjecture
 import CollatzFormal.CSWave3Synthesis
 import CollatzFormal.Wave4WholeSpace
 import CollatzFormal.Wave5WholeSpace
+import CollatzFormal.Wave6WholeSpace
 
 
 

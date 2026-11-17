@@ -2573,8 +2573,14 @@ def load_witness_bank(bank_path: Optional[Path] = None) -> Dict[str, Any]:
                 raise ValueError(f"Duplicate witness_id '{wid}' in witness_bank.json")
             if "kills_mechanisms" in entry:
                 kills = entry["kills_mechanisms"]
-                if not isinstance(kills, list) or len(kills) == 0:
-                    raise ValueError(f"Witness '{wid}' must have a non-empty 'kills_mechanisms' list")
+                if (
+                    not isinstance(kills, list)
+                    or len(kills) == 0
+                    or not all(isinstance(s, str) and len(s.strip()) > 0 for s in kills)
+                ):
+                    raise ValueError(
+                        f"Witness '{wid}' must have a non-empty 'kills_mechanisms' list of non-empty strings"
+                    )
             seen_ids.add(wid)
 
     falsified = data["falsified_hypotheses"]
@@ -2590,6 +2596,17 @@ def load_witness_bank(bank_path: Optional[Path] = None) -> Dict[str, Any]:
         if hid in seen_hids:
             raise ValueError(f"Duplicate hypothesis_id '{hid}' in witness_bank.json")
         seen_hids.add(hid)
+        status_val = rec.get("status")
+        if status_val not in ("PROVED_BARRIER", "FALSIFIED"):
+            raise ValueError(
+                f"Hypothesis '{hid}' has invalid status '{status_val}', expected 'PROVED_BARRIER' or 'FALSIFIED'"
+            )
+        if "branch" in rec:
+            branch_val = rec.get("branch")
+            if not isinstance(branch_val, str) or re.match(r"^P[0-5](?:\.[1-9][0-9]*)?$", branch_val) is None:
+                raise ValueError(
+                    f"Hypothesis '{hid}' has invalid branch '{branch_val}', expected 'P<0..5>' or 'P<0..5>.<n>'"
+                )
         min_wid = rec.get("minimal_witness_id")
         if not isinstance(min_wid, str) or min_wid not in seen_ids:
             raise ValueError(
@@ -3782,6 +3799,21 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
                 )
                 if "compressed_steps_to_1" in entry:
                     ok = ok and (cft.backward_one_total_steps(u_w, q_i) == int(entry["compressed_steps_to_1"]))
+                if "loop_core_word" in entry:
+                    checked_keys.add("loop_core_word")
+                    u_loop = tuple(int(b) for b in entry["loop_core_word"])
+                    ok = (
+                        ok
+                        and q_i == 0
+                        and len(u_loop) >= 2
+                        and u_loop[0] == 1
+                        and u_loop[-1] == 1
+                        and all(b in (0, 1) for b in u_loop)
+                        and u_loop != u_w
+                        and cft.exact_backward_quotient(1, u_loop, 0) == seed
+                        and (not cft.is_first_hit_one_pair(u_loop, 0))
+                        and cft.is_first_hit_one_pair(u_loop, 1)
+                    )
             else:
                 ok = False
         if "survives_mod373248" in entry:
@@ -3918,6 +3950,36 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
             if "phi_diamond2_next" in entry:
                 checked_keys.add("phi_diamond2_next")
                 ok = ok and (cousin_diamond2_phi(nxt_d2) == int(entry["phi_diamond2_next"]))
+        if "cousin_diamond3_next" in entry:
+            checked_keys.add("cousin_diamond3_next")
+            claims_checked += 1
+            nxt_d3 = cousin_diamond3_step_int(seed, q=3)
+            ok = ok and (nxt_d3 == int(entry["cousin_diamond3_next"]))
+            if "cousin_diamond3_steps_to_1" in entry:
+                checked_keys.add("cousin_diamond3_steps_to_1")
+                cur_d3 = seed
+                st_d3 = 0
+                while cur_d3 != 1 and st_d3 < 5000:
+                    cur_d3 = cousin_diamond3_step_int(cur_d3, q=3)
+                    st_d3 += 1
+                ok = ok and (cur_d3 == 1) and (st_d3 == int(entry["cousin_diamond3_steps_to_1"]))
+            if "phi_diamond2_seed" in entry:
+                checked_keys.add("phi_diamond2_seed")
+                ok = ok and (cousin_diamond2_phi(seed) == int(entry["phi_diamond2_seed"]))
+            if "phi_diamond2_next" in entry:
+                checked_keys.add("phi_diamond2_next")
+                ok = ok and (cousin_diamond2_phi(nxt_d3) == int(entry["phi_diamond2_next"]))
+        if "spiral_block_next" in entry or "spiral_block_2_next" in entry:
+            if "spiral_block_next" in entry and seed >= 1 and (seed & 1) == 1:
+                checked_keys.add("spiral_block_next")
+                claims_checked += 1
+                sb1 = spiral_block_return_int(seed)
+                ok = ok and (sb1 == int(entry["spiral_block_next"]))
+                if "spiral_block_2_next" in entry:
+                    checked_keys.add("spiral_block_2_next")
+                    ok = ok and (spiral_block_return_int(sb1) == int(entry["spiral_block_2_next"]))
+            else:
+                ok = False
         if "steps" in entry or "target" in entry:
             if "steps" in entry and "target" in entry:
                 checked_keys.update(("steps", "target"))
@@ -3947,12 +4009,13 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
         x0 = Fraction(int(entry["numerator"]), int(entry["denominator"]))
         ok = (x0 == Fraction(str(entry["x0"]))) and (x0 > 0) and (x0.denominator % 2 == 1)
         checked_m1: Set[str] = {"witness_id", "x0", "numerator", "denominator", "kills_mechanisms"}
-        if entry.get("system") in ("T_diamond", "T_diamond2"):
+        if entry.get("system") in ("T_diamond", "T_diamond2", "T_diamond3"):
             checked_m1.update(("system", "orbit"))
+            sys_m1 = entry.get("system")
             step_fn_q6 = (
                 cousin_diamond_step_q6
-                if entry.get("system") == "T_diamond"
-                else cousin_diamond2_step_q6
+                if sys_m1 == "T_diamond"
+                else (cousin_diamond2_step_q6 if sys_m1 == "T_diamond2" else cousin_diamond3_step_q6)
             )
             orb = [Fraction(s) for s in entry["orbit"]]
             cur_f = x0
@@ -4074,12 +4137,13 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
         q_mul = int(entry["multiplier_q"])
         ok = seed >= 1 and q_mul > 3 and (q_mul & 1) == 1
         checked_m3: Set[str] = {"witness_id", "seed", "multiplier_q", "kills_mechanisms"}
-        if entry.get("system") in ("T_diamond_q7", "T_diamond2_q7"):
+        if entry.get("system") in ("T_diamond_q7", "T_diamond2_q7", "T_diamond3_q7"):
             checked_m3.update(("system", "orbit"))
+            sys_m3 = entry.get("system")
             step_fn_m3 = (
                 cousin_diamond_step_int
-                if entry.get("system") == "T_diamond_q7"
-                else cousin_diamond2_step_int
+                if sys_m3 == "T_diamond_q7"
+                else (cousin_diamond2_step_int if sys_m3 == "T_diamond2_q7" else cousin_diamond3_step_int)
             )
             orb = [int(v) for v in entry["orbit"]]
             cur_m3 = seed
@@ -4220,6 +4284,45 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
                     ok = ok and (
                         abs(float(res_br["integral_2d_log2"]) - float(entry["integral_2d_log2"])) < 1e-3
                     )
+            else:
+                ok = False
+        elif "laurent_grid" in entry:
+            req_laur = (
+                "laurent_grid",
+                "low_W",
+                "low_K",
+                "low_det_nonzero",
+                "low_det_int_log2",
+                "low_det_m0_log2",
+                "high_W",
+                "high_K",
+                "high_det_nonzero",
+                "high_det_int_log2",
+                "high_det_m0_log2",
+            )
+            grid_vals = entry.get("laurent_grid")
+            if (
+                all(k in entry for k in req_laur)
+                and isinstance(grid_vals, list)
+                and len(grid_vals) == 4
+            ):
+                checked_conv.update(req_laur)
+                r_g, s_g, t_g, u_g = (int(v) for v in grid_vals)
+                res_low = _solve_laurent_2log_interpolation_det(
+                    int(entry["low_W"]), int(entry["low_K"]), r_g, s_g, t_g, u_g
+                )
+                res_high = _solve_laurent_2log_interpolation_det(
+                    int(entry["high_W"]), int(entry["high_K"]), r_g, s_g, t_g, u_g
+                )
+                ok = (
+                    ok
+                    and bool(res_low["det_nonzero"]) == bool(entry["low_det_nonzero"])
+                    and abs(float(res_low["det_int_log2"]) - float(entry["low_det_int_log2"])) < 1e-3
+                    and abs(float(res_low["det_m0_log2"]) - float(entry["low_det_m0_log2"])) < 1e-3
+                    and bool(res_high["det_nonzero"]) == bool(entry["high_det_nonzero"])
+                    and abs(float(res_high["det_int_log2"]) - float(entry["high_det_int_log2"])) < 1e-3
+                    and abs(float(res_high["det_m0_log2"]) - float(entry["high_det_m0_log2"])) < 1e-3
+                )
             else:
                 ok = False
         else:
@@ -5248,4 +5351,890 @@ def run_wave5_whole_space_campaign(bank_path: Optional[Path] = None) -> Dict[str
         "front_b_cousin_diamond2_and_cones": front_b,
         "front_c_beukers_rhin_and_resultants": front_c,
         "front_d_coupled_q_rays_and_pi2": front_d,
+    }
+
+
+# ============================================================================
+# 11. Wave 6 Whole-Space Campaign (Fronts A–D: Coupled-Core Preimage Barrier,
+#     Zero-Diagonal Matrices / Spiral Block-Return / Cousin T_diamond3,
+#     Schneider–Laurent Integer Determinants & 2-Block Order/Equal-Even Locks,
+#     Cross-Ray Disjointness, 27-Prefix Partition & Bounded-Length Sparsity)
+# ============================================================================
+
+
+def is_diamond3_cone4(x: int) -> bool:
+    """
+    Fourth Syracuse-jump cone of `T_diamond3` (`2 * z_j - 1 -> 2^m - 1`, `169 -> 127, ...`):
+        `x >= 169 and x % 8 == 1 and core2_pos(3 * x + 5) == 1`.
+    Note: since `3 * x + 5 == 2 (mod 3)` and `3 * 169 + 5 == 512 == 2^9`, every `x` in
+    Cone 4 has `3 * x + 5 == 2^(2*r + 3)` for a unique `r >= 3`.
+    """
+    if isinstance(x, bool) or not isinstance(x, int):
+        raise ValueError(f"Expected integer x, got {x!r}")
+    if x < 169 or (x % 8) != 1:
+        return False
+    return core2_pos(3 * x + 5) == 1
+
+
+def cousin_diamond3_step_int(x: int, q: int = 3) -> int:
+    """
+    Third solvable mixed-(2,3) Collatz cousin `T_diamond3` on `Z` (for odd `q >= 3`),
+    defeating ALL fixed-step `L`-term (`forall L >= 1`) Laurent valuation sums on `Z^+`
+    while converging globally to `1` via variable-horizon block-return descent:
+      - Odd `x`:
+        * Cone 4 (`x >= 169 and x % 8 == 1 and core2_pos(3 * x + 5) == 1`): `(q * x + 1) // 4`;
+        * Cone 1 (`x > 1 and x % 16 == 1 and x % 3 != 2 and core3_pos(2 * x + 1) != 1`):
+          `(q * x + 1) // 4`;
+        * Cone 2 (`x >= 73 and x % 64 == 9 and x % 3 != 2 and core3_pos(2 * x + 1) != 1`):
+          `(q * x + 1) // 4`;
+        * Cone 3 (`x >= 17 and core3_pos(x + 1) == 2`): `(q * x + 1) // 4`;
+        * All other odd `x`: `(q * x + 1) // 2`;
+      - Even `x`:
+        * `x >= 20 and x % 18 == 2`: `(x - 2) // 9`;
+        * `x > 2 and x % 6 == 2`: `(x - 2) // 3`;
+        * `x > 2 and x % 8 == 6`: `(x - 2) // 2`;
+        * All other even `x`: `x // 2`.
+    """
+    if isinstance(x, bool) or not isinstance(x, int):
+        raise ValueError(f"Expected integer x, got {x!r}")
+    if isinstance(q, bool) or not isinstance(q, int) or (q & 1) == 0 or q < 3:
+        raise ValueError(f"Expected odd multiplier q >= 3, got {q!r}")
+    if (x & 1) == 1:
+        if x >= 169 and (x % 8) == 1 and core2_pos(3 * x + 5) == 1:
+            return (q * x + 1) // 4
+        if x > 1 and (x % 16) == 1 and (x % 3) != 2 and core3_pos(2 * x + 1) != 1:
+            return (q * x + 1) // 4
+        if x >= 73 and (x % 64) == 9 and (x % 3) != 2 and core3_pos(2 * x + 1) != 1:
+            return (q * x + 1) // 4
+        if x >= 17 and core3_pos(x + 1) == 2:
+            return (q * x + 1) // 4
+        return (q * x + 1) // 2
+    if x >= 20 and (x % 18) == 2:
+        return (x - 2) // 9
+    if x > 2 and (x % 6) == 2:
+        return (x - 2) // 3
+    if x > 2 and (x % 8) == 6:
+        return (x - 2) // 2
+    return x // 2
+
+
+def cousin_diamond3_step_q6(x: Fraction) -> Fraction:
+    """
+    Canonical extension of `T_diamond3` (`q = 3`) to `Q_(6) = {a/b : gcd(b, 6) == 1}`.
+    Agrees identically with `cousin_diamond3_step_int` on all integers `a/1` (`a >= 1`).
+    """
+    if isinstance(x, bool) or not isinstance(x, (int, Fraction)):
+        raise ValueError(f"Expected int or Fraction x, got {x!r}")
+    if not isinstance(x, Fraction):
+        x = Fraction(x)
+    if math.gcd(x.denominator, 6) != 1:
+        raise ValueError(f"Expected rational with gcd(denom, 6) == 1, got {x}")
+    num = x.numerator
+    den = x.denominator
+    inv_d_64 = pow(den, -1, 64)
+    inv_d_3 = pow(den, -1, 3)
+    r64 = (num * inv_d_64) % 64
+    r3 = (num * inv_d_3) % 3
+    if (r64 & 1) == 1:
+        if num >= 169 * den and (r64 % 8) == 1 and core2_pos(3 * num + 5 * den) == den:
+            return (3 * x + 1) / 4
+        if num > den and (r64 % 16) == 1 and r3 != 2 and core3_pos(2 * num + den) != den:
+            return (3 * x + 1) / 4
+        if num >= 73 * den and r64 == 9 and r3 != 2 and core3_pos(2 * num + den) != den:
+            return (3 * x + 1) / 4
+        if num >= 17 * den and core3_pos(num + den) == 2 * den:
+            return (3 * x + 1) / 4
+        return (3 * x + 1) / 2
+    if num >= 20 * den and (num % 18) == ((2 * den) % 18):
+        return (x - 2) / 9
+    if num > 2 * den and r3 == 2:
+        return (x - 2) / 3
+    if num > 2 * den and (r64 % 8) == 6:
+        return (x - 2) / 2
+    return x / 2
+
+
+def cousin_diamond3_block_return(x: int) -> Tuple[int, int]:
+    """
+    Variable-horizon block-return step `(horizon_steps, next_state)` for `T_diamond3` on `Z^+`:
+      - `x == 1`: `(0, 1)`;
+      - `x == 2`: `(1, 1)`;
+      - `is_diamond3_cone4(x)` (`3 * x + 5 == 2^(2*r + 3)`, `r >= 3`): `(3 * r + 4, 1)`;
+      - all other `x > 2`: `(1, cousin_diamond3_step_int(x))` (strictly decreasing `Phi_diamond2`).
+    """
+    if isinstance(x, bool) or not isinstance(x, int) or x < 1:
+        raise ValueError(f"Expected positive integer x >= 1, got {x!r}")
+    if x == 1:
+        return (0, 1)
+    if x == 2:
+        return (1, 1)
+    if is_diamond3_cone4(x):
+        exp2 = (3 * x + 5).bit_length() - 1
+        r = (exp2 - 3) // 2
+        horizon = 3 * r + 4
+        cur = x
+        for _ in range(horizon):
+            cur = cousin_diamond3_step_int(cur, q=3)
+        if cur != 1:
+            raise AssertionError(f"Cone 4 return mismatch at x={x}: ended at {cur}")
+        return (horizon, 1)
+    return (1, cousin_diamond3_step_int(x, q=3))
+
+
+def spiral_block_return_int(x: int) -> int:
+    """
+    Variable-horizon spiral block-return map on odd positive integers `x >= 1`:
+    writing `x + 1 = 2^w * u` (`w >= 1`, `u >= 1` odd), steps across the entire `w`-step
+    odd glide (`x -> 3^w * u - 1`) plus `a = v_2(3^w * u - 1)` halving steps to the next
+    odd integer `core2_pos(3^w * u - 1)`.
+    """
+    if isinstance(x, bool) or not isinstance(x, int) or x < 1 or (x & 1) == 0:
+        raise ValueError(f"Expected odd positive integer x >= 1, got {x!r}")
+    xp1 = x + 1
+    p2 = xp1 & -xp1
+    w = p2.bit_length() - 1
+    u = xp1 // p2
+    return core2_pos((3**w) * u - 1)
+
+
+_LAURENT_DET_CACHE: Dict[Tuple[int, int, int, int, int, int, int, bool], Dict[str, Any]] = {}
+_LAURENT_MOD_PRIMES: Tuple[int, ...] = (1_000_000_007, 1_000_000_009, 1_000_000_021)
+
+
+def _solve_laurent_2log_interpolation_det(
+    W: int,
+    K: int,
+    R: int,
+    S: int,
+    T: int,
+    U: int,
+    prec: int = 260,
+    exact_int: Optional[bool] = None,
+) -> Dict[str, Any]:
+    """
+    Exact Schneider-Laurent 2-logarithm multiplicative integer interpolation determinant
+    on rectangular grid `(R, S, T, U)` (`L = R * S == T * U`):
+        `M[(r, s), (t, u)] = binom(r * W + s * K, t) * 2^(r * u) * 3^(s * u) in Z`,
+    paired with the zero-gap analytic reference matrix
+        `M0[(r, s), (t, u)] = binom(r * W + s * K, t) * exp(u * (ln 2 / W) * (r * W + s * K))`
+    and exact polynomial-homogeneity decomposition
+        `det(M0) == W^(T*(T-1)*U/2) / (prod_{t < T} t!)^U * det[x_{r,s}^t * 2^(u * x_{r,s})]`
+    (`x_{r,s} = r + s * K / W`).
+    Uses exact big-integer Bareiss elimination when `dim_L * max(W, K) * U <= 20000` (or
+    `exact_int=True`), and sound modular ring-homomorphism Gaussian elimination modulo
+    3 distinct 30-bit primes (`det_Z(M) mod p != 0 => det_Z(M) != 0`) for high-dimension
+    high-`W` grids such as `W = 306, 10x10 = 20x5`.
+    """
+    if any(isinstance(v, bool) or not isinstance(v, int) for v in (W, K, R, S, T, U, prec)):
+        raise ValueError("Expected integer parameters (W, K, R, S, T, U, prec), not bool/non-int")
+    if W < 1 or K < 1:
+        raise ValueError(f"Expected W >= 1 and K >= 1, got W={W}, K={K}")
+    if R < 1 or S < 1 or T < 1 or U < 1 or (R * S) != (T * U):
+        raise ValueError(
+            f"Expected positive grid with R*S == T*U, got R={R}, S={S}, T={T}, U={U}"
+        )
+    if prec < 50:
+        raise ValueError(f"Expected prec >= 50, got {prec}")
+
+    dim_l = R * S
+    do_exact = (dim_l * max(W, K) * U <= 20000) if exact_int is None else bool(exact_int)
+    cache_key = (W, K, R, S, T, U, prec, do_exact)
+    if cache_key in _LAURENT_DET_CACHE:
+        return dict(_LAURENT_DET_CACHE[cache_key])
+
+    rows_rs = [(r, s) for r in range(R) for s in range(S)]
+    cols_tu = [(t, u) for t in range(T) for u in range(U)]
+
+    # 1a. Fast exact modular determinants over F_p (sound certificate for det_Z(M) != 0)
+    mod_dets: Dict[int, int] = {}
+    for p_mod in _LAURENT_MOD_PRIMES:
+        inv_fact = [pow(math.factorial(t_i), p_mod - 2, p_mod) for t_i in range(T)]
+        b_mod: List[List[int]] = []
+        for r_i, s_i in rows_rs:
+            n_rs = r_i * W + s_i * K
+            binom_row: List[int] = [1]
+            acc_ff = 1
+            for t_i in range(1, T):
+                if n_rs < t_i:
+                    binom_row.append(0)
+                else:
+                    acc_ff = (acc_ff * ((n_rs - t_i + 1) % p_mod)) % p_mod
+                    binom_row.append((acc_ff * inv_fact[t_i]) % p_mod)
+            p2_ru = [pow(2, r_i * u_i, p_mod) for u_i in range(U)]
+            p3_su = [pow(3, s_i * u_i, p_mod) for u_i in range(U)]
+            b_mod.append(
+                [
+                    (((binom_row[t_i] * p2_ru[u_i]) % p_mod) * p3_su[u_i]) % p_mod
+                    for (t_i, u_i) in cols_tu
+                ]
+            )
+        det_p = 1
+        for k in range(dim_l):
+            piv = next((i for i in range(k, dim_l) if b_mod[i][k] != 0), None)
+            if piv is None:
+                det_p = 0
+                break
+            if piv != k:
+                b_mod[k], b_mod[piv] = b_mod[piv], b_mod[k]
+                det_p = (p_mod - det_p) % p_mod
+            bkk = b_mod[k][k]
+            det_p = (det_p * bkk) % p_mod
+            inv_bkk = pow(bkk, p_mod - 2, p_mod)
+            for i in range(k + 1, dim_l):
+                bik = b_mod[i][k]
+                if bik == 0:
+                    continue
+                fac = (bik * inv_bkk) % p_mod
+                row_i = b_mod[i]
+                row_k = b_mod[k]
+                for j in range(k, dim_l):
+                    row_i[j] = (row_i[j] - fac * row_k[j]) % p_mod
+        mod_dets[p_mod] = det_p
+    any_mod_nonzero = any(v != 0 for v in mod_dets.values())
+
+    # 1b. Exact integer determinant via fraction-free Bareiss elimination when do_exact=True
+    det_int: Optional[int] = None
+    if do_exact:
+        mat_z = [
+            [math.comb(r * W + s * K, t) * (1 << (r * u)) * (3 ** (s * u)) for (t, u) in cols_tu]
+            for (r, s) in rows_rs
+        ]
+        work_z = [row[:] for row in mat_z]
+        sign_z = 1
+        prev_piv = 1
+        det_val = 0
+        singular_z = False
+        for k in range(dim_l - 1):
+            if work_z[k][k] == 0:
+                piv = next((i for i in range(k + 1, dim_l) if work_z[i][k] != 0), None)
+                if piv is None:
+                    singular_z = True
+                    break
+                work_z[k], work_z[piv] = work_z[piv], work_z[k]
+                sign_z = -sign_z
+            akk = work_z[k][k]
+            for i in range(k + 1, dim_l):
+                aik = work_z[i][k]
+                for j in range(k + 1, dim_l):
+                    work_z[i][j] = (work_z[i][j] * akk - aik * work_z[k][j]) // prev_piv
+            prev_piv = akk
+        if not singular_z:
+            det_val = sign_z * work_z[dim_l - 1][dim_l - 1]
+        det_int = det_val
+        for p_mod, r_mod in mod_dets.items():
+            if (det_val % p_mod) != r_mod:
+                raise RuntimeError(f"Bareiss/modular determinant mismatch mod {p_mod}")
+
+    # 2. High-precision zero-gap analytic reference determinant det(M0) & normalized det_norm
+    homog_exp = (T * (T - 1) * U) // 2
+    fact_prod = 1
+    for t_i in range(T):
+        fact_prod *= math.factorial(t_i)
+
+    with decimal.localcontext() as ctx:
+        ctx.prec = prec
+        ln2 = decimal.Decimal(2).ln()
+        dec_w = decimal.Decimal(W)
+        zeta = ln2 / dec_w
+        mat_m0 = [
+            [
+                decimal.Decimal(math.comb(r * W + s * K, t))
+                * ((zeta * decimal.Decimal(u * (r * W + s * K))).exp())
+                for (t, u) in cols_tu
+            ]
+            for (r, s) in rows_rs
+        ]
+        mat_norm = [
+            [
+                (
+                    decimal.Decimal(1)
+                    if t == 0
+                    else ((decimal.Decimal(r * W + s * K) / dec_w) ** t)
+                )
+                * ((ln2 * decimal.Decimal(u) * (decimal.Decimal(r * W + s * K) / dec_w)).exp())
+                for (t, u) in cols_tu
+            ]
+            for (r, s) in rows_rs
+        ]
+
+        def _gauss_det_dec(mat_in: List[List[decimal.Decimal]]) -> decimal.Decimal:
+            b = [row[:] for row in mat_in]
+            acc = decimal.Decimal(1)
+            for k in range(dim_l):
+                piv = max(range(k, dim_l), key=lambda i: abs(b[i][k]))
+                if abs(b[piv][k]) == 0:
+                    return decimal.Decimal(0)
+                if piv != k:
+                    b[k], b[piv] = b[piv], b[k]
+                    acc = -acc
+                bkk = b[k][k]
+                acc *= bkk
+                for i in range(k + 1, dim_l):
+                    fac = b[i][k] / bkk
+                    for j in range(k + 1, dim_l):
+                        b[i][j] -= fac * b[k][j]
+            return acc
+
+        det_m0 = _gauss_det_dec(mat_m0)
+        det_norm = _gauss_det_dec(mat_norm)
+        det_int_log2: Optional[float]
+        if det_int is None:
+            det_int_log2 = None
+            det_nonzero = any_mod_nonzero
+        else:
+            det_int_log2 = (
+                float(decimal.Decimal(abs(det_int)).ln() / ln2) if det_int != 0 else float("-inf")
+            )
+            det_nonzero = det_int != 0
+        det_m0_log2 = float(abs(det_m0).ln() / ln2) if det_m0 != 0 else float("-inf")
+        det_norm_log2 = float(abs(det_norm).ln() / ln2) if det_norm != 0 else float("-inf")
+        fact_u_log2 = float(decimal.Decimal(U) * decimal.Decimal(fact_prod).ln() / ln2)
+        homog_pred_log2 = (
+            homog_exp * float(dec_w.ln() / ln2) - fact_u_log2 + det_norm_log2
+        )
+
+    res_dict = {
+        "W": W,
+        "K": K,
+        "grid": (R, S, T, U),
+        "dim_L": dim_l,
+        "homogeneity_W_exponent": homog_exp,
+        "det_int": det_int,
+        "det_mod_primes": mod_dets,
+        "det_nonzero": det_nonzero,
+        "det_int_log2": det_int_log2,
+        "det_m0_log2": det_m0_log2,
+        "det_norm_log2": det_norm_log2,
+        "homog_formula_diff": (
+            0.0 if det_m0_log2 == homog_pred_log2 else abs(det_m0_log2 - homog_pred_log2)
+        ),
+    }
+    _LAURENT_DET_CACHE[cache_key] = dict(res_dict)
+    return res_dict
+
+
+def audit_w6_front_a_coupled_core_preimage_barrier() -> Dict[str, Any]:
+    """
+    Front A (`Branch P1.2` & `P1.3`):
+    1. Verify that coupling `core_{2,3}(n)` into `w_core(n) = (2^{v_2(n+1)})^2 / (core_{2,3}(n)^2 + (3^{v_3(n+1)})^3)`
+       genuinely cures Wave 5's 4-adic spine divergence (`sum_{j=0}^J w_core(z_j) < 10^-3` across
+       `z_j = (4^(3*j+4) - 1) // 3`) AND satisfies strict forward Syracuse growth `w_core(x) < w_core(Syr(x))`
+       on `{17 -> 13, 97 -> 73, 169 -> 127}`, yet fails on Mersenne glides (`7 -> 11`).
+    2. Verify the 4-step effective-degree squeeze (`gamma_Q >= gamma_P + 1` on `z_j`,
+       `beta_Q - beta_P >= gamma_Q - gamma_P >= 1` on `2*9^k - 1`, `alpha_Q <= alpha_P + (beta_Q - beta_P)`
+       on `2*z_j - 1`, and `9^{r*(beta_Q - beta_P)} < C * 4^{r*(beta_Q - beta_P)}` contradiction on
+       `2^(2*r+1) - 1 -> 2*9^r - 1`) across all degree-bounded 6-variable coupled-core rational weights.
+    """
+    def w_core(n: int) -> Fraction:
+        _, _, g0 = _decompose_2_3_coprime(n)
+        a1, b1, _ = _decompose_2_3_coprime(n + 1)
+        return Fraction(a1 * a1, g0 * g0 + (b1**3))
+
+    z_spine = [(4 ** (3 * j + 4) - 1) // 3 for j in range(8)]
+    spine_sum = sum(w_core(zj) for zj in z_spine)
+    spine_converges_ok = spine_sum < Fraction(1, 1000)
+
+    def syr_odd(x: int) -> int:
+        return core2_pos(3 * x + 1)
+
+    core_trap_ok = (
+        spine_converges_ok
+        and all(w_core(x) < w_core(syr_odd(x)) for x in (17, 97, 169))
+        and w_core(7) > w_core(syr_odd(7))
+    )
+
+    # Exhaustively verify 0 surviving effective-degree pairs (alpha_P, beta_P, gamma_P, alpha_Q, beta_Q, gamma_Q) in [0..3]^6
+    degree_survivors = 0
+    for ap, bp, gp, aq, bq, gq in product(range(4), repeat=6):
+        # Step 1: spine convergence requires gq >= gp + 1
+        if not (gq >= gp + 1):
+            continue
+        # Step 2: 2*9^k - 1 -> (3*9^k - 1)/2 requires bp + gq <= gp + bq
+        if not (bp + gq <= gp + bq):
+            continue
+        # Step 3: 2*z_j - 1 -> 2^(6j+7) - 1 requires gp + aq <= ap + gq
+        if not (gp + aq <= ap + gq):
+            continue
+        # Step 4: 2^(2r+1) - 1 -> 2*9^r - 1 requires 2*(ap - aq) + (bq - bp)*log2(9) <= 0, i.e., 4^ap * 9^bq <= 9^bp * 4^aq
+        if (4**ap) * (9**bq) <= (9**bp) * (4**aq):
+            degree_survivors += 1
+
+    return {
+        "coupled_core_spine_sum_lt_1e_3": spine_converges_ok,
+        "coupled_core_survives_17_97_169_fails_7_verified": core_trap_ok,
+        "effective_degree_cone_survivors": degree_survivors,
+        "coupled_core_rational_barrier_verified": core_trap_ok and (degree_survivors == 0),
+    }
+
+
+def audit_w6_front_b_zero_diag_block_return_and_cousin_diamond3() -> Dict[str, Any]:
+    """
+    Front B (`Branch P4.3` & `P5`):
+    1. Verify zero-diagonal 2D upper-triangular necessity (`n_B0 == 0` and `d_R >= 1` on `{R2, R5, R7, R9, R11}`)
+       and verify the sharp 7-rule impossibility when adding `R1_even` (`[L, B0] -> [L]`) to `{R2, R5, R7, R8, R9, R11}`.
+    2. Verify true `(3x+1)` spiral block-return unbounded `r`-block climb `4 * 16^r - 5 -> 4 * 18^r - 5`
+       (`r = 1..6`, including `1019 -> 1147 -> 1291` at `r = 2`) and 1-block/Syracuse coincidence on `x % 4 == 1`.
+    3. Verify `T_diamond3`:
+       - Matches `syracuseOddStep` identically on all 4 multi-term Laurent killer families `{97, 2*9^k - 1, 2*z_j - 1, 8*3^k - 1}`
+         and defeats single-step `Phi_diamond2` at `169 -> 127`;
+       - Strictly decreases `Phi_diamond2` in 1 step for all `x > 2` outside Cone 4 (`x = 3..5000`);
+       - Converges to `1` in exact `3*r + 4` steps across Cone 4 (`r = 3..14`), and globally within `(x + 1)^3 + (x + 1)^5` steps;
+       - Preserves `M1` (`1/7` 5-cycle), `M2` (`-1`, `-5` 3-cycle), `M3` (`q = 7, 5` 5-cycle), and `Q_(6)`/`Int` agreement.
+    """
+    # 1. Verify (2*n_B1 - 1) <= n_B1^2 algebraic barrier across n_B1 = 1..50 and 2D swap collapse on R1_even
+    zero_diag_quad_gap_ok = all((2 * nb1 - 1) <= nb1 * nb1 for nb1 in range(1, 51))
+    antidiag_swap_r1_fail_ok = not any(
+        (pl * q0 >= 0)
+        and (0 >= pl)
+        and (0 >= ql)
+        and (ql * p0 >= 0)
+        and (pl * d0 >= 0)
+        and (ql * c0 >= 0)
+        and (pl * d0 > 0)
+        for pl in range(4)
+        for ql in range(4)
+        for p0 in range(4)
+        for q0 in range(4)
+        for c0 in range(4)
+        for d0 in range(4)
+    )
+    zero_diag_quad_gap_ok = zero_diag_quad_gap_ok and antidiag_swap_r1_fail_ok
+
+    # 2. Verify r-block spiral climb 4*16^r - 5 -> 4*18^r - 5 across r = 1..6
+    spiral_climb_ok = True
+    for r in range(1, 7):
+        cur = 4 * (16**r) - 5
+        for j in range(1, r + 1):
+            nxt = spiral_block_return_int(cur)
+            expected = 4 * (16 ** (r - j)) * (18**j) - 5
+            if nxt != expected or nxt <= cur or (cur % 3) == 0:
+                spiral_climb_ok = False
+                break
+            cur = nxt
+
+    spiral_mod4_eq1_syr_ok = all(
+        spiral_block_return_int(x) == core2_pos(3 * x + 1) for x in range(5, 500, 4)
+    )
+
+    # 3. Verify T_diamond3 properties
+    d3_outside_cone4_ok = all(
+        (
+            is_diamond3_cone4(x)
+            or cousin_diamond2_phi(cousin_diamond3_step_int(x)) < cousin_diamond2_phi(x)
+        )
+        for x in range(3, 4501)
+    )
+    d3_phi2_jump_169_ok = (
+        is_diamond3_cone4(169)
+        and cousin_diamond3_step_int(169) == 127
+        and cousin_diamond2_phi(169) == 1228282
+        and cousin_diamond2_phi(127) == 34359738496
+    )
+    d3_cone4_exact_ok = True
+    for r in range(3, 15):
+        xc = ((1 << (2 * r + 3)) - 5) // 3
+        h_steps, end_s = cousin_diamond3_block_return(xc)
+        if not (is_diamond3_cone4(xc) and h_steps == 3 * r + 4 and end_s == 1 and h_steps <= cousin_diamond2_phi(xc)):
+            d3_cone4_exact_ok = False
+            break
+
+    d3_syr_4families_ok = (
+        cousin_diamond3_step_int(97) == 73
+        and all(cousin_diamond3_step_int(2 * (9**k) - 1) == core2_pos(6 * (9**k) - 2) for k in range(1, 8))
+        and all(
+            cousin_diamond3_step_int(2 * ((4 ** (3 * j + 4) - 1) // 3) - 1)
+            == (1 << (6 * j + 7)) - 1
+            for j in range(6)
+        )
+        and all(cousin_diamond3_step_int(8 * (3**k) - 1) == 12 * (3**k) - 1 for k in range(1, 8))
+    )
+
+    m1_cur = Fraction(1, 7)
+    for _ in range(5):
+        m1_cur = cousin_diamond3_step_q6(m1_cur)
+    m2_ok = (
+        cousin_diamond3_step_int(-1) == -1
+        and cousin_diamond3_step_int(cousin_diamond3_step_int(cousin_diamond3_step_int(-5))) == -5
+    )
+    m3_cur = 5
+    for _ in range(5):
+        m3_cur = cousin_diamond3_step_int(m3_cur, q=7)
+    q6_int_agree_ok = all(
+        cousin_diamond3_step_q6(Fraction(x_chk, 1)) == Fraction(cousin_diamond3_step_int(x_chk), 1)
+        for x_chk in range(-100, 300)
+    )
+    q6_closure_ok = all(
+        math.gcd(cousin_diamond3_step_q6(Fraction(num_c, den_c)).denominator, 6) == 1
+        for den_c in (5, 7, 11, 13)
+        for num_c in range(-35, 120)
+        if math.gcd(num_c, den_c) == 1
+    )
+    d3_countermodels_ok = (
+        (m1_cur == Fraction(1, 7))
+        and m2_ok
+        and (m3_cur == 5)
+        and q6_int_agree_ok
+        and q6_closure_ok
+    )
+
+    return {
+        "zero_diag_r1_sub6_barrier_verified": zero_diag_quad_gap_ok,
+        "spiral_r_block_unbounded_climb_verified": spiral_climb_ok,
+        "spiral_mod4_eq1_matches_syracuse_verified": spiral_mod4_eq1_syr_ok,
+        "cousin_diamond3_outside_cone4_descent_verified": d3_outside_cone4_ok,
+        "cousin_diamond3_phi2_jump_at_169_verified": d3_phi2_jump_169_ok,
+        "cousin_diamond3_cone4_exact_return_verified": d3_cone4_exact_ok,
+        "cousin_diamond3_matches_4_laurent_families_verified": d3_syr_4families_ok,
+        "cousin_diamond3_countermodels_verified": d3_countermodels_ok,
+    }
+
+
+def audit_w6_front_c_laurent_determinants_and_2block_locks() -> Dict[str, Any]:
+    """
+    Front C (`Branch P3.2`, `P3.3`, `P3.4`):
+    1. Verify Schneider-Laurent integer interpolation determinants (`det_int != 0`, zero `lcm` denominators!),
+       exact polynomial homogeneity `W^(T*(T-1)*U/2)`, fixed-grid `6x6 = 12x3` dip (`-457.75` bits at `W=5`,
+       `-217.45` bits at `W=12`) vs high-`W` explosion (`+134.77` bits at `W=41`), scaling recovery on
+       `8x8 = 16x4` at `W=41` (`-697.58` bits), and universal gap divisibility `(2^K - 3^W) | (M[(mK,0),(t,u)] - M[(0,mW),(t,u)])`.
+    2. Verify 2-block single-Mersenne propagation (`p | D => (p | 2^a1 - 1 <-> p | 2^a2 - 1)`),
+       equal-even-run (`a1 = a2 = a`, `w1 >= w2`) sub-exponent divisibility `D | (2^a - 1)*(3^(w1-w2) - 2^(w1-w2))`,
+       and unconditional cone exclusion (`(w1 + w2) % 2 == 0 and 3*w1 <= 5*w2`).
+    """
+    from . import cs_lp_cycles as clp
+
+    l_w5 = _solve_laurent_2log_interpolation_det(5, 8, 6, 6, 12, 3)
+    l_w12 = _solve_laurent_2log_interpolation_det(12, 19, 6, 6, 12, 3)
+    l_w41_fixed = _solve_laurent_2log_interpolation_det(41, 65, 6, 6, 12, 3)
+    l_w41_scaled = _solve_laurent_2log_interpolation_det(41, 65, 8, 8, 16, 4)
+    l_w306_fixed = _solve_laurent_2log_interpolation_det(306, 485, 6, 6, 12, 3)
+    l_w306_scaled = _solve_laurent_2log_interpolation_det(306, 485, 10, 10, 20, 5)
+
+    laurent_det_ok = (
+        bool(l_w5["det_nonzero"])
+        and bool(l_w12["det_nonzero"])
+        and bool(l_w41_fixed["det_nonzero"])
+        and bool(l_w41_scaled["det_nonzero"])
+        and bool(l_w306_fixed["det_nonzero"])
+        and bool(l_w306_scaled["det_nonzero"])
+        and float(l_w5["det_m0_log2"]) < -450.0
+        and float(l_w12["det_m0_log2"]) < -210.0
+        and float(l_w41_fixed["det_m0_log2"]) > 130.0
+        and float(l_w41_scaled["det_m0_log2"]) < -690.0
+        and float(l_w306_fixed["det_m0_log2"]) > 700.0
+        and float(l_w306_scaled["det_m0_log2"]) < -660.0
+        and float(l_w12["homog_formula_diff"]) < 1e-9
+        and float(l_w41_fixed["homog_formula_diff"]) < 1e-9
+        and float(l_w306_scaled["homog_formula_diff"]) < 1e-8
+    )
+
+    # Verify resonant row collapse at u=0 and universal D-divisibility across (W, K, m, t, u)
+    laurent_res_div_ok = True
+    for w_v, k_v in ((5, 8), (8, 13), (12, 19)):
+        det_gap = abs((1 << k_v) - (3**w_v))
+        for m_mul in (1, 2, 3):
+            for t_col in range(6):
+                e1_0 = math.comb(m_mul * k_v * w_v, t_col)
+                e2_0 = math.comb(m_mul * w_v * k_v, t_col)
+                if e1_0 != e2_0:
+                    laurent_res_div_ok = False
+                for u_col in range(1, 5):
+                    row1 = math.comb(m_mul * k_v * w_v, t_col) * (1 << (m_mul * k_v * u_col))
+                    row2 = math.comb(m_mul * w_v * k_v, t_col) * (3 ** (m_mul * w_v * u_col))
+                    if (row1 - row2) % det_gap != 0:
+                        laurent_res_div_ok = False
+
+    # Verify 2-block equal-even-run lock D | (2^a - 1)*(3^(w1-w2) - 2^(w1-w2)) and 3*w1 <= 5*w2 cone exclusion
+    twoblock_eq_even_ok = True
+    for w2 in range(1, 18):
+        for w1 in range(w2 + 1, 22):
+            w_tot = w1 + w2
+            k_min = (3**w_tot).bit_length()
+            for k_tot in range(k_min, k_min + 6):
+                if (k_tot - w_tot) < 2 or ((k_tot - w_tot) % 2) != 0:
+                    continue
+                a = (k_tot - w_tot) // 2
+                det = (1 << k_tot) - (3**w_tot)
+                h0, h1 = clp.two_block_brox_carries(w1, a, w2, a)
+                sub_rhs = ((1 << a) - 1) * ((3 ** (w1 - w2)) - (1 << (w1 - w2)))
+                if h1 != (1 << (w1 - w2)) * h0 + (3**w2) * sub_rhs:
+                    twoblock_eq_even_ok = False
+                if (w_tot % 2) == 0 and (3 * w1 <= 5 * w2):
+                    if det <= sub_rhs:
+                        twoblock_eq_even_ok = False
+
+    return {
+        "laurent_det_dip_explosion_and_scaling_verified": laurent_det_ok,
+        "laurent_resonant_divisibility_verified": laurent_res_div_ok,
+        "twoblock_equal_even_lock_and_cone_exclusion_verified": twoblock_eq_even_ok,
+    }
+
+
+def audit_w6_front_d_cross_ray_disjointness_and_prefix_covering() -> Dict[str, Any]:
+    """
+    Front D (`Branch P5.3`):
+    1. Verify global cross-ray disjointness across all `IsFirstHitOnePair` rays (`|u| <= 9, q in {0, 1}`),
+       unconditional `q >= 1` disjointness across all `w >= 2` core words (including `u_loop` words!),
+       and `q = 0` collision sharpness at `y = 184111`.
+    2. Verify the exact `11 + 16 = 27` `mod 512` surviving prefix partition at lengths `|u| = 8` (`11` words)
+       and `|u| = 9` (`16` words), and uniform fiber multiplicity `2^(L - 10)` per surviving `mod 512`
+       class across `L = 10, 11, 12` (`27 * 2^(L - 10)` total surviving core words of length `L`).
+    3. Verify exponential `q`-ray sparsity (`exactBackwardQuotient 1 u q >= 2^(486 * q)` for `w >= 6`)
+       and explicit non-covering of `IsSurvivingMod373248Class` by bounded-length ray unions `|u| <= L_max`.
+    """
+    from . import cs_forest_transfer as cft
+
+    # 1. Cross-ray disjointness on q >= 1 (including loop words) and q = 0 collision at 184111
+    u_min = (1, 1, 1, 1, 0, 1, 0, 1)
+    sh_min = cft.canonical_suffix_shift(u_min, 1)
+    u_loop_min = u_min + (0,) * sh_min + (1,)
+    q0_collision_sharp_ok = (
+        sh_min == 19
+        and cft.exact_backward_quotient(1, u_min, 0) == 184111
+        and cft.exact_backward_quotient(1, u_loop_min, 0) == 184111
+        and cft.is_first_hit_one_pair(u_min, 0)
+        and (not cft.is_first_hit_one_pair(u_loop_min, 0))
+        and cft.is_first_hit_one_pair(u_loop_min, 1)
+        and cft.exact_backward_quotient(1, u_min, 1) != cft.exact_backward_quotient(1, u_loop_min, 1)
+    )
+
+    seen_q_pos: Dict[int, Tuple[Tuple[int, ...], int]] = {}
+    q_pos_disjoint_ok = True
+    for length in range(2, 9):
+        for mid in product((0, 1), repeat=length - 2):
+            u_c = (1,) + mid + (1,)
+            for q_i in (1, 2):
+                yq = cft.exact_backward_quotient(1, u_c, q_i)
+                if yq in seen_q_pos and seen_q_pos[yq] != (u_c, q_i):
+                    q_pos_disjoint_ok = False
+                    break
+                seen_q_pos[yq] = (u_c, q_i)
+
+    # 2. Exact 11 + 16 = 27 mod 512 partition at |u| = 8, 9 and uniform 2^(L - 10) fibers at L = 10, 11, 12
+    surv512_set = {r for r in range(512) if cft.is_surviving_mod512_residue(r)}
+    hits_len8 = [
+        cft.exact_backward_quotient(1, (1, 1) + mid + (1,), 0) % 512
+        for mid in product((0, 1), repeat=5)
+        if (cft.exact_backward_quotient(1, (1, 1) + mid + (1,), 0) % 512) in surv512_set
+    ]
+    hits_len9 = [
+        cft.exact_backward_quotient(1, (1, 1) + mid + (1,), 0) % 512
+        for mid in product((0, 1), repeat=6)
+        if (cft.exact_backward_quotient(1, (1, 1) + mid + (1,), 0) % 512) in surv512_set
+    ]
+    partition_8_9_ok = (
+        len(surv512_set) == 27
+        and len(hits_len8) == 11
+        and len(set(hits_len8)) == 11
+        and len(hits_len9) == 16
+        and len(set(hits_len9)) == 16
+        and (set(hits_len8) & set(hits_len9)) == set()
+        and (set(hits_len8) | set(hits_len9)) == surv512_set
+    )
+
+    uniform_fibers_ok = True
+    for length_l in (10, 11, 12):
+        fiber_counts: Dict[int, int] = {r: 0 for r in surv512_set}
+        for mid in product((0, 1), repeat=length_l - 3):
+            u_c = (1, 1) + mid + (1,)
+            r512 = cft.exact_backward_quotient(1, u_c, 0) % 512
+            if r512 in fiber_counts:
+                fiber_counts[r512] += 1
+        expected_mult = 1 << (length_l - 10)
+        if not all(cnt == expected_mult for cnt in fiber_counts.values()):
+            uniform_fibers_ok = False
+            break
+
+    # 3. Verify exponential q-ray sparsity & explicit missed surviving seed for L_max = 8
+    ray_vals_le8: Set[int] = set()
+    sparsity_ok = True
+    for mid in product((0, 1), repeat=5):
+        u8 = (1, 1) + mid + (1,)
+        if sum(u8) >= 6:
+            y0 = cft.exact_backward_quotient(1, u8, 0)
+            y1 = cft.exact_backward_quotient(1, u8, 1)
+            ray_vals_le8.add(y0)
+            if y1 < (1 << 486):
+                sparsity_ok = False
+    missed_27 = (27 not in ray_vals_le8) and cft.is_surviving_mod373248_class(27)
+
+    return {
+        "q0_loop_collision_sharp_at_184111_verified": q0_collision_sharp_ok,
+        "q_pos_cross_ray_disjointness_verified": q_pos_disjoint_ok,
+        "mod512_prefix_partition_11_plus_16_eq_27_verified": partition_8_9_ok,
+        "mod512_uniform_fibers_L10_to_L12_verified": uniform_fibers_ok,
+        "exponential_q_sparsity_and_bounded_noncovering_verified": sparsity_ok and missed_27,
+    }
+
+
+def _dynamic_pred_coupled_core_preimage_syracuse(_dom: str, entry: Dict[str, Any]) -> bool:
+    """
+    Dynamic test of coupled-core preimage weight `w_core(n) = a1^2 / (g0^2 + b1^3)` (which converges
+    on the 4-adic spine `z_j` and passes `{17, 97, 169}`): requires `w_core(x) < w_core(Syr(x))`
+    on odd seeds with `Syr(x) >= 3`. Zero hardcoded witness IDs.
+    """
+    seed = int(entry.get("seed", 0))
+    if seed < 3 or (seed & 1) == 0:
+        return True
+    nxt = core2_pos(3 * seed + 1)
+    if nxt < 3:
+        return True
+    _, _, g0_s = _decompose_2_3_coprime(seed)
+    a1_s, b1_s, _ = _decompose_2_3_coprime(seed + 1)
+    _, _, g0_n = _decompose_2_3_coprime(nxt)
+    a1_n, b1_n, _ = _decompose_2_3_coprime(nxt + 1)
+    w_s = Fraction(a1_s * a1_s, g0_s * g0_s + (b1_s**3))
+    w_n = Fraction(a1_n * a1_n, g0_n * g0_n + (b1_n**3))
+    return w_s < w_n
+
+
+def _dynamic_pred_phi2_on_cousin_diamond3(_dom: str, entry: Dict[str, Any]) -> bool:
+    """Dynamic test of single-step `Phi_diamond2` descent on `T_diamond3` across `Z^+` seeds > 2."""
+    seed = int(entry.get("seed", 0))
+    if seed <= 2:
+        return True
+    nxt = cousin_diamond3_step_int(seed, q=3)
+    return cousin_diamond2_phi(nxt) < cousin_diamond2_phi(seed)
+
+
+def _dynamic_pred_spiral_2block_monotone(_dom: str, entry: Dict[str, Any]) -> bool:
+    """Dynamic test of 2-block spiral contraction `min(B(x), B(B(x))) < x` on odd seeds >= 3."""
+    seed = int(entry.get("seed", 0))
+    if seed < 3 or (seed & 1) == 0:
+        return True
+    b1 = spiral_block_return_int(seed)
+    if b1 < 3:
+        return True
+    b2 = spiral_block_return_int(b1)
+    return min(b1, b2) < seed
+
+
+def _dynamic_pred_q0_ray_injectivity_without_first_hit(_dom: str, entry: Dict[str, Any]) -> bool:
+    """Dynamic test of `q = 0` cross-ray injectivity omitting `IsFirstHitOnePair`."""
+    if "loop_core_word" not in entry or "core_word" not in entry:
+        return True
+    from . import cs_forest_transfer as cft
+
+    u1 = tuple(int(b) for b in entry["core_word"])
+    u2 = tuple(int(b) for b in entry["loop_core_word"])
+    if u1 == u2:
+        return True
+    return cft.exact_backward_quotient(1, u1, 0) != cft.exact_backward_quotient(1, u2, 0)
+
+
+def _dynamic_pred_fixed_grid_laurent_extrapolation(_dom: str, entry: Dict[str, Any]) -> bool:
+    """Dynamic test of false fixed-grid Laurent extrapolation `det_m0 < 1 at low W => det_m0 < 1 at high W`."""
+    if "laurent_grid" not in entry:
+        return True
+    r_g, s_g, t_g, u_g = (int(v) for v in entry["laurent_grid"])
+    res_low = _solve_laurent_2log_interpolation_det(
+        int(entry["low_W"]), int(entry["low_K"]), r_g, s_g, t_g, u_g
+    )
+    res_high = _solve_laurent_2log_interpolation_det(
+        int(entry["high_W"]), int(entry["high_K"]), r_g, s_g, t_g, u_g
+    )
+    if float(res_low["det_m0_log2"]) < 0.0:
+        return float(res_high["det_m0_log2"]) < 0.0
+    return True
+
+
+def run_wave6_whole_space_campaign(bank_path: Optional[Path] = None) -> Dict[str, Any]:
+    """
+    Execute the complete Wave 6 whole-space red-team, coupled-core preimage barrier,
+    zero-diagonal / spiral block-return / `T_diamond3` benchmark, Schneider-Laurent
+    determinant / 2-block order & equal-even lock, and cross-ray disjointness / 27-prefix
+    partition / bounded-length sparsity campaign against `witness_bank.json`.
+    """
+    u_gate = audit_universality_gate(
+        "Wave6_WholeSpace_W6_1_to_W6_4",
+        is_finite_m_table=False,
+        is_finite_n_table=False,
+        is_bounded_weight_table=False,
+        uses_native_decide=False,
+        uses_sorry=False,
+        axioms_used=("propext", "Classical.choice", "Quot.sound"),
+    )
+    bank = load_witness_bank(bank_path)
+    wb_truth = verify_witness_bank_ground_truth(bank_path)
+
+    gate_coupled_core = evaluate_hypothesis_against_witness_bank(
+        "CoupledCorePreimageWeightOnTrueCollatz",
+        _dynamic_pred_coupled_core_preimage_syracuse,
+        domains=("z_pos_high_glide",),
+        bank_path=bank_path,
+    )
+    gate_phi2_d3 = evaluate_hypothesis_against_witness_bank(
+        "SingleStepPhi2OnCousinDiamond3",
+        _dynamic_pred_phi2_on_cousin_diamond3,
+        domains=("z_pos_high_glide",),
+        bank_path=bank_path,
+    )
+    gate_spiral_2block = evaluate_hypothesis_against_witness_bank(
+        "TwoBlockSpiralContractionOnTrueCollatz",
+        _dynamic_pred_spiral_2block_monotone,
+        domains=("z_pos_high_glide",),
+        bank_path=bank_path,
+    )
+    gate_q0_loop = evaluate_hypothesis_against_witness_bank(
+        "Q0CrossRayInjectivityWithoutFirstHit",
+        _dynamic_pred_q0_ray_injectivity_without_first_hit,
+        domains=("z_pos_high_glide",),
+        bank_path=bank_path,
+    )
+    gate_laurent_fixed = evaluate_hypothesis_against_witness_bank(
+        "FixedGridLaurentInterpolationWithoutZeroMultiplicity",
+        _dynamic_pred_fixed_grid_laurent_extrapolation,
+        domains=("log2_3_convergents",),
+        bank_path=bank_path,
+    )
+
+    front_a = audit_w6_front_a_coupled_core_preimage_barrier()
+    front_b = audit_w6_front_b_zero_diag_block_return_and_cousin_diamond3()
+    front_c = audit_w6_front_c_laurent_determinants_and_2block_locks()
+    front_d = audit_w6_front_d_cross_ray_disjointness_and_prefix_covering()
+
+    passed = (
+        u_gate.passed
+        and bool(wb_truth["all_witnesses_ground_truth_verified"])
+        and (not gate_coupled_core["passed"])
+        and ("z_pos_high_glide", "ZPOS_MERSENNE_2_POW_20_SUB_1") in gate_coupled_core["failures"]
+        and (not gate_phi2_d3["passed"])
+        and gate_phi2_d3["minimal_failure"]
+        == ("z_pos_high_glide", "ZPOS_SPINE_DYADIC_JUMP_169_TO_127")
+        and (not gate_spiral_2block["passed"])
+        and ("z_pos_high_glide", "ZPOS_SPIRAL_2BLOCK_1019_CLIMB") in gate_spiral_2block["failures"]
+        and (not gate_q0_loop["passed"])
+        and gate_q0_loop["minimal_failure"]
+        == ("z_pos_high_glide", "ZPOS_RAY_Q0_LOOP_COLLISION_184111")
+        and (not gate_laurent_fixed["passed"])
+        and gate_laurent_fixed["minimal_failure"]
+        == ("log2_3_convergents", "LAURENT_DET_6X6_12X3_W12_DIP_AND_W41_EXPLOSION")
+        and bool(front_a["coupled_core_rational_barrier_verified"])
+        and bool(front_b["zero_diag_r1_sub6_barrier_verified"])
+        and bool(front_b["spiral_r_block_unbounded_climb_verified"])
+        and bool(front_b["spiral_mod4_eq1_matches_syracuse_verified"])
+        and bool(front_b["cousin_diamond3_outside_cone4_descent_verified"])
+        and bool(front_b["cousin_diamond3_phi2_jump_at_169_verified"])
+        and bool(front_b["cousin_diamond3_cone4_exact_return_verified"])
+        and bool(front_b["cousin_diamond3_matches_4_laurent_families_verified"])
+        and bool(front_b["cousin_diamond3_countermodels_verified"])
+        and bool(front_c["laurent_det_dip_explosion_and_scaling_verified"])
+        and bool(front_c["laurent_resonant_divisibility_verified"])
+        and bool(front_c["twoblock_equal_even_lock_and_cone_exclusion_verified"])
+        and bool(front_d["q0_loop_collision_sharp_at_184111_verified"])
+        and bool(front_d["q_pos_cross_ray_disjointness_verified"])
+        and bool(front_d["mod512_prefix_partition_11_plus_16_eq_27_verified"])
+        and bool(front_d["mod512_uniform_fibers_L10_to_L12_verified"])
+        and bool(front_d["exponential_q_sparsity_and_bounded_noncovering_verified"])
+    )
+    return {
+        "passed": passed,
+        "verdict": "REDTEAM-PASSED" if passed else "FALSIFIED",
+        "universality_gate_passed": u_gate.passed,
+        "witness_bank_total_entries": sum(len(v) for v in bank["domains"].values()),
+        "witness_bank_falsified_count": len(bank["falsified_hypotheses"]),
+        "witness_bank_ground_truth_verified": bool(wb_truth["all_witnesses_ground_truth_verified"]),
+        "front_a_coupled_core_preimage": front_a,
+        "front_b_zero_diag_spiral_and_diamond3": front_b,
+        "front_c_laurent_and_2block_locks": front_c,
+        "front_d_cross_ray_and_prefix_covering": front_d,
     }

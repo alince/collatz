@@ -181,6 +181,48 @@
         "kills_mechanisms": [
           "partial signed Int / rational Q_(6) extensions of T_diamond2 omitting the third Syracuse-jump cone (x >= 17 and core3(x + 1) == 2) on odd powers of 3 where x % 16 == 5 != 1 (gives 80 instead of 40 at x = 53)"
         ]
+      },
+      {
+        "witness_id": "ZPOS_SPINE_DYADIC_JUMP_169_TO_127",
+        "seed": 169,
+        "next_odd": 127,
+        "compressed_steps": 2,
+        "v2_pow_seed_plus_1": 2,
+        "v2_pow_next_plus_1": 128,
+        "v3_pow_seed_plus_1": 1,
+        "v3_pow_next_plus_1": 1,
+        "coprime23_seed_plus_1": 85,
+        "coprime23_next_plus_1": 1,
+        "cousin_diamond3_next": 127,
+        "cousin_diamond3_steps_to_1": 13,
+        "phi_diamond2_seed": 1228282,
+        "phi_diamond2_next": 34359738496,
+        "kills_mechanisms": [
+          "single-step valuation Lyapunov sums on solvable cousin T_diamond3 (Phi_diamond2 jumps 1228282 -> 34359738496 at 169 -> 127 while 13-step variable-horizon block return reaches 1)",
+          "coupled (core_{2,3}(n), core_{2,3}(n+1), 2^{v_2}, 3^{v_3}) rational Berg-Meinardus preimage weights when paired with 4-adic spine drain z_j, 2 * 9^k - 1, and Mersenne glides"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_SPIRAL_2BLOCK_1019_CLIMB",
+        "seed": 1019,
+        "spiral_block_next": 1147,
+        "spiral_block_2_next": 1291,
+        "kills_mechanisms": [
+          "monotone / eventually-increasing univariate rankings across variable-horizon spiral block-return steps (4 * 16^r - 5 climbs strictly for r consecutive spiral blocks to 4 * 18^r - 5; minimal r = 2 witness 1019 -> 1147 -> 1291)"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_RAY_Q0_LOOP_COLLISION_184111",
+        "seed": 184111,
+        "compressed_steps_to_1": 27,
+        "odd_weight": 6,
+        "core_word": [1, 1, 1, 1, 0, 1, 0, 1],
+        "q_index": 0,
+        "loop_core_word": [1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+        "survives_mod373248": true,
+        "kills_mechanisms": [
+          "cross-ray injectivity claims (u1, q1) != (u2, q2) => exactBackwardQuotient 1 u1 q1 != exactBackwardQuotient 1 u2 q2 at q = 0 omitting IsFirstHitOnePair inside IsSurvivingMod373248Class"
+        ]
       }
     ],
     "m1_q2_pos": [
@@ -321,6 +363,17 @@
         "kills_mechanisms": [
           "proofs of T_diamond2 global convergence omitting Z-discreteness at 0 < x <= 2"
         ]
+      },
+      {
+        "witness_id": "M1_COUSIN_DIAMOND3_1_OVER_7",
+        "x0": "1/7",
+        "numerator": 1,
+        "denominator": 7,
+        "system": "T_diamond3",
+        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "kills_mechanisms": [
+          "proofs of T_diamond3 block-return convergence omitting Z-discreteness at 0 < x < 20"
+        ]
       }
     ],
     "m2_z_neg": [
@@ -416,6 +469,16 @@
         "kills_mechanisms": [
           "T_diamond2 2-term valuation convergence claims omitting q = 3 carry-shift alignment"
         ]
+      },
+      {
+        "witness_id": "M3_COUSIN_DIAMOND3_7X1_CYCLE5",
+        "seed": 5,
+        "multiplier_q": 7,
+        "system": "T_diamond3_q7",
+        "orbit": [5, 18, 9, 32, 10],
+        "kills_mechanisms": [
+          "T_diamond3 variable-horizon block-return convergence claims omitting q = 3 carry-shift alignment"
+        ]
       }
     ],
     "log2_3_convergents": [
@@ -506,6 +569,23 @@
         "nonsep_2d_err_log2": 18.554515,
         "kills_mechanisms": [
           "2-variable Beukers-Rhin Euler integral approximants on [0,1]^2 and inhomogeneous constant-term elimination between convergent 1-logarithm Legendre-Pade forms without Gelfond-Baker-Laurent 2^r*3^s multiplicative extrapolation"
+        ]
+      },
+      {
+        "witness_id": "LAURENT_DET_6X6_12X3_W12_DIP_AND_W41_EXPLOSION",
+        "laurent_grid": [6, 6, 12, 3],
+        "low_W": 12,
+        "low_K": 19,
+        "low_det_nonzero": true,
+        "low_det_int_log2": 700.327693,
+        "low_det_m0_log2": -217.448134,
+        "high_W": 41,
+        "high_K": 65,
+        "high_det_nonzero": true,
+        "high_det_int_log2": 1007.396142,
+        "high_det_m0_log2": 134.77327,
+        "kills_mechanisms": [
+          "fixed-grid (R, S, T, U) Schneider-Laurent 2-logarithm integer interpolation determinants det[binom(r*W + s*K, t) * 2^(r*u) * 3^(s*u)] extrapolated to all W >= W_0 without growing U ~ log(W) and Laurent's algebraic zero-multiplicity theorem: 6x6 = 12x3 achieves |det(M0)| = 2^-217.45 << 1 at W = 12 with zero lcm denominators, yet W^(T*(T-1)*U/2) = W^198 homogeneity drives |det(M0)| = 2^+134.77 > 1 at W = 41"
         ]
       }
     ]
@@ -613,6 +693,40 @@
       "status": "FALSIFIED",
       "minimal_witness_id": "BEUKERS_RHIN_2D_CONST_ELIM_N5_AND_NONSEP_EXPLOSION",
       "failure_diagnosis": "Non-separable 2D Euler-Rhin integrals int_0^1 int_0^1 x^n(1-x)^n y^n(1-y)^n u^(2n+1)/(1-ux)^(n+1) dx dy (u = (3+y)/6) genuinely decay exponentially (2^-6.30 at n = 1, 2^-27.80 at n = 5), yet squared lcm(1,..,3n+3)^2 * 6^n denominator growth (~9.8n bits) overtakes integral decay (~5.1n bits), driving cleared-denominator error to diverge (+3.45 bits at n = 1, +18.55 bits at n = 5, +39.91 bits at n = 8); separable 1D Legendre-Pade forms converge individually (2^-9.77 and 2^-14.37 at n = 5), but eliminating the constant term 1 injects exponential polynomial height (+3.44 bits at n = 5, +5.02 bits at n = 8)."
+    },
+    {
+      "hypothesis_id": "W6_H1_COUPLED_CORE_RATIONAL_PREIMAGE_WEIGHTS",
+      "branch": "P1.2",
+      "statement": "There exists a positive rational Berg-Meinardus preimage weight w(n) = P(n)/Q(n) (theta <= 1) built from positive polynomials P, Q in all six coupled valuation/core coordinates (2^{v_2(n)}, 3^{v_3(n)}, core_{2,3}(n), 2^{v_2(n+1)}, 3^{v_3(n+1)}, core_{2,3}(n+1)) that survives both the 4-adic spine drain z_j and odd Syracuse glides.",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_SPINE_DYADIC_JUMP_169_TO_127",
+      "secondary_witness_id": "ZPOS_MERSENNE_2_POW_20_SUB_1",
+      "failure_diagnosis": "Although coupling core_{2,3}(n) into Q(n) makes sum_j w(z_j) < infty converge on z_j = (4^(3j+4)-1)/3 and survives {17->13, 97->73, 169->127} via (2^{v_2(n+1)})^2 / (core_{2,3}(n)^2 + (3^{v_3(n+1)})^3), spine convergence forces gamma_Q >= gamma_P + 1, 2*9^k - 1 forces beta_Q - beta_P >= gamma_Q - gamma_P >= 1, 2*z_j - 1 (169->127, ...) forces alpha_Q <= alpha_P + (beta_Q - beta_P), and the 2r-step Mersenne glide 2^(2r+1) - 1 -> 2*9^r - 1 pits 9^{r*(beta_Q - beta_P)} against C * 4^{r*(beta_Q - beta_P)}, refuting ALL coupled-core rational weights in Wave6WholeSpace.lean (berg_meinardus_coupled_core_rational_weight_impossibility, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W6_H2A_ZERO_DIAG_2D_UPPER_TRI_WITH_R1",
+      "branch": "P4.3",
+      "statement": "Allowing zero diagonal entries (M_s)_{1,1} = 0 (n_s = 0) in a 2D upper-triangular Natural Matrix Interpretation (m_s >= 1, generalizing T2.8b's sub6UpperTri2DCert) or bipartite zero-diagonal swap matrices M_s = [[0, P_s], [Q_s, 0]] extends to orient R1_even ([L, B0] -> [L]) alongside {R2, R5, R7, R8, R9, R11}.",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_MERSENNE_2_POW_20_SUB_1",
+      "failure_diagnosis": "{R2, R5, R7, R9, R11} already forces n_B0 = 0 and d_R >= 1; adding R1_even ([L, B0] -> [L]) forces n_L = 0 and p_L <= m_L * p_B0, while R8 + R2.p + R11.d force n_B1 >= 1, 1 <= n_T2 <= n_B1, and d_B0 < d_R, causing m_L*(R5.c + R7.c + R9.c + R11.c) + 2*R2.c to pit (2*n_B1 - 1) against n_B1^2 and fail by (n_B1 - 1)^2 >= 0 (zero_diag_upper_tri_2d_r1_sub6_impossibility); meanwhile (M_s)_{0,0} = 0 destroys left-context rewrite monotonicity (zero_top_left_breaks_left_context_monotonicity_2d) and all d >= 1 bipartite/antidiagonal zero-diagonal swap matrices collapse on R1_even (bipartite_zero_diag_swap_r1_impossibility_all_dim, antidiag_swap_2d_r1_impossibility)."
+    },
+    {
+      "hypothesis_id": "W6_H2B_SPIRAL_BLOCK_RETURN_LAURENT_AND_MONOTONE_RANKINGS",
+      "branch": "P5.5",
+      "statement": "Stepping across entire variable-horizon spiral odd-glide + even-drop blocks (x + 1 = 2^w * u -> core_2(3^w * u - 1)) on true (3x+1) admits either an r-block eventually-increasing univariate ranking or a finite L-term (2,3)-adic Laurent valuation Lyapunov sum.",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_SPIRAL_2BLOCK_1019_CLIMB",
+      "secondary_witness_id": "ZPOS_SPINE_DYADIC_JUMP_169_TO_127",
+      "failure_diagnosis": "Even though variable-horizon block-return globally solves T_diamond3 (which defeats all fixed-step L-term Laurent sums), on true (3x+1) x_0(r) = 4*16^r - 5 climbs strictly for r consecutive spiral blocks to 4*18^r - 5 (minimal r = 2 witness 1019 -> 1147 -> 1291), and because spiralBlockReturn agrees with syracuseOddStep on all x == 1 mod 4 ({97, 2*z_j - 1}) while mapping 2^(2r+1) - 1 -> (3*9^r - 1)/2 in 1 block, every L-term Laurent sum fails on spiralBlockReturn (spiral_block_return_multiterm_laurent_impossibility, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W6_H3_FIXED_GRID_LAURENT_INTERPOLATION_WITHOUT_ZERO_MULTIPLICITY",
+      "branch": "P3.3",
+      "statement": "A fixed rectangular grid (R, S, T, U) of multiplicative Schneider-Laurent 2-logarithm integer interpolation determinants det[binom(r*W + s*K, t) * 2^(r*u) * 3^(s*u)] keeps zero-gap analytic reference |det(M0)| < 1 for all W >= W_0 to discharge SubexponentialCubicGapProp without W-dependent grid growth and Laurent's algebraic zero-multiplicity theorem.",
+      "status": "FALSIFIED",
+      "minimal_witness_id": "LAURENT_DET_6X6_12X3_W12_DIP_AND_W41_EXPLOSION",
+      "failure_diagnosis": "Unlike additive Pade and Beukers-Rhin integrals, Laurent's matrix has exact integer entries (zero lcm denominators!) and achieves |det(M0)| = 2^-457.75 at (W,K)=(5,8) and 2^-217.45 at (12,19) on grid 6x6 = 12x3 with det(M) != 0, yet exact polynomial homogeneity W^(T*(T-1)*U/2) = W^198 drives |det(M0)| to 2^+134.77 > 1 at (41,65) and 2^+708.70 at (306,485); scaling U ~ log(W) restores |det(M0)| << 1 (-697.58 bits on 8x8=16x4 at W=41; -667.03 bits on 10x10=20x5 at W=306) at the exact algebraic cost of proving det(M) != 0 via zero-multiplicity."
     }
   ]
 }

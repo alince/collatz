@@ -323,6 +323,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     from .cs_cegar_redteam import (
         run_wave4_whole_space_campaign,
         run_wave5_whole_space_campaign,
+        run_wave6_whole_space_campaign,
     )
 
     w4 = run_wave4_whole_space_campaign()
@@ -378,6 +379,35 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"q-ray/|u|>=8/Pi2={fd['q_ray_affine_and_382_per_729_verified'] and fd['q_pos_universal_first_hit_verified'] and fd['length_le_7_mod373248_disjoint_verified'] and fd['pi2_skolem_box_and_cousin_poly_bound_verified']}"
     )
 
+    w6 = run_wave6_whole_space_campaign()
+    w6a = w6["front_a_coupled_core_preimage"]
+    w6b = w6["front_b_zero_diag_spiral_and_diamond3"]
+    w6c = w6["front_c_laurent_and_2block_locks"]
+    w6d = w6["front_d_cross_ray_and_prefix_covering"]
+    w6_d3_ok = (
+        bool(w6b["cousin_diamond3_outside_cone4_descent_verified"])
+        and bool(w6b["cousin_diamond3_cone4_exact_return_verified"])
+        and bool(w6b["cousin_diamond3_matches_4_laurent_families_verified"])
+        and bool(w6b["cousin_diamond3_countermodels_verified"])
+    )
+    print(f"\n[Wave 6 Whole-Space Proof Loop] Coupled-Core Barrier, Zero-Diag/T_diamond3, Laurent & Rays:")
+    print(
+        f"  - Universality & witness gates ({w6['witness_bank_total_entries']} wits, {w6['witness_bank_falsified_count']} hyps): "
+        f"u-gate={w6['universality_gate_passed']}, ground-truth={w6['witness_bank_ground_truth_verified']}, verdict={w6['verdict']}"
+    )
+    print(
+        f"  - Fronts A & B (coupled-core barrier, R1+sub6 zero-diag, spiral & T_diamond3): "
+        f"A={w6a['coupled_core_rational_barrier_verified']} (deg-surv={w6a['effective_degree_cone_survivors']}), "
+        f"zero-diag/spiral={w6b['zero_diag_r1_sub6_barrier_verified'] and w6b['spiral_r_block_unbounded_climb_verified']}, "
+        f"T_diamond3={w6_d3_ok}"
+    )
+    print(
+        f"  - Fronts C & D (Schneider-Laurent det, 2-blk equal-even, ray disj & 11+16=27): "
+        f"Laurent={w6c['laurent_det_dip_explosion_and_scaling_verified'] and w6c['laurent_resonant_divisibility_verified']}, "
+        f"2-blk-lock={w6c['twoblock_equal_even_lock_and_cone_exclusion_verified']}, "
+        f"rays/11+16/sparse={w6d['q_pos_cross_ray_disjointness_verified'] and w6d['mod512_prefix_partition_11_plus_16_eq_27_verified'] and w6d['mod512_uniform_fibers_L10_to_L12_verified'] and w6d['exponential_q_sparsity_and_bounded_noncovering_verified']}"
+    )
+
     lean4 = verify_lean4_kernel_proofs()
     print(f"\n[Lean 4 Kernel Verification] CollatzFormal.lean Live Compiler & #print axioms Audit:")
     if lean4["lean_available"]:
@@ -389,6 +419,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         print(f"  - Observed foundational axioms across all theorems       : {lean4['all_axioms_observed']}")
         print(f"  - Zero `sorryAx` / zero warnings / pure kernel verified  : {lean4['zero_sorry_verified']} / {lean4['zero_warnings_verified']} / {lean4['pure_kernel_verified']} ({lean4['elapsed_ms']:.1f} ms)")
+        diag_first_line = next(
+            (ln.strip() for ln in str(lean4.get("stderr") or "").splitlines() if ln.strip()),
+            "",
+        )
+        if diag_first_line:
+            print(f"  - Kernel audit diagnostics                               : {diag_first_line}")
     else:
         print(
             f"  - Lean 4 toolchain not found on PATH / ~/.elan/bin "
@@ -410,6 +446,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         and bool(thm29_31["all_next_tier_mechanisms_verified"])
         and bool(w4["passed"])
         and bool(w5["passed"])
+        and bool(w6["passed"])
         and lean4_ok
     )
     return 0 if summary_ok else 1

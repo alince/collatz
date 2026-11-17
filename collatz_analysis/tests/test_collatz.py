@@ -379,6 +379,7 @@ class TestFrontierReductionsAndNoGoTheorems(unittest.TestCase):
         )
         self.assertTrue(report["wave4_whole_space_campaign"]["passed"])
         self.assertTrue(report["wave5_whole_space_campaign"]["passed"])
+        self.assertTrue(report["wave6_whole_space_campaign"]["passed"])
 
 
 class TestBoostObstructionsTheorems15To18(unittest.TestCase):
@@ -773,6 +774,300 @@ class TestGoalExtensionsTheorems19To22(unittest.TestCase):
         self.assertIn("collatz_standard_iff_sieved_backward_carry_window", ax_map)
         self.assertIn("collatz_standard_iff_sieved_forest_collision", ax_map)
         self.assertIn("s_low_top_strip_upper_bound", ax_map)
+        self.assertFalse(res["timed_out"])
+
+    def test_lean4_kernel_verification_timeout_budget_and_graceful_handling(self) -> None:
+        import contextlib
+        import io
+        import subprocess
+        from unittest import mock
+        from collatz_analysis import formal_proofs as fp
+        from collatz_analysis.cli import main as cli_main
+
+        # 1. Invalid timeout_sec values must raise ValueError deterministically (even if cache warm)
+        for bad_to in (0, 0.0, -0.5, -30, float("nan"), float("inf"), float("-inf"), False, True):
+            with self.assertRaises(ValueError):
+                verify_lean4_kernel_proofs(timeout_sec=bad_to)  # type: ignore[arg-type]
+
+        # 2. Remaining timeout_sec propagates to lean --version, lake --no-build build,
+        #    lake build <target>, and lean CollatzFormalAudit.lean (never hardcoded 30.0s!)
+        observed_timeouts_900: list[tuple[str, float]] = []
+
+        def fake_run_900(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+            to_val = float(kwargs["timeout"])  # type: ignore[arg-type]
+            observed_timeouts_900.append((" ".join(cmd[1:3]), to_val))
+            if cmd[1:2] == ["--version"]:
+                return subprocess.CompletedProcess(cmd, 0, stdout="Lean (version 4.35.0)\n", stderr="")
+            if "--no-build" in cmd:
+                return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+            return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="synthetic audit stop")
+
+        with mock.patch("collatz_analysis.formal_proofs.subprocess.run", side_effect=fake_run_900):
+            r900 = verify_lean4_kernel_proofs(timeout_sec=900.0, bypass_cache=True)
+        self.assertFalse(r900["timed_out"])
+        self.assertFalse(r900["pure_kernel_verified"])
+        self.assertEqual(len(observed_timeouts_900), 3)
+        for stage_tag, to_val in observed_timeouts_900:
+            self.assertGreater(
+                to_val,
+                850.0,
+                f"Expected full remaining 900s budget (not 30s cap) at {stage_tag}, got {to_val}",
+            )
+
+        observed_timeouts_small: list[float] = []
+
+        def fake_run_small(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+            to_val = float(kwargs["timeout"])  # type: ignore[arg-type]
+            observed_timeouts_small.append(to_val)
+            if cmd[1:2] == ["--version"]:
+                return subprocess.CompletedProcess(cmd, 0, stdout="Lean (version 4.35.0)\n", stderr="")
+            if "--no-build" in cmd:
+                return subprocess.CompletedProcess(cmd, 3, stdout="", stderr="")
+            if "build" in cmd:
+                return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+            return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="stop audit")
+
+        with mock.patch("collatz_analysis.formal_proofs.subprocess.run", side_effect=fake_run_small):
+            r_small = verify_lean4_kernel_proofs(timeout_sec=12.5, bypass_cache=True)
+        self.assertFalse(r_small["timed_out"])
+        self.assertEqual(len(observed_timeouts_small), 2 + len(fp._LAKE_SEQUENTIAL_TARGETS) + 1)
+        for to_val in observed_timeouts_small:
+            self.assertGreater(to_val, 0.0)
+            self.assertLessEqual(to_val, 12.5)
+
+        # 2b. When Stage 3 (lake build <target>) fails with non-zero exit code, Stage 4 is skipped
+        #     (never running lean on broken concatenated multi-module source!) and None streams are safe
+        calls_lake_fail: list[list[str]] = []
+
+        def fake_lake_fail(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+            calls_lake_fail.append(cmd)
+            if cmd[1:2] == ["--version"]:
+                return subprocess.CompletedProcess(cmd, 0, stdout="Lean (version 4.35.0)\n", stderr="")
+            if "--no-build" in cmd:
+                return subprocess.CompletedProcess(cmd, 3, stdout=None, stderr=None)  # type: ignore[arg-type]
+            if "build" in cmd:
+                return subprocess.CompletedProcess(
+                    cmd, 1, stdout=None, stderr="real Core.lean compile failure"  # type: ignore[arg-type]
+                )
+            return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="SHOULD_NOT_RUN_STAGE4")
+
+        with mock.patch("collatz_analysis.formal_proofs.subprocess.run", side_effect=fake_lake_fail):
+            r_lake_fail = verify_lean4_kernel_proofs(timeout_sec=20.0, bypass_cache=True)
+        self.assertEqual(len(calls_lake_fail), 3)
+        self.assertFalse(r_lake_fail["timed_out"])
+        self.assertEqual(r_lake_fail["returncode"], 1)
+        self.assertFalse(r_lake_fail["pure_kernel_verified"])
+        self.assertEqual(r_lake_fail["stderr"], "real Core.lean compile failure")
+
+        # 3. Stage-by-stage TimeoutExpired handling (including raw non-UTF8 bytes on TimeoutExpired)
+        # 3a) Timeout on Stage 1 (lean --version) aborts immediately without spawning lake/lean audit
+        calls_s1 = 0
+
+        def fake_to_stage1(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+            nonlocal calls_s1
+            calls_s1 += 1
+            raise subprocess.TimeoutExpired(
+                cmd=cmd,
+                timeout=float(kwargs["timeout"]),  # type: ignore[arg-type]
+                output=b"partial-ver\n",
+                stderr=b"lean version probe stalled\xff\n",
+            )
+
+        with mock.patch("collatz_analysis.formal_proofs.subprocess.run", side_effect=fake_to_stage1):
+            res_s1 = verify_lean4_kernel_proofs(timeout_sec=45.0, bypass_cache=True)
+        self.assertEqual(calls_s1, 1)
+        self.assertTrue(res_s1["timed_out"])
+        self.assertEqual(res_s1["returncode"], 124)
+        self.assertEqual(res_s1["lean_version"], "")
+        self.assertFalse(res_s1["zero_sorry_verified"])
+        self.assertFalse(res_s1["zero_warnings_verified"])
+        self.assertFalse(res_s1["pure_kernel_verified"])
+        self.assertIn("during lean --version", str(res_s1["stderr"]))
+        self.assertIn("lean version probe stalled", str(res_s1["stderr"]))
+
+        # 3b) Timeout on Stage 2 (lake --no-build build) aborts without spawning 56 lake targets
+        calls_s2 = 0
+
+        def fake_to_stage2(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+            nonlocal calls_s2
+            calls_s2 += 1
+            if calls_s2 == 1:
+                return subprocess.CompletedProcess(cmd, 0, stdout="Lean (version 4.35.0)\n", stderr="")
+            raise subprocess.TimeoutExpired(
+                cmd=cmd,
+                timeout=float(kwargs["timeout"]),  # type: ignore[arg-type]
+                output=None,
+                stderr="lake trace check timed out",
+            )
+
+        with mock.patch("collatz_analysis.formal_proofs.subprocess.run", side_effect=fake_to_stage2):
+            res_s2 = verify_lean4_kernel_proofs(timeout_sec=60.0, bypass_cache=True)
+        self.assertEqual(calls_s2, 2)
+        self.assertTrue(res_s2["timed_out"])
+        self.assertEqual(res_s2["returncode"], 124)
+        self.assertFalse(res_s2["pure_kernel_verified"])
+        self.assertIn("during lake --no-build build", str(res_s2["stderr"]))
+        self.assertIn("lake trace check timed out", str(res_s2["stderr"]))
+
+        # 3c) Timeout on Stage 3 (lake build +CollatzFormal.Core) stops target loop immediately
+        calls_s3 = 0
+
+        def fake_to_stage3(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+            nonlocal calls_s3
+            calls_s3 += 1
+            if calls_s3 == 1:
+                return subprocess.CompletedProcess(cmd, 0, stdout="Lean (version 4.35.0)\n", stderr="")
+            if calls_s3 == 2:
+                return subprocess.CompletedProcess(cmd, 3, stdout="", stderr="")
+            raise subprocess.TimeoutExpired(
+                cmd=cmd,
+                timeout=float(kwargs["timeout"]),  # type: ignore[arg-type]
+                output="building Core...",
+                stderr="",
+            )
+
+        with mock.patch("collatz_analysis.formal_proofs.subprocess.run", side_effect=fake_to_stage3):
+            res_s3 = verify_lean4_kernel_proofs(timeout_sec=60.0, bypass_cache=True)
+        self.assertEqual(calls_s3, 3)
+        self.assertTrue(res_s3["timed_out"])
+        self.assertEqual(res_s3["returncode"], 124)
+        self.assertFalse(res_s3["pure_kernel_verified"])
+        self.assertIn("during lake build +CollatzFormal.Core", str(res_s3["stderr"]))
+
+        # 3d) Timeout on Stage 4 (lean CollatzFormalAudit.lean) with >20 partial stdout lines
+        calls_s4 = 0
+        long_partial_out = "\n".join(f"line-{idx}" for idx in range(30))
+
+        def fake_to_stage4(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+            nonlocal calls_s4
+            calls_s4 += 1
+            if calls_s4 == 1:
+                return subprocess.CompletedProcess(cmd, 0, stdout="Lean (version 4.35.0)\n", stderr="")
+            if calls_s4 == 2:
+                return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+            raise subprocess.TimeoutExpired(
+                cmd=cmd,
+                timeout=float(kwargs["timeout"]),  # type: ignore[arg-type]
+                output=long_partial_out,
+                stderr="kernel elaboration exceeded budget",
+            )
+
+        with mock.patch("collatz_analysis.formal_proofs.subprocess.run", side_effect=fake_to_stage4):
+            res_s4 = verify_lean4_kernel_proofs(timeout_sec=60.0, bypass_cache=True)
+        self.assertEqual(calls_s4, 3)
+        self.assertTrue(res_s4["timed_out"])
+        self.assertEqual(res_s4["returncode"], 124)
+        self.assertEqual(res_s4["theorems_audited"], 0)
+        self.assertFalse(res_s4["zero_sorry_verified"])
+        self.assertFalse(res_s4["zero_warnings_verified"])
+        self.assertFalse(res_s4["pure_kernel_verified"])
+        self.assertIn("during lean CollatzFormalAudit.lean", str(res_s4["stderr"]))
+        self.assertIn("kernel elaboration exceeded budget", str(res_s4["stderr"]))
+        self.assertNotIn("line-0\n", str(res_s4["stderr"]))
+        self.assertIn("line-29", str(res_s4["stderr"]))
+
+        # 4. Pre-stage deadline exhaustion (rem <= 0 before spawning next subprocess)
+        fake_clock = [100.0, 100.1, 106.0, 106.1]
+
+        def step_clock() -> float:
+            return fake_clock.pop(0) if len(fake_clock) > 1 else fake_clock[0]
+
+        with mock.patch("collatz_analysis.formal_proofs.time.perf_counter", side_effect=step_clock), mock.patch(
+            "collatz_analysis.formal_proofs.subprocess.run",
+            return_value=subprocess.CompletedProcess(["lean", "--version"], 0, stdout="Lean 4.35.0\n", stderr=""),
+        ) as run_mock:
+            res_exhausted = verify_lean4_kernel_proofs(timeout_sec=5.0, bypass_cache=True)
+        self.assertEqual(run_mock.call_count, 1)
+        self.assertTrue(res_exhausted["timed_out"])
+        self.assertEqual(res_exhausted["returncode"], 124)
+        self.assertFalse(res_exhausted["pure_kernel_verified"])
+        self.assertIn("Timeout budget (5.000s) exhausted before", str(res_exhausted["stderr"]))
+
+        # 5. Live end-to-end tiny-timeout check: never raises unhandled TimeoutExpired and never
+        #    poisons _LEAN4_AUDIT_CACHE for subsequent normal calls
+        saved_cache = dict(fp._LEAN4_AUDIT_CACHE)
+        try:
+            fp._LEAN4_AUDIT_CACHE.clear()
+            live_to = verify_lean4_kernel_proofs(timeout_sec=0.001, bypass_cache=True)
+            self.assertTrue(live_to["timed_out"])
+            self.assertEqual(live_to["returncode"], 124)
+            self.assertFalse(live_to["pure_kernel_verified"])
+            self.assertEqual(len(fp._LEAN4_AUDIT_CACHE), 0)
+        finally:
+            fp._LEAN4_AUDIT_CACHE.clear()
+            fp._LEAN4_AUDIT_CACHE.update(saved_cache)
+
+        # 6. CLI --summary handles timed-out kernel audit cleanly with exit code 1 & diagnostic line
+        buf_cli = io.StringIO()
+        with mock.patch(
+            "collatz_analysis.cli.verify_lean4_kernel_proofs",
+            return_value=res_s2,
+        ), contextlib.redirect_stdout(buf_cli):
+            rc_cli = cli_main(["--summary", "--dp-depth", "10"])
+        self.assertEqual(rc_cli, 1)
+        self.assertIn("Kernel audit diagnostics", buf_cli.getvalue())
+        self.assertIn("Timed out after", buf_cli.getvalue())
+
+        # 7. Missing Lean binary path includes timed_out == False cleanly
+        with mock.patch("collatz_analysis.formal_proofs.find_lean4_executable", return_value=None):
+            res_nolean = verify_lean4_kernel_proofs(timeout_sec=10.0, bypass_cache=True)
+        self.assertFalse(res_nolean["lean_available"])
+        self.assertFalse(res_nolean["timed_out"])
+        self.assertFalse(res_nolean["pure_kernel_verified"])
+
+        # 8. Missing Lake binary on multi-module package refuses to trust potentially stale .olean files
+        with mock.patch("collatz_analysis.formal_proofs.find_lake_executable", return_value=None):
+            res_nolake = verify_lean4_kernel_proofs(timeout_sec=15.0, bypass_cache=True)
+        self.assertIsNone(res_nolake["lake_executable"])
+        self.assertFalse(res_nolake["timed_out"])
+        self.assertEqual(res_nolake["returncode"], 1)
+        self.assertFalse(res_nolake["zero_sorry_verified"])
+        self.assertFalse(res_nolake["zero_warnings_verified"])
+        self.assertFalse(res_nolake["pure_kernel_verified"])
+        self.assertIn("Lake executable not found", str(res_nolake["stderr"]))
+
+        # 9. Live _run_process_tree_bounded safely decodes raw non-UTF-8 bytes (0xff) without UnicodeDecodeError
+        import sys
+        import time
+        from pathlib import Path
+
+        cp_nonutf8 = fp._run_process_tree_bounded(
+            [
+                sys.executable,
+                "-c",
+                "import sys; sys.stdout.buffer.write(b'ok\\xffout\\n'); sys.stderr.buffer.write(b'err\\xfe\\n')",
+            ],
+            cwd=str(Path(__file__).resolve().parent),
+            env=None,
+            timeout=10.0,
+        )
+        self.assertEqual(cp_nonutf8.returncode, 0)
+        self.assertIn("ok\ufffdout", cp_nonutf8.stdout)
+        self.assertIn("err\ufffd", cp_nonutf8.stderr)
+
+        # 10. Live _run_process_tree_bounded kills grandchild processes holding inherited stdout/stderr pipes
+        #     immediately on timeout (returning well below the 8.0s grandchild sleep)
+        parent_spawn_code = (
+            "import subprocess, sys, time; "
+            "subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(8)']); "
+            "print('partial-before-timeout', flush=True); "
+            "time.sleep(8)"
+        )
+        t_start = time.perf_counter()
+        with self.assertRaises(subprocess.TimeoutExpired) as cm_tree:
+            fp._run_process_tree_bounded(
+                [sys.executable, "-c", parent_spawn_code],
+                cwd=str(Path(__file__).resolve().parent),
+                env=None,
+                timeout=0.4,
+            )
+        dt_tree = time.perf_counter() - t_start
+        self.assertLess(
+            dt_tree,
+            5.0,
+            f"Grandchild pipe inheritance delayed TimeoutExpired to {dt_tree:.3f}s (expected < 5.0s for 8s grandchild)",
+        )
+        self.assertIn("partial-before-timeout", fp._decode_proc_stream(cm_tree.exception.stdout))
 
     def test_theorem_23_minimal_counterexample_rigidity_and_sturmian_obstruction(self) -> None:
         res = verify_minimal_counterexample_rigidity_and_sturmian_obstruction(

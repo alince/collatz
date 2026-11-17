@@ -15,9 +15,11 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import math
 import os
 import re
 import shutil
+import signal
 import subprocess
 import tempfile
 import time
@@ -332,8 +334,98 @@ _LAKE_SEQUENTIAL_TARGETS: Tuple[str, ...] = (
     "+CollatzFormal.CSWave3Synthesis",
     "+CollatzFormal.Wave4WholeSpace",
     "+CollatzFormal.Wave5WholeSpace",
+    "+CollatzFormal.Wave6WholeSpace",
     "+CollatzFormal",
 )
+
+
+_STDLIB_SUBPROCESS_RUN = subprocess.run
+
+
+def _decode_proc_stream(stream: object) -> str:
+    """Safely decode subprocess output streams (`None`, `bytes`, or `str`)."""
+    if stream is None:
+        return ""
+    if isinstance(stream, (bytes, bytearray)):
+        return bytes(stream).decode("utf-8", errors="replace")
+    return str(stream)
+
+
+def _kill_process_tree(proc: subprocess.Popen[str]) -> None:
+    """Force-terminate `proc` and any descendant child/grandchild processes."""
+    if os.name == "nt":
+        try:
+            _STDLIB_SUBPROCESS_RUN(
+                ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=5.0,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
+    else:
+        killpg_fn = getattr(os, "killpg", None)
+        sigkill = getattr(signal, "SIGKILL", signal.SIGTERM)
+        if killpg_fn is not None:
+            try:
+                killpg_fn(proc.pid, sigkill)
+            except (ProcessLookupError, PermissionError, OSError):
+                pass
+    try:
+        proc.kill()
+    except OSError:
+        pass
+
+
+def _run_process_tree_bounded(
+    cmd: List[str],
+    *,
+    cwd: str,
+    env: Optional[Dict[str, str]],
+    timeout: float,
+) -> subprocess.CompletedProcess[str]:
+    """
+    Execute `cmd` with UTF-8 (`errors='replace'`) stream capture and full process-tree
+    termination on timeout so grandchild `lean` processes holding inherited pipes on
+    Windows/POSIX never block `communicate()` or outlive `timeout`.
+    """
+    popen_kwargs: Dict[str, object] = {
+        "cwd": cwd,
+        "env": env,
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.PIPE,
+        "text": True,
+        "encoding": "utf-8",
+        "errors": "replace",
+    }
+    if os.name == "nt":
+        popen_kwargs["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    else:
+        popen_kwargs["start_new_session"] = True
+
+    with subprocess.Popen(cmd, **popen_kwargs) as proc:  # type: ignore[call-overload]
+        try:
+            out_str, err_str = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            _kill_process_tree(proc)
+            out_part, err_part = proc.communicate()
+            raise subprocess.TimeoutExpired(
+                cmd=cmd,
+                timeout=timeout,
+                output=out_part,
+                stderr=err_part,
+            ) from None
+        except BaseException:
+            _kill_process_tree(proc)
+            proc.wait()
+            raise
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=proc.returncode,
+            stdout=out_str,
+            stderr=err_str,
+        )
 
 
 def verify_lean4_kernel_proofs(
@@ -356,7 +448,16 @@ def verify_lean4_kernel_proofs(
        zero `Lean.trustCompiler`, and every observed axiom strictly in
        `{"propext", "Quot.sound", "Classical.choice"}`.
     """
+    if (
+        isinstance(timeout_sec, bool)
+        or not isinstance(timeout_sec, (int, float))
+        or not math.isfinite(timeout_sec)
+        or timeout_sec <= 0.0
+    ):
+        raise ValueError(f"timeout_sec must be a finite positive number, got {timeout_sec!r}")
+
     t0 = time.perf_counter()
+    deadline = t0 + float(timeout_sec)
     pkg_dir = Path(__file__).resolve().parent
     lean_path = pkg_dir / "CollatzFormal.lean"
     lean_files = get_collatz_lean_files()
@@ -404,6 +505,7 @@ def verify_lean4_kernel_proofs(
             "lean_version": None,
             "lean_file": str(lean_path),
             "lean_files": [str(p) for p in lean_files],
+            "timed_out": False,
             "theorems_audited": 0,
             "theorem_names": theorem_names,
             "static_hygiene_clean": static_hygiene_clean,
@@ -417,83 +519,142 @@ def verify_lean4_kernel_proofs(
     if not bypass_cache and cache_key in _LEAN4_AUDIT_CACHE:
         return copy.deepcopy(_LEAN4_AUDIT_CACHE[cache_key])
 
-    ver_proc = subprocess.run(
+    timed_out = False
+    timeout_diag_parts: List[str] = []
+
+    def _run_bounded_subprocess(
+        cmd: List[str],
+        *,
+        stage_label: str,
+        run_env: Optional[Dict[str, str]] = None,
+    ) -> Optional[subprocess.CompletedProcess[str]]:
+        nonlocal timed_out
+        rem = deadline - time.perf_counter()
+        if rem <= 0.0:
+            timed_out = True
+            timeout_diag_parts.append(
+                f"Timeout budget ({timeout_sec:.3f}s) exhausted before {stage_label}"
+            )
+            return None
+        try:
+            if subprocess.run is not _STDLIB_SUBPROCESS_RUN:
+                return subprocess.run(
+                    cmd,
+                    cwd=str(pkg_dir),
+                    env=run_env,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=rem,
+                    check=False,
+                )
+            return _run_process_tree_bounded(
+                cmd,
+                cwd=str(pkg_dir),
+                env=run_env,
+                timeout=rem,
+            )
+        except subprocess.TimeoutExpired as exc:
+            timed_out = True
+            actual_to = (
+                f"{float(exc.timeout):.3f}s"
+                if isinstance(exc.timeout, (int, float))
+                else str(exc.timeout)
+            )
+            timeout_diag_parts.append(
+                f"Timed out after {actual_to} (total budget {timeout_sec:.3f}s) during {stage_label}"
+            )
+            out_txt = _decode_proc_stream(exc.stdout).strip()
+            err_txt = _decode_proc_stream(exc.stderr).strip()
+            if err_txt:
+                timeout_diag_parts.append(err_txt)
+            if out_txt:
+                out_lines = out_txt.splitlines()
+                if len(out_lines) > 20:
+                    timeout_diag_parts.append("\n".join(out_lines[-20:]))
+                else:
+                    timeout_diag_parts.append(out_txt)
+            return None
+
+    ver_proc = _run_bounded_subprocess(
         [str(lean_bin), "--version"],
-        cwd=str(pkg_dir),
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        timeout=30.0,
-        check=False,
+        stage_label="lean --version",
     )
-    lean_version = ver_proc.stdout.strip().splitlines()[0] if ver_proc.stdout.strip() else ""
+    ver_out = _decode_proc_stream(ver_proc.stdout).strip() if ver_proc is not None else ""
+    lean_version = ver_out.splitlines()[0] if ver_out else ""
 
     env = os.environ.copy()
     env["LEAN_JOBS"] = "2"
     env["PATH"] = str(lean_bin.parent) + os.pathsep + env.get("PATH", "")
 
+    has_lakefile = (pkg_dir / "lakefile.lean").is_file()
     lake_build_ok = True
     lake_diag_parts: List[str] = []
     olean_lib_dir = pkg_dir / ".lake" / "build" / "lib" / "lean"
 
-    if lake_bin is not None and (pkg_dir / "lakefile.lean").is_file():
-        chk_proc = subprocess.run(
-            [str(lake_bin), "--no-cache", "--wfail", "--no-ansi", "-q", "--no-build", "build"],
-            cwd=str(pkg_dir),
-            env=env,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            timeout=30.0,
-            check=False,
-        )
-        if chk_proc.returncode != 0:
-            for target in _LAKE_SEQUENTIAL_TARGETS:
-                rem_sec = max(30.0, timeout_sec - (time.perf_counter() - t0))
-                b_proc = subprocess.run(
-                    [str(lake_bin), "--no-cache", "--wfail", "--no-ansi", "-q", "build", target],
-                    cwd=str(pkg_dir),
-                    env=env,
-                    capture_output=True,
-                    text=True,
-                    encoding="utf-8",
-                    timeout=rem_sec,
-                    check=False,
-                )
-                if b_proc.stdout.strip():
-                    lake_diag_parts.append(b_proc.stdout.strip())
-                if b_proc.stderr.strip():
-                    lake_diag_parts.append(b_proc.stderr.strip())
-                if b_proc.returncode != 0:
-                    lake_build_ok = False
-                    break
+    if not timed_out and has_lakefile:
+        if lake_bin is None:
+            lake_build_ok = False
+            lake_diag_parts.append(
+                "Lake executable not found; required to verify multi-module CollatzFormal build"
+            )
         else:
-            if chk_proc.stdout.strip():
-                lake_diag_parts.append(chk_proc.stdout.strip())
-            if chk_proc.stderr.strip():
-                lake_diag_parts.append(chk_proc.stderr.strip())
+            chk_proc = _run_bounded_subprocess(
+                [str(lake_bin), "--no-cache", "--wfail", "--no-ansi", "-q", "--no-build", "build"],
+                stage_label="lake --no-build build",
+                run_env=env,
+            )
+            if chk_proc is None:
+                lake_build_ok = False
+            elif chk_proc.returncode != 0:
+                for target in _LAKE_SEQUENTIAL_TARGETS:
+                    b_proc = _run_bounded_subprocess(
+                        [str(lake_bin), "--no-cache", "--wfail", "--no-ansi", "-q", "build", target],
+                        stage_label=f"lake build {target}",
+                        run_env=env,
+                    )
+                    if b_proc is None:
+                        lake_build_ok = False
+                        break
+                    b_out = _decode_proc_stream(b_proc.stdout).strip()
+                    b_err = _decode_proc_stream(b_proc.stderr).strip()
+                    if b_out:
+                        lake_diag_parts.append(b_out)
+                    if b_err:
+                        lake_diag_parts.append(b_err)
+                    if b_proc.returncode != 0:
+                        lake_build_ok = False
+                        break
+            else:
+                chk_out = _decode_proc_stream(chk_proc.stdout).strip()
+                chk_err = _decode_proc_stream(chk_proc.stderr).strip()
+                if chk_out:
+                    lake_diag_parts.append(chk_out)
+                if chk_err:
+                    lake_diag_parts.append(chk_err)
 
-    audit_lines = [f"#print axioms CollatzFormal.{name}" for name in theorem_names]
-    if olean_lib_dir.is_dir() and lake_build_ok:
-        env["LEAN_PATH"] = str(olean_lib_dir)
-        audit_source = "import CollatzFormal\n\n" + "\n".join(audit_lines) + "\n"
-    else:
-        audit_source = read_all_collatz_lean_sources() + "\n\n" + "\n".join(audit_lines) + "\n"
+    proc: Optional[subprocess.CompletedProcess[str]] = None
+    if not timed_out and lake_build_ok:
+        audit_lines = [f"#print axioms CollatzFormal.{name}" for name in theorem_names]
+        if has_lakefile or olean_lib_dir.is_dir():
+            env["LEAN_PATH"] = str(olean_lib_dir)
+            audit_source = "import CollatzFormal\n\n" + "\n".join(audit_lines) + "\n"
+        else:
+            audit_source = read_all_collatz_lean_sources() + "\n\n" + "\n".join(audit_lines) + "\n"
 
-    rem_audit_sec = max(30.0, timeout_sec - (time.perf_counter() - t0))
-    with tempfile.TemporaryDirectory() as tmpdir:
-        audit_file = Path(tmpdir) / "CollatzFormalAudit.lean"
-        audit_file.write_text(audit_source, encoding="utf-8")
-        proc = subprocess.run(
-            [str(lean_bin), "-M", "2048", "-T", "200000", "-j", "2", str(audit_file)],
-            cwd=str(pkg_dir),
-            env=env,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            timeout=rem_audit_sec,
-            check=False,
-        )
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmpdir:
+            audit_file = Path(tmpdir) / "CollatzFormalAudit.lean"
+            audit_file.write_text(audit_source, encoding="utf-8")
+            proc = _run_bounded_subprocess(
+                [str(lean_bin), "-M", "2048", "-T", "200000", "-j", "2", str(audit_file)],
+                stage_label="lean CollatzFormalAudit.lean",
+                run_env=env,
+            )
+
+    proc_stdout = _decode_proc_stream(proc.stdout) if proc is not None else ""
+    proc_stderr = _decode_proc_stream(proc.stderr) if proc is not None else ""
+    proc_returncode = proc.returncode if proc is not None else 124
 
     axioms_by_theorem: Dict[str, List[str]] = {}
     all_axioms_observed: Set[str] = set()
@@ -502,7 +663,7 @@ def verify_lean4_kernel_proofs(
 
     merged_stdout_lines: List[str] = []
     pending_bracket: Optional[str] = None
-    for raw_line in proc.stdout.splitlines():
+    for raw_line in proc_stdout.splitlines():
         line = raw_line.strip()
         if not line:
             continue
@@ -540,32 +701,37 @@ def verify_lean4_kernel_proofs(
     has_stdout_warning = any("warning:" in ln.lower() for ln in unexpected_stdout_lines)
     all_theorems_accounted = set(axioms_by_theorem.keys()) == set(theorem_names)
     zero_warnings = (
-        lake_build_ok
+        not timed_out
+        and lake_build_ok
         and len(lake_diag_parts) == 0
-        and proc.returncode == 0
-        and proc.stderr.strip() == ""
+        and proc is not None
+        and proc_returncode == 0
+        and proc_stderr.strip() == ""
         and not has_stdout_warning
         and len(unexpected_stdout_lines) == 0
     )
     zero_sorry = (
-        lake_build_ok
-        and proc.returncode == 0
+        not timed_out
+        and lake_build_ok
+        and proc is not None
+        and proc_returncode == 0
         and static_hygiene_clean
         and all_theorems_accounted
         and ("sorryAx" not in all_axioms_observed)
-        and ("sorryAx" not in proc.stdout)
+        and ("sorryAx" not in proc_stdout)
     )
     pure_kernel = (
-        zero_sorry
+        not timed_out
+        and zero_sorry
         and zero_warnings
         and all_axioms_observed.issubset(ALLOWED_LEAN4_FOUNDATIONAL_AXIOMS)
     )
     axiom_free_theorems = [name for name, axs in axioms_by_theorem.items() if len(axs) == 0]
     elapsed_ms = (time.perf_counter() - t0) * 1000.0
 
-    diag_chunks: List[str] = list(lake_diag_parts)
-    if proc.stderr.strip():
-        diag_chunks.append(proc.stderr.strip())
+    diag_chunks: List[str] = list(timeout_diag_parts) + list(lake_diag_parts)
+    if proc_stderr.strip():
+        diag_chunks.append(proc_stderr.strip())
     if unexpected_stdout_lines:
         diag_chunks.append("\n".join(unexpected_stdout_lines))
     combined_diag = "\n".join(diag_chunks).strip()
@@ -577,7 +743,8 @@ def verify_lean4_kernel_proofs(
         "lean_version": lean_version,
         "lean_file": str(lean_path),
         "lean_files": [str(p) for p in lean_files],
-        "returncode": proc.returncode if lake_build_ok else 1,
+        "timed_out": timed_out,
+        "returncode": 124 if timed_out else (proc_returncode if lake_build_ok else 1),
         "stderr": combined_diag,
         "theorems_audited": len(axioms_by_theorem),
         "theorem_names": theorem_names,
@@ -644,12 +811,14 @@ def generate_full_proof_suite_report() -> Dict[str, object]:
     from .cs_cegar_redteam import (
         run_wave4_whole_space_campaign,
         run_wave5_whole_space_campaign,
+        run_wave6_whole_space_campaign,
     )
 
     thm23_25_boost = verify_boost_three_line_counter_model_matrix()
     thm29_31_boost = verify_next_tier_boost_counter_model_matrix()
     wave4_cert = run_wave4_whole_space_campaign()
     wave5_cert = run_wave5_whole_space_campaign()
+    wave6_cert = run_wave6_whole_space_campaign()
     lean4_cert = verify_lean4_kernel_proofs()
 
     return {
@@ -715,5 +884,6 @@ def generate_full_proof_suite_report() -> Dict[str, object]:
         "theorems_29_to_31_next_tier_boost_and_counter_model_matrix": thm29_31_boost,
         "wave4_whole_space_campaign": wave4_cert,
         "wave5_whole_space_campaign": wave5_cert,
+        "wave6_whole_space_campaign": wave6_cert,
         "lean4_kernel_verification": lean4_cert,
     }
