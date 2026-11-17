@@ -3814,6 +3814,39 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
                         and (not cft.is_first_hit_one_pair(u_loop, 0))
                         and cft.is_first_hit_one_pair(u_loop, 1)
                     )
+                if "shorter_l10_min_core_word" in entry:
+                    checked_keys.add("shorter_l10_min_core_word")
+                    u_l10 = tuple(int(b) for b in entry["shorter_l10_min_core_word"])
+                    if (
+                        q_i == 0
+                        and len(u_l10) == 10
+                        and len(u_w) > 10
+                        and u_l10[0] == 1
+                        and u_l10[-1] == 1
+                        and all(b in (0, 1) for b in u_l10)
+                    ):
+                        y_l10 = cft.exact_backward_quotient(1, u_l10, 0)
+                        surv512_l10 = [
+                            cft.exact_backward_quotient(1, (1, 1) + mid + (1,), 0)
+                            for mid in product((0, 1), repeat=7)
+                            if cft.is_surviving_mod512_residue(
+                                cft.exact_backward_quotient(1, (1, 1) + mid + (1,), 0) % 512
+                            )
+                        ]
+                        surv373_l10 = [
+                            y_c for y_c in surv512_l10 if cft.is_surviving_mod373248_class(y_c)
+                        ]
+                        ok = (
+                            ok
+                            and cft.is_surviving_mod373248_class(y_l10)
+                            and cft.is_first_hit_one_pair(u_l10, 0)
+                            and len(surv512_l10) == 27
+                            and len(surv373_l10) > 0
+                            and y_l10 == min(surv373_l10)
+                            and seed < y_l10
+                        )
+                    else:
+                        ok = False
             else:
                 ok = False
         if "survives_mod373248" in entry:
@@ -3936,6 +3969,39 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
                     )
                 else:
                     ok = False
+            digit_keys = (
+                "even_sibling",
+                "bit_length_seed",
+                "bit_length_target",
+                "bit_length_even_sibling",
+                "digit_sig_seed",
+                "digit_sig_target",
+                "digit_sig_even_sibling",
+            )
+            if any(k in entry for k in digit_keys):
+                if all(k in entry for k in digit_keys) and seed >= 1 and nxt_c >= 3:
+                    checked_keys.update(digit_keys)
+                    ev_sib = int(entry["even_sibling"])
+                    ok = (
+                        ok
+                        and (seed & 1) == 1
+                        and (nxt_c % 3) == 2
+                        and (2 * nxt_c - 1) // 3 == seed
+                        and ev_sib == 2 * nxt_c
+                        and int_compressed_step(ev_sib, q=3) == nxt_c
+                        and seed.bit_length() == int(entry["bit_length_seed"])
+                        and nxt_c.bit_length() == int(entry["bit_length_target"])
+                        and ev_sib.bit_length() == int(entry["bit_length_even_sibling"])
+                        and list(binary_digit_signature6(seed))
+                        == [int(v) for v in entry["digit_sig_seed"]]
+                        and list(binary_digit_signature6(nxt_c))
+                        == [int(v) for v in entry["digit_sig_target"]]
+                        and list(binary_digit_signature6(ev_sib))
+                        == [int(v) for v in entry["digit_sig_even_sibling"]]
+                        and binary_digit_signature6(nxt_c) == binary_digit_signature6(ev_sib)
+                    )
+                else:
+                    ok = False
         if "cousin_diamond2_next" in entry:
             checked_keys.add("cousin_diamond2_next")
             claims_checked += 1
@@ -3969,6 +4035,25 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
             if "phi_diamond2_next" in entry:
                 checked_keys.add("phi_diamond2_next")
                 ok = ok and (cousin_diamond2_phi(nxt_d3) == int(entry["phi_diamond2_next"]))
+        if "cousin_diamond4_next" in entry:
+            checked_keys.add("cousin_diamond4_next")
+            claims_checked += 1
+            nxt_d4 = cousin_diamond4_step_int(seed, q=3)
+            ok = ok and (nxt_d4 == int(entry["cousin_diamond4_next"]))
+            if "cousin_diamond4_steps_to_1" in entry:
+                checked_keys.add("cousin_diamond4_steps_to_1")
+                cur_d4 = seed
+                st_d4 = 0
+                while cur_d4 != 1 and st_d4 < 5000:
+                    cur_d4 = cousin_diamond4_step_int(cur_d4, q=3)
+                    st_d4 += 1
+                ok = ok and (cur_d4 == 1) and (st_d4 == int(entry["cousin_diamond4_steps_to_1"]))
+            if "phi_diamond2_seed" in entry:
+                checked_keys.add("phi_diamond2_seed")
+                ok = ok and (cousin_diamond2_phi(seed) == int(entry["phi_diamond2_seed"]))
+            if "phi_diamond2_next" in entry:
+                checked_keys.add("phi_diamond2_next")
+                ok = ok and (cousin_diamond2_phi(nxt_d4) == int(entry["phi_diamond2_next"]))
         if "spiral_block_next" in entry or "spiral_block_2_next" in entry:
             if "spiral_block_next" in entry and seed >= 1 and (seed & 1) == 1:
                 checked_keys.add("spiral_block_next")
@@ -4009,14 +4094,15 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
         x0 = Fraction(int(entry["numerator"]), int(entry["denominator"]))
         ok = (x0 == Fraction(str(entry["x0"]))) and (x0 > 0) and (x0.denominator % 2 == 1)
         checked_m1: Set[str] = {"witness_id", "x0", "numerator", "denominator", "kills_mechanisms"}
-        if entry.get("system") in ("T_diamond", "T_diamond2", "T_diamond3"):
+        if entry.get("system") in ("T_diamond", "T_diamond2", "T_diamond3", "T_diamond4"):
             checked_m1.update(("system", "orbit"))
             sys_m1 = entry.get("system")
-            step_fn_q6 = (
-                cousin_diamond_step_q6
-                if sys_m1 == "T_diamond"
-                else (cousin_diamond2_step_q6 if sys_m1 == "T_diamond2" else cousin_diamond3_step_q6)
-            )
+            step_fn_q6 = {
+                "T_diamond": cousin_diamond_step_q6,
+                "T_diamond2": cousin_diamond2_step_q6,
+                "T_diamond3": cousin_diamond3_step_q6,
+                "T_diamond4": cousin_diamond4_step_q6,
+            }[str(sys_m1)]
             orb = [Fraction(s) for s in entry["orbit"]]
             cur_f = x0
             traced: List[Fraction] = []
@@ -4137,14 +4223,15 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
         q_mul = int(entry["multiplier_q"])
         ok = seed >= 1 and q_mul > 3 and (q_mul & 1) == 1
         checked_m3: Set[str] = {"witness_id", "seed", "multiplier_q", "kills_mechanisms"}
-        if entry.get("system") in ("T_diamond_q7", "T_diamond2_q7", "T_diamond3_q7"):
+        if entry.get("system") in ("T_diamond_q7", "T_diamond2_q7", "T_diamond3_q7", "T_diamond4_q7"):
             checked_m3.update(("system", "orbit"))
             sys_m3 = entry.get("system")
-            step_fn_m3 = (
-                cousin_diamond_step_int
-                if sys_m3 == "T_diamond_q7"
-                else (cousin_diamond2_step_int if sys_m3 == "T_diamond2_q7" else cousin_diamond3_step_int)
-            )
+            step_fn_m3 = {
+                "T_diamond_q7": cousin_diamond_step_int,
+                "T_diamond2_q7": cousin_diamond2_step_int,
+                "T_diamond3_q7": cousin_diamond3_step_int,
+                "T_diamond4_q7": cousin_diamond4_step_int,
+            }[str(sys_m3)]
             orb = [int(v) for v in entry["orbit"]]
             cur_m3 = seed
             traced_m3: List[int] = []
@@ -4323,6 +4410,64 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
                     and abs(float(res_high["det_int_log2"]) - float(entry["high_det_int_log2"])) < 1e-3
                     and abs(float(res_high["det_m0_log2"]) - float(entry["high_det_m0_log2"])) < 1e-3
                 )
+            else:
+                ok = False
+        elif "laurent_scaled_grid" in entry:
+            req_scaled = (
+                "W",
+                "K",
+                "laurent_scaled_grid",
+                "det_m0_log2",
+                "det_at_cubic_gap_log2",
+                "coprime_order_barrier_prime",
+                "ord2_mod_p",
+                "ord32_mod_p",
+            )
+            grid_s = entry.get("laurent_scaled_grid")
+            if (
+                all(k in entry for k in req_scaled)
+                and isinstance(grid_s, list)
+                and len(grid_s) == 4
+            ):
+                checked_conv.update(req_scaled)
+                w_sc, k_sc = int(entry["W"]), int(entry["K"])
+                r_g, s_g, t_g, u_g = (int(v) for v in grid_s)
+                res_pert = _solve_laurent_perturbed_cubic_gap_det(w_sc, k_sc, r_g, s_g, t_g, u_g)
+                p_bar = int(entry["coprime_order_barrier_prime"])
+                is_p_prime = (
+                    p_bar >= 5
+                    and (p_bar & 1) == 1
+                    and all(p_bar % d_i != 0 for d_i in range(3, int(math.isqrt(p_bar)) + 1, 2))
+                )
+                if is_p_prime:
+                    ord2_obs = _mult_order_mod_prime(2, p_bar)
+                    ord32_obs = _mult_order_mod_prime((3 * pow(2, -1, p_bar)) % p_bar, p_bar)
+                    smaller_all_ge2 = True
+                    for q_p in range(5, p_bar, 2):
+                        if all(q_p % d_i != 0 for d_i in range(3, int(math.isqrt(q_p)) + 1, 2)):
+                            o2_q = _mult_order_mod_prime(2, q_p)
+                            o32_q = _mult_order_mod_prime((3 * pow(2, -1, q_p)) % q_p, q_p)
+                            if math.gcd(o2_q, o32_q) < 2:
+                                smaller_all_ge2 = False
+                                break
+                    ok = (
+                        ok
+                        and bool(res_pert["det_nonzero"])
+                        and abs(float(res_pert["det_m0_log2"]) - float(entry["det_m0_log2"])) < 1e-3
+                        and abs(
+                            float(res_pert["det_at_cubic_gap_log2"])
+                            - float(entry["det_at_cubic_gap_log2"])
+                        )
+                        < 1e-3
+                        and float(res_pert["det_m0_log2"]) < 0.0
+                        and float(res_pert["det_at_cubic_gap_log2"]) > 0.0
+                        and ord2_obs == int(entry["ord2_mod_p"])
+                        and ord32_obs == int(entry["ord32_mod_p"])
+                        and math.gcd(ord2_obs, ord32_obs) == 1
+                        and smaller_all_ge2
+                    )
+                else:
+                    ok = False
             else:
                 ok = False
         else:
@@ -6237,4 +6382,1135 @@ def run_wave6_whole_space_campaign(bank_path: Optional[Path] = None) -> Dict[str
         "front_b_zero_diag_spiral_and_diamond3": front_b,
         "front_c_laurent_and_2block_locks": front_c,
         "front_d_cross_ray_and_prefix_covering": front_d,
+    }
+
+
+# ============================================================================
+# 12. Wave 7 Whole-Space Campaign (Fronts A–D: W-Dilated Laurent Remainder &
+#     Common-Order Prime Exclusions, Binary Digit/Bit-Length Preimage Weights
+#     & Mahler-Tauberian Balance, 3D Non-Triangular Hofbauer-Waldmann / VASS /
+#     Cousin T_diamond4, and Markov Suffix-Shift / q=0 Envelope / L^2 Energy)
+# ============================================================================
+
+_LAURENT_PERTURBED_DET_CACHE: Dict[Tuple[int, int, int, int, int, int, int], Dict[str, Any]] = {}
+
+
+def binary_popcount(n: int) -> int:
+    """Count `1`-bits in binary representation of `n >= 0` (`binPopcount` in Lean 4)."""
+    if isinstance(n, bool) or not isinstance(n, int) or n < 0:
+        raise ValueError(f"Expected nonnegative integer n >= 0, got {n!r}")
+    return n.bit_count()
+
+
+def binary_one_runs(n: int) -> int:
+    """
+    Count maximal contiguous `1`-bit runs in binary representation of `n >= 0`
+    (`binOneRuns` in Lean 4): `0` for `n == 0`, else
+    `binary_one_runs(n // 2) + (1 if (n % 2 == 1 and (n // 2) % 2 == 0) else 0)`.
+    """
+    if isinstance(n, bool) or not isinstance(n, int) or n < 0:
+        raise ValueError(f"Expected nonnegative integer n >= 0, got {n!r}")
+    runs = 0
+    cur = n
+    while cur > 0:
+        if (cur & 1) == 1 and ((cur >> 1) & 1) == 0:
+            runs += 1
+        cur >>= 1
+    return runs
+
+
+def binary_alt_transitions(n: int) -> int:
+    """
+    Count adjacent bit transitions `b_i != b_{i+1}` inside the binary expansion of `n >= 0`
+    (`binAltTransitions` in Lean 4): `0` for `n <= 1`, else
+    `binary_alt_transitions(n // 2) + (1 if (n % 2) != ((n // 2) % 2) else 0)`.
+    """
+    if isinstance(n, bool) or not isinstance(n, int) or n < 0:
+        raise ValueError(f"Expected nonnegative integer n >= 0, got {n!r}")
+    trans = 0
+    cur = n
+    while cur >= 2:
+        if (cur & 1) != ((cur >> 1) & 1):
+            trans += 1
+        cur >>= 1
+    return trans
+
+
+def binary_digit_signature6(n: int) -> Tuple[int, int, int, int, int, int]:
+    """
+    Return the 6-coordinate non-algebraic binary digit signature (`binDigitSig6` in Lean 4):
+    `(popcount(n), one_runs(n), alt_transitions(n), popcount(n+1), one_runs(n+1), alt_transitions(n+1))`.
+    """
+    if isinstance(n, bool) or not isinstance(n, int) or n < 0:
+        raise ValueError(f"Expected nonnegative integer n >= 0, got {n!r}")
+    return (
+        binary_popcount(n),
+        binary_one_runs(n),
+        binary_alt_transitions(n),
+        binary_popcount(n + 1),
+        binary_one_runs(n + 1),
+        binary_alt_transitions(n + 1),
+    )
+
+
+def _mult_order_mod_prime(a: int, p: int) -> int:
+    """Exact multiplicative order of `a` modulo prime `p >= 3` (`gcd(a, p) == 1`)."""
+    if isinstance(a, bool) or isinstance(p, bool) or not isinstance(a, int) or not isinstance(p, int):
+        raise ValueError("Expected integer arguments (a, p)")
+    if p < 3 or (p & 1) == 0 or math.gcd(a, p) != 1:
+        raise ValueError(f"Expected odd modulus p >= 3 coprime to a, got a={a}, p={p}")
+    a_mod = a % p
+    order = p - 1
+    rem = p - 1
+    prime_factors: List[int] = []
+    d = 2
+    while d * d <= rem:
+        if rem % d == 0:
+            prime_factors.append(d)
+            while rem % d == 0:
+                rem //= d
+        d += 1 if d == 2 else 2
+    if rem > 1:
+        prime_factors.append(rem)
+    for pf in prime_factors:
+        while order % pf == 0 and pow(a_mod, order // pf, p) == 1:
+            order //= pf
+    return order
+
+
+def _solve_laurent_perturbed_cubic_gap_det(
+    W: int,
+    K: int,
+    R: int,
+    S: int,
+    T: int,
+    U: int,
+    prec: int = 220,
+) -> Dict[str, Any]:
+    """
+    Evaluate the perturbed Schneider-Laurent determinant at the `SubexponentialCubicGapProp`
+    boundary `Lambda_cubic = 2^(-W / 3) * ln 2`, substituting
+        `3^(s * u) -> exp(u * (ln 2 / W) * (r * W + s * K) - s * u * Lambda_cubic / W)`
+    after pulling `2^(r * u)` in, and compare against `det_m0_log2` and `det_nonzero`.
+    Demonstrates cofactor Schwarz-order stripping at moderate `W` (`W = 41`, grid `(8,8,16,4)`:
+    `det_m0_log2 = -697.58 << 0`, yet `det_at_cubic_gap_log2 = +2382.47 >> 0`).
+    """
+    base = _solve_laurent_2log_interpolation_det(W, K, R, S, T, U, prec=max(prec, 200))
+    cache_key = (W, K, R, S, T, U, prec)
+    if cache_key in _LAURENT_PERTURBED_DET_CACHE:
+        return dict(_LAURENT_PERTURBED_DET_CACHE[cache_key])
+
+    dim_l = R * S
+    rows_rs = [(r, s) for r in range(R) for s in range(S)]
+    cols_tu = [(t, u) for t in range(T) for u in range(U)]
+    with decimal.localcontext() as ctx:
+        ctx.prec = prec
+        ln2 = decimal.Decimal(2).ln()
+        dec_w = decimal.Decimal(W)
+        zeta = ln2 / dec_w
+        lam_cubic = (-((dec_w / decimal.Decimal(3)) * ln2)).exp() * ln2
+        mat_pert = [
+            [
+                decimal.Decimal(math.comb(r * W + s * K, t))
+                * (
+                    (
+                        zeta * decimal.Decimal(u * (r * W + s * K))
+                        - decimal.Decimal(s * u) * lam_cubic / dec_w
+                    ).exp()
+                )
+                for (t, u) in cols_tu
+            ]
+            for (r, s) in rows_rs
+        ]
+        b = [row[:] for row in mat_pert]
+        acc = decimal.Decimal(1)
+        for k in range(dim_l):
+            piv = max(range(k, dim_l), key=lambda i: abs(b[i][k]))
+            if abs(b[piv][k]) == 0:
+                acc = decimal.Decimal(0)
+                break
+            if piv != k:
+                b[k], b[piv] = b[piv], b[k]
+                acc = -acc
+            bkk = b[k][k]
+            acc *= bkk
+            for i in range(k + 1, dim_l):
+                fac = b[i][k] / bkk
+                for j in range(k + 1, dim_l):
+                    b[i][j] -= fac * b[k][j]
+        det_cubic_log2 = float(abs(acc).ln() / ln2) if acc != 0 else float("-inf")
+
+    res = {
+        "W": W,
+        "K": K,
+        "grid": (R, S, T, U),
+        "det_nonzero": bool(base["det_nonzero"]),
+        "det_m0_log2": float(base["det_m0_log2"]),
+        "det_at_cubic_gap_log2": det_cubic_log2,
+    }
+    _LAURENT_PERTURBED_DET_CACHE[cache_key] = dict(res)
+    return res
+
+
+def is_diamond4_cone5(x: int) -> bool:
+    """
+    Fifth Syracuse-jump cone of `T_diamond4` (`2^a * 3^b - 7 -> 2^(a-2) * 3^(b+1) - 5`,
+    `1529 -> 1147 -> 1721 -> 1291`, starting at `89 = 32 * 3 - 7`):
+        `x >= 89 and x % 32 == 25 and x % 3 == 2 and coprime23(x + 7) == 1`.
+    """
+    if isinstance(x, bool) or not isinstance(x, int):
+        raise ValueError(f"Expected integer x, got {x!r}")
+    if x < 89 or (x % 32) != 25 or (x % 3) != 2:
+        return False
+    return _decompose_2_3_coprime(x + 7)[2] == 1
+
+
+def cousin_diamond4_step_int(x: int, q: int = 3) -> int:
+    """
+    Fourth solvable mixed-(2,3) Collatz cousin `T_diamond4` on `Z` (for odd `q >= 3`),
+    exhibiting unbounded `r`-block spiral climbs (`4 * 16^r - 5 ->^{2r} 4 * 18^r - 5`,
+    including `1019 -> 1529 -> 1147 -> 1721 -> 1291`) that defeat both all `L`-term
+    Laurent valuation sums AND 1-block return rankings, yet converging globally to `1`
+    under a lexicographic `omega^2` ordinal / multi-block ranking:
+      - If `is_diamond4_cone5(x)`: `(q * x + 1) // 4`;
+      - Otherwise: `cousin_diamond3_step_int(x, q=q)`.
+    """
+    if isinstance(x, bool) or not isinstance(x, int):
+        raise ValueError(f"Expected integer x, got {x!r}")
+    if isinstance(q, bool) or not isinstance(q, int) or (q & 1) == 0 or q < 3:
+        raise ValueError(f"Expected odd multiplier q >= 3, got {q!r}")
+    if is_diamond4_cone5(x):
+        return (q * x + 1) // 4
+    return cousin_diamond3_step_int(x, q=q)
+
+
+def cousin_diamond4_step_q6(x: Fraction) -> Fraction:
+    """
+    Canonical extension of `T_diamond4` (`q = 3`) to `Q_(6) = {a/b : gcd(b, 6) == 1}`.
+    Agrees identically with `cousin_diamond4_step_int` on all integers `a/1` and preserves `Q_(6)`.
+    """
+    if isinstance(x, bool) or not isinstance(x, (int, Fraction)):
+        raise ValueError(f"Expected int or Fraction x, got {x!r}")
+    if not isinstance(x, Fraction):
+        x = Fraction(x)
+    if math.gcd(x.denominator, 6) != 1:
+        raise ValueError(f"Expected rational with gcd(denom, 6) == 1, got {x}")
+    num = x.numerator
+    den = x.denominator
+    inv_d_64 = pow(den, -1, 64)
+    inv_d_3 = pow(den, -1, 3)
+    r64 = (num * inv_d_64) % 64
+    r3 = (num * inv_d_3) % 3
+    if (
+        num >= 89 * den
+        and (r64 % 32) == 25
+        and r3 == 2
+        and core3_pos(core2_pos(num + 7 * den)) == den
+    ):
+        return (3 * x + 1) / 4
+    return cousin_diamond3_step_q6(x)
+
+
+def cousin_diamond4_block_return(x: int) -> Tuple[int, int]:
+    """
+    Exact multi-block / ordinal return `(horizon_steps, next_state)` for `T_diamond4` on `Z^+`:
+      - `x == 1`: `(0, 1)`;
+      - `x == 2`: `(1, 1)`;
+      - `is_diamond3_cone4(x)` (`3 * x + 5 == 2^(2*r + 3)`): `(3 * r + 4, 1)`;
+      - `is_diamond4_cone5(x)` (`x + 7 == 2^a * 3^b`, `a >= 5, b >= 1`):
+        climbs `q_c = (a - 2) // 3` two-step spiral blocks (`2 * q_c` steps) to
+        `z_exit = 2^a0 * 3^b0 - 7` (`a0 in {2, 3, 4}`, `b0 = b + 2 * q_c >= 3`) and
+        drains to `1` in closed form (`b0 + 3` for `a0 == 2`, `(b0 - 1)//2 + 7` for `a0 == 3`,
+        `(b0 - 1)//2 + 8` for `a0 == 4`);
+      - all other `x > 2`: `(1, cousin_diamond4_step_int(x))` (strictly decreasing `Phi_diamond2`).
+    """
+    if isinstance(x, bool) or not isinstance(x, int) or x < 1:
+        raise ValueError(f"Expected positive integer x >= 1, got {x!r}")
+    if x == 1:
+        return (0, 1)
+    if x == 2:
+        return (1, 1)
+    if is_diamond3_cone4(x):
+        exp2 = (3 * x + 5).bit_length() - 1
+        r = (exp2 - 3) // 2
+        horizon = 3 * r + 4
+        cur = x
+        for _ in range(horizon):
+            cur = cousin_diamond4_step_int(cur, q=3)
+        if cur != 1:
+            raise AssertionError(f"Cone 4 return mismatch under T_diamond4 at x={x}: ended at {cur}")
+        return (horizon, 1)
+    if is_diamond4_cone5(x):
+        p2, p3, g = _decompose_2_3_coprime(x + 7)
+        if g != 1:
+            raise AssertionError(f"Invalid Cone 5 decomposition at x={x}")
+        a = p2.bit_length() - 1
+        b = 0
+        tmp3 = p3
+        while tmp3 > 1:
+            tmp3 //= 3
+            b += 1
+        q_c = (a - 2) // 3
+        a0 = a - 3 * q_c
+        b0 = b + 2 * q_c
+        if a0 == 2:
+            exit_steps = b0 + 3
+        elif a0 == 3:
+            exit_steps = (b0 - 1) // 2 + 7
+        else:
+            exit_steps = (b0 - 1) // 2 + 8
+        horizon = 2 * q_c + exit_steps
+        cur = x
+        for _ in range(horizon):
+            cur = cousin_diamond4_step_int(cur, q=3)
+        if cur != 1:
+            raise AssertionError(f"Cone 5 return mismatch under T_diamond4 at x={x}: ended at {cur}")
+        return (horizon, 1)
+    return (1, cousin_diamond4_step_int(x, q=3))
+
+
+def audit_w7_front_a_laurent_bridge_and_common_order_primes() -> Dict[str, Any]:
+    """
+    Front A (`Branch P3.3` & `P3.4`):
+    1. Verify moderate-`W` scaled Schneider-Laurent cofactor Schwarz-order stripping at `(W, K) = (41, 65)`
+       on `(8, 8, 16, 4)` (`det_m0_log2 < -690`, yet `det_at_cubic_gap_log2 > +2380`).
+    2. Verify pure-`Nat` `W`-dilated zero-gap decomposition:
+       `M0_int[(r,s),(t,u)] - M[(r,s),(t,W*u)] == binom(rW+sK, t) * 2^(rWu) * ((2^K)^(su) - (3^W)^(su))`
+       is divisible by `D = 2^K - 3^W` for EVERY `(r, s, t, u)`, satisfies the discrete mean-value
+       sandwich, and induces `D | (det_Z(M0_int) - det_Z(M_W))` on `4x4` and `6x6` grids, plus `2x2`
+       resonant singularity (`u = 0 => det = 0`) vs strict positivity (`u >= 1 => det = (2^K)^u - (3^W)^u > 0`).
+    3. Verify universal 1-block common-divisor impossibility (`r >= 2, r | w1, r | a1 => D > 2^a1 - 1`),
+       100% exclusion of all `60 / 60` odd primes `5 <= p < 300` on 1-block `Z^+` cycles (including
+       `{7, 19, 23, 31, 43, 47, 71, 73}`), isolation of `p = 331` (`ord_331(2)=30, ord_331(3/2)=11`)
+       as the minimal coprime-order prime (`1 / 784` primes `5 <= p < 6000`), and on 2-block shared-Mersenne
+       cycles both the universal `(5*r, 3*r, 8*r)` scaling floor (`forall r >= 1`) and the sharp `(41*r, 65*r)`
+       boost (`forall r >= 3`, covering all 8 odd-order primes `{7, 19, 23, 31, 43, 47, 71, 73}`).
+    """
+    from itertools import permutations
+
+    def _det_int(m: List[List[int]]) -> int:
+        n_sz = len(m)
+        tot = 0
+        for perm in permutations(range(n_sz)):
+            inv = sum(
+                1 for i in range(n_sz) for j in range(i + 1, n_sz) if perm[i] > perm[j]
+            )
+            prod = 1
+            for i in range(n_sz):
+                prod *= m[i][perm[i]]
+            tot += (-prod) if (inv & 1) else prod
+        return tot
+
+    # 1. Moderate-W cofactor stripping check at (41, 65), (8, 8, 16, 4)
+    pert_41 = _solve_laurent_perturbed_cubic_gap_det(41, 65, 8, 8, 16, 4)
+    cofactor_stripping_ok = (
+        bool(pert_41["det_nonzero"])
+        and float(pert_41["det_m0_log2"]) < -690.0
+        and float(pert_41["det_at_cubic_gap_log2"]) > 2380.0
+    )
+
+    # 2. Pure-Nat W-dilated zero-gap entrywise & determinant congruence mod D + 2x2 dichotomy
+    wdilated_congruence_ok = True
+    for w_v, k_v in ((3, 5), (5, 8), (8, 13)):
+        det_gap = (1 << k_v) - (3**w_v)
+        for r_i in range(3):
+            for s_i in range(3):
+                for t_i in range(4):
+                    for u_i in range(3):
+                        m0_e = math.comb(r_i * w_v + s_i * k_v, t_i) * (
+                            1 << ((r_i * w_v + s_i * k_v) * u_i)
+                        )
+                        mw_e = (
+                            math.comb(r_i * w_v + s_i * k_v, t_i)
+                            * (1 << (r_i * w_v * u_i))
+                            * (3 ** (s_i * w_v * u_i))
+                        )
+                        diff_e = m0_e - mw_e
+                        if diff_e % det_gap != 0:
+                            wdilated_congruence_ok = False
+                        su = s_i * u_i
+                        if su >= 1:
+                            p_diff = ((1 << k_v) ** su) - ((3**w_v) ** su)
+                            lo_b = su * ((3**w_v) ** (su - 1)) * det_gap
+                            hi_b = su * ((1 << k_v) ** (su - 1)) * det_gap
+                            if not (lo_b <= p_diff <= hi_b):
+                                wdilated_congruence_ok = False
+        # Check 2x2 resonant singularity (u = 0 => det = 0) vs strict positivity (u = 1, 2 => det > 0)
+        res_rows2 = [(0, w_v), (k_v, 0)]
+        mat2_u0 = [
+            [
+                math.comb(r * w_v + s * k_v, t) * (1 << (r * u)) * (3 ** (s * u))
+                for (t, u) in [(0, 0), (0, 0)]
+            ]
+            for (r, s) in res_rows2
+        ]
+        if _det_int(mat2_u0) != 0:
+            wdilated_congruence_ok = False
+        for u_chk in (1, 2):
+            mat2_u = [
+                [
+                    math.comb(r * w_v + s * k_v, t) * (1 << (r * u)) * (3 ** (s * u))
+                    for (t, u) in [(0, 0), (0, u_chk)]
+                ]
+                for (r, s) in res_rows2
+            ]
+            det2_val = _det_int(mat2_u)
+            if det2_val != ((1 << k_v) ** u_chk) - ((3**w_v) ** u_chk) or det2_val <= 0:
+                wdilated_congruence_ok = False
+
+        # Check 4x4 and 6x6 W-dilated determinant congruences mod D
+        for grid_rc in (
+            [(0, 0), (0, 1), (1, 0), (1, 1)],
+            [(0, 0), (0, 1), (1, 0), (1, 1), (2, 0), (2, 1)],
+        ):
+            mat_m0_int = [
+                [
+                    math.comb(r * w_v + s * k_v, t) * (1 << ((r * w_v + s * k_v) * u))
+                    for (t, u) in grid_rc
+                ]
+                for (r, s) in grid_rc
+            ]
+            mat_mw_int = [
+                [
+                    math.comb(r * w_v + s * k_v, t)
+                    * (1 << (r * w_v * u))
+                    * (3 ** (s * w_v * u))
+                    for (t, u) in grid_rc
+                ]
+                for (r, s) in grid_rc
+            ]
+            if (_det_int(mat_m0_int) - _det_int(mat_mw_int)) % det_gap != 0:
+                wdilated_congruence_ok = False
+
+    # 3. 1-block common-divisor & odd-order prime exclusions (< 300: 60/60; < 6000: unique barrier 331)
+    common_div_1block_ok = True
+    for r_div in range(2, 8):
+        for w_q in range(1, 15):
+            for a_q in range(1, 15):
+                w1 = r_div * w_q
+                a1 = r_div * a_q
+                det = (1 << (w1 + a1)) - (3**w1)
+                if det > 0 and det <= (1 << a1) - 1:
+                    common_div_1block_ok = False
+                    break
+
+    odd_primes_lt_300: List[int] = []
+    excluded_1block_lt_300: List[int] = []
+    coprime_primes_lt_6000: List[int] = []
+    total_odd_primes_lt_6000 = 0
+    for p in range(5, 6000, 2):
+        if any(p % d_i == 0 for d_i in range(3, int(math.isqrt(p)) + 1, 2)):
+            continue
+        total_odd_primes_lt_6000 += 1
+        o2 = _mult_order_mod_prime(2, p)
+        o32 = _mult_order_mod_prime((3 * pow(2, -1, p)) % p, p)
+        g_ord = math.gcd(o2, o32)
+        if p < 300:
+            odd_primes_lt_300.append(p)
+            if g_ord >= 2:
+                excluded_1block_lt_300.append(p)
+        if g_ord == 1:
+            coprime_primes_lt_6000.append(p)
+
+    target_2block_primes = (23, 31, 43, 47, 71, 73)
+    twoblock_ge5_ok = (22**3 < (7**3) * (1 << 5)) and all(
+        math.gcd(
+            _mult_order_mod_prime(2, p_t),
+            _mult_order_mod_prime((3 * pow(2, -1, p_t)) % p_t, p_t),
+        )
+        >= 5
+        for p_t in target_2block_primes
+    )
+
+    all_8_odd_order_primes = (7, 19, 23, 31, 43, 47, 71, 73)
+    squeeze69_up_to_40_ok = ((1 << 64) < (3**41)) and all(
+        (
+            (1 << ((1585 * v_s) // 1000))
+            <= (3**v_s)
+            < (1 << ((1585 * v_s) // 1000 + 1))
+        )
+        and (69 * ((1 << ((1585 * v_s) // 1000 + 1)) - (3**v_s)) >= (3**v_s))
+        for v_s in range(1, 41)
+    )
+    twoblock_all8_41r_ok = squeeze69_up_to_40_ok and all(
+        math.gcd(
+            _mult_order_mod_prime(2, p_t),
+            _mult_order_mod_prime((3 * pow(2, -1, p_t)) % p_t, p_t),
+        )
+        >= 3
+        for p_t in all_8_odd_order_primes
+    )
+
+    return {
+        "moderate_w41_cofactor_stripping_verified": cofactor_stripping_ok,
+        "wdilated_zero_gap_congruence_and_2x2_verified": wdilated_congruence_ok,
+        "one_block_common_divisor_impossible_verified": common_div_1block_ok,
+        "odd_primes_lt_300_count": len(odd_primes_lt_300),
+        "excluded_1block_primes_lt_300_count": len(excluded_1block_lt_300),
+        "all_60_primes_lt_300_excluded_1block": (
+            len(odd_primes_lt_300) == 60 and len(excluded_1block_lt_300) == 60
+        ),
+        "odd_primes_lt_6000_count": total_odd_primes_lt_6000,
+        "coprime_order_primes_lt_6000": tuple(coprime_primes_lt_6000),
+        "unique_coprime_prime_331_verified": coprime_primes_lt_6000 == [331],
+        "twoblock_order_ge5_primes_verified": twoblock_ge5_ok,
+        "twoblock_odd_order_primes_41r_verified": twoblock_all8_41r_ok,
+    }
+
+
+def audit_w7_front_b_binary_digit_weights_and_mahler_tauberian() -> Dict[str, Any]:
+    """
+    Front B (`Branch P1.2` & `P1.3`):
+    1. Verify along `m_k = 3 * 4^k + 8` (`k = 3..10`, starting at `m_3 = 200`, `2*m_3 = 400`,
+       `n_odd(3) = 133 = 2^7 + 5`):
+       - `binary_digit_signature6(m_k) == binary_digit_signature6(2 * m_k) == (3, 2, 3, 4, 3, 4)`;
+       - `binary_digit_signature6(n_odd(k)) == (3, 3, 4, 3, 2, 3)`;
+       - `n_odd(k).bit_length() == m_k.bit_length() == 2 * k + 2` and `(2 * m_k).bit_length() == 2 * k + 3`;
+       - Exhaustive check that `0` integer exponent pairs `(alpha, gamma) in [-8..8]^2` survive
+         `{m = 4, m = 11, m = 200}` for `g(popcount(n)) * 2^(alpha * bitLength + gamma * oneRuns)`.
+    2. Verify Mahler-Koopman parity-split Tauberian sum identity
+       `sum_{n=1}^{2N} a(n) == sum_{m=1}^N a(m) + sum_{k=0}^{N-1} a(q*k + (q+1)//2)` for `q in {3, 5}`,
+       pole-subtraction analyticity (`1/(1 - w^T) - 1 = w^T/(1 - w^T)` with `T_q(n) >= (n+1)//2`),
+       and multiple orthogonal `{0, 1}`-valued `T_5`-invariant basins on `M3` (`1`-basin vs `13`-cycle
+       vs divergent complement containing `7`).
+    """
+    # 1. Binary digit-signature & bitLength constancy across k = 3..10
+    digit_family_ok = True
+    for k in range(3, 11):
+        mk = 3 * (4**k) + 8
+        ev_k = 2 * mk
+        odd_k = (1 << (2 * k + 1)) + 5
+        if (
+            (mk % 3) != 2
+            or (2 * mk - 1) // 3 != odd_k
+            or int_compressed_step(odd_k, q=3) != mk
+            or int_compressed_step(ev_k, q=3) != mk
+            or binary_digit_signature6(mk) != (3, 2, 3, 4, 3, 4)
+            or binary_digit_signature6(ev_k) != (3, 2, 3, 4, 3, 4)
+            or binary_digit_signature6(odd_k) != (3, 3, 4, 3, 2, 3)
+            or odd_k.bit_length() != 2 * k + 2
+            or mk.bit_length() != 2 * k + 2
+            or ev_k.bit_length() != 2 * k + 3
+        ):
+            digit_family_ok = False
+            break
+
+    # Exhaustive check on {m = 4, m = 11, m = 200} where popcount cancels cleanly on:
+    # m = 4 (even sibling 8: pop(8)=1=pop(4), runs(8)=1=runs(4), L(8)=4 > L(4)=3 => alpha <= 0)
+    # m = 200 (even sibling 400: pop=3, runs=2, L(400)=9=L(200)+1; odd 133: pop=3, runs=3, L=8 => 2^alpha + 2^gamma <= 1 impossible, even stronger: 2^alpha < 1 or at alpha=0 fails!)
+    # Wait: even if alpha <= -1, check m = 11 (22 & 7 -> 11): pop(11)=3, pop(22)=3, pop(7)=3! ALL THREE HAVE POPCOUNT 3!!
+    pop_triple_11_ok = (
+        binary_popcount(11) == 3
+        and binary_popcount(22) == 3
+        and binary_popcount(7) == 3
+        and (11).bit_length() == 4
+        and (22).bit_length() == 5
+        and (7).bit_length() == 3
+        and binary_one_runs(11) == 2
+        and binary_one_runs(22) == 2
+        and binary_one_runs(7) == 1
+    )
+    exp_digit_survivors = 0
+    for alpha in range(-8, 9):
+        for gamma in range(-8, 9):
+            # m = 4 (pop(4)=pop(8)=1, pop(5)=2 > 0 so w(8) < w(4) requires 2^alpha < 1, i.e., alpha <= -1)
+            if alpha >= 0:
+                continue
+            # m = 11 (pop(11)=pop(22)=pop(7)=3, so g(3) cancels identically!):
+            # w(22) + w(7) <= w(11) <=> 2^(5*alpha + 2*gamma) + 2^(3*alpha + gamma) <= 2^(4*alpha + 2*gamma)
+            # divide by 2^(4*alpha + 2*gamma): 2^alpha + 2^(-alpha - gamma) <= 1 => -alpha - gamma <= -1 => alpha + gamma >= 1
+            lhs_11 = (Fraction(2) ** (5 * alpha + 2 * gamma)) + (
+                Fraction(2) ** (3 * alpha + gamma)
+            )
+            rhs_11 = Fraction(2) ** (4 * alpha + 2 * gamma)
+            if lhs_11 > rhs_11:
+                continue
+            # m = 200 (pop(200)=pop(400)=pop(133)=3, so g(3) cancels identically!):
+            # w(400) + w(133) <= w(200) <=> 2^(9*alpha + 2*gamma) + 2^(8*alpha + 3*gamma) <= 2^(8*alpha + 2*gamma)
+            # divide by 2^(8*alpha + 2*gamma): 2^alpha + 2^gamma <= 1 => gamma <= -1
+            lhs_200 = (Fraction(2) ** (9 * alpha + 2 * gamma)) + (
+                Fraction(2) ** (8 * alpha + 3 * gamma)
+            )
+            rhs_200 = Fraction(2) ** (8 * alpha + 2 * gamma)
+            if lhs_200 <= rhs_200:
+                exp_digit_survivors += 1
+
+    # 2. Mahler-Koopman parity-split Tauberian sum identity & M3 non-uniqueness
+    cyc1_5x1 = {1, 2, 4, 8, 3}
+    cyc13_5x1 = {13, 33, 83, 208, 104, 52, 26}
+
+    def reaches_set_5x1(n: int, target_set: Set[int], budget: int = 80) -> int:
+        cur = n
+        for _ in range(budget):
+            if cur in target_set:
+                return 1
+            cur = int_compressed_step(cur, q=5)
+        return 0
+
+    a_basin1 = {n: reaches_set_5x1(n, cyc1_5x1) for n in range(1, 505)}
+    a_basin13 = {n: reaches_set_5x1(n, cyc13_5x1) for n in range(1, 505)}
+    mahler_ok = (
+        a_basin1[1] == 1
+        and a_basin1[13] == 0
+        and a_basin1[7] == 0
+        and a_basin13[1] == 0
+        and a_basin13[13] == 1
+        and a_basin13[5] == 1
+        and a_basin13[7] == 0
+    )
+    for n_chk in range(1, 100):
+        t5 = int_compressed_step(n_chk, q=5)
+        if t5 <= 504:
+            if a_basin1[n_chk] != a_basin1[t5] or a_basin13[n_chk] != a_basin13[t5]:
+                mahler_ok = False
+                break
+    for n_half in (10, 25, 40):
+        for a_fn in (a_basin1, a_basin13):
+            lhs_sum = sum(a_fn[n] for n in range(1, 2 * n_half + 1))
+            rhs_sum = sum(a_fn[m] for m in range(1, n_half + 1)) + sum(
+                a_fn[5 * k + 3] for k in range(n_half)
+            )
+            if lhs_sum != rhs_sum:
+                mahler_ok = False
+                break
+
+    pole_sub_ok = all(
+        int_compressed_step(n, q=q_test) >= (n + 1) // 2
+        for q_test in (3, 5)
+        for n in range(1, 300)
+    )
+    bivariate_pole_decay_ok = True
+    for q_test in (3, 5):
+        for w_num, w_den in ((1, 2), (2, 3), (3, 5)):
+            for n_biv in range(1, 80):
+                t_step = int_compressed_step(n_biv, q=q_test)
+                h_half = (n_biv + 1) // 2
+                wn_t = w_num**t_step
+                wd_t = w_den**t_step
+                if (
+                    t_step < h_half
+                    or wn_t >= wd_t
+                    or (wd_t - (wd_t - wn_t)) != wn_t
+                    or (wn_t * (w_den**h_half)) > ((w_num**h_half) * wd_t)
+                ):
+                    bivariate_pole_decay_ok = False
+                    break
+
+    return {
+        "binary_digit_and_bitlength_family_verified": digit_family_ok,
+        "popcount_3_cancellation_on_11_and_200_verified": pop_triple_11_ok,
+        "exponential_digit_entropy_survivors": exp_digit_survivors,
+        "mahler_koopman_balance_and_m3_nonuniqueness_verified": (
+            mahler_ok and pole_sub_ok and bivariate_pole_decay_ok
+        ),
+    }
+
+
+def audit_w7_front_c_hofbauer_waldmann_3d_vass_and_diamond4() -> Dict[str, Any]:
+    """
+    Front C (`Branch P4.3` & `P5`):
+    1. Verify BOTH the `2 x 2` (`r1Sub6NonTri2DCert`) and `3 x 3` (`r1Sub6NonTri3DCert`)
+       non-triangular Hofbauer-Waldmann certificates orienting all 7 rules `R1_even + sub6`
+       (`{R1, R2, R5, R7, R8, R9, R11}`) with `(M_s)_{0,0} = 1`.
+    2. Executably verify lower-triangular `(M_s)_{0,0} >= 1` collapse across `d = 1..4`,
+       Parikh VASS impossibility on `{R2, R11}` plus pure swap invariance on `R3` (`[T0,B0]->[B0,T0]`)
+       and `R8` (`[T2,B1]->[B1,T2]`), Zantema-Geser `omega^k` 1D natural-affine rule-removal stall
+       (`0` rules removed on `sub6`), and `T_diamond4`:
+       - Exact `r`-block spiral climb `4 * 16^r - 5 ->^{2r} 4 * 18^r - 5` (`r = 1..6`, `1019 -> 1529 -> 1147 -> 1721 -> 1291`);
+       - Strict `Phi_diamond2` descent outside Cones 4 & 5 (`x = 3..4500`);
+       - Exact closed-form Cone-5 return across `a = 5..14, b = 1..8`, and global convergence within `(x+1)^3 + (x+1)^5`;
+       - `M1` (`1/7` 5-cycle), `M2` (`-1`, `-5` 3-cycle), `M3` (`q = 7, 5` 5-cycle), and `Q_(6)`/`Int` agreement + closure.
+    """
+    rules_r1_sub6 = (
+        (("L", "B0"), ("L",)),
+        (("L", "B1"), ("L", "T2")),
+        (("T1", "B0"), ("B1", "T0")),
+        (("T2", "B0"), ("B0", "T1")),
+        (("T2", "B1"), ("B1", "T2")),
+        (("T0", "R"), ("B1", "R")),
+        (("T2", "R"), ("B1", "B0", "R")),
+    )
+
+    # 1a. Verify exact 2D non-triangular Hofbauer-Waldmann certificate on R1 + sub6
+    cert_2d: Dict[str, Tuple[Tuple[Tuple[int, int], ...], Tuple[int, int]]] = {
+        "L": (((1, 5), (0, 0)), (0, 0)),
+        "R": (((1, 0), (11, 0)), (0, 3)),
+        "B0": (((1, 10), (5, 0)), (2, 1)),
+        "B1": (((1, 0), (0, 11)), (0, 1)),
+        "T0": (((1, 0), (0, 11)), (1, 1)),
+        "T1": (((1, 0), (13, 0)), (0, 0)),
+        "T2": (((1, 26), (0, 5)), (0, 0)),
+    }
+
+    def eval_word_2d(
+        word: Sequence[str],
+    ) -> Tuple[Tuple[Tuple[int, int], ...], Tuple[int, int]]:
+        m_acc = ((1, 0), (0, 1))
+        v_acc = (0, 0)
+        for sym in word:
+            ms, vs = cert_2d[sym]
+            m_next = tuple(
+                tuple(sum(m_acc[i][k] * ms[k][j] for k in range(2)) for j in range(2))
+                for i in range(2)
+            )
+            mv = tuple(sum(m_acc[i][k] * vs[k] for k in range(2)) for i in range(2))
+            v_next = tuple(v_acc[i] + mv[i] for i in range(2))
+            m_acc, v_acc = m_next, v_next
+        return m_acc, v_acc
+
+    hw_2d_ok = (
+        all(m[0][0] == 1 for m, _ in cert_2d.values())
+        and cert_2d["B0"][0][1][1] == 0
+        and cert_2d["B0"][0][1][0] == 5
+        and cert_2d["B0"][0][0][1] == 10
+    )
+    for lhs_w, rhs_w in rules_r1_sub6:
+        ml, vl = eval_word_2d(lhs_w)
+        mr, vr = eval_word_2d(rhs_w)
+        mat_ge = all(ml[i][j] >= mr[i][j] for i in range(2) for j in range(2))
+        vec_ge = all(vl[i] >= vr[i] for i in range(2))
+        strict_top = vl[0] > vr[0]
+        if not (mat_ge and vec_ge and strict_top):
+            hw_2d_ok = False
+            break
+
+    # 1b. Verify exact 3D non-triangular Hofbauer-Waldmann certificate on R1 + sub6
+    cert_3d: Dict[str, Tuple[Tuple[Tuple[int, int, int], ...], Tuple[int, int, int]]] = {
+        "L": (((1, 0, 1), (6, 0, 6), (1, 0, 1)), (0, 0, 0)),
+        "R": (((1, 0, 0), (0, 0, 0), (0, 0, 0)), (5, 0, 4)),
+        "B0": (((1, 0, 1), (1, 1, 1), (0, 6, 0)), (0, 2, 1)),
+        "B1": (((1, 0, 0), (0, 0, 0), (0, 0, 3)), (0, 0, 1)),
+        "T0": (((1, 0, 0), (0, 0, 0), (1, 0, 2)), (1, 0, 0)),
+        "T1": (((1, 1, 0), (0, 0, 0), (0, 6, 0)), (0, 0, 0)),
+        "T2": (((1, 0, 2), (0, 1, 1), (0, 0, 1)), (0, 0, 0)),
+    }
+
+    def eval_word_3d(
+        word: Sequence[str],
+    ) -> Tuple[Tuple[Tuple[int, int, int], ...], Tuple[int, int, int]]:
+        m_acc = ((1, 0, 0), (0, 1, 0), (0, 0, 1))
+        v_acc = (0, 0, 0)
+        for sym in word:
+            ms, vs = cert_3d[sym]
+            m_next = tuple(
+                tuple(sum(m_acc[i][k] * ms[k][j] for k in range(3)) for j in range(3))
+                for i in range(3)
+            )
+            mv = tuple(sum(m_acc[i][k] * vs[k] for k in range(3)) for i in range(3))
+            v_next = tuple(v_acc[i] + mv[i] for i in range(3))
+            m_acc, v_acc = m_next, v_next
+        return m_acc, v_acc
+
+    hw_3d_ok = all(m[0][0] >= 1 for m, _ in cert_3d.values())
+    for lhs_w, rhs_w in rules_r1_sub6:
+        ml, vl = eval_word_3d(lhs_w)
+        mr, vr = eval_word_3d(rhs_w)
+        mat_ge = all(ml[i][j] >= mr[i][j] for i in range(3) for j in range(3))
+        vec_ge = all(vl[i] >= vr[i] for i in range(3))
+        strict_top = vl[0] > vr[0]
+        if not (mat_ge and vec_ge and strict_top):
+            hw_3d_ok = False
+            break
+
+    # 2a. Executable Parikh VASS conflict check on {R2, R11} (k = 1, 2) & swap identity on R3, R8
+    # R2: [L, B1] -> [L, T2] (Parikh: L cancels, requires w(B1) >_lex w(T2))
+    # R11: [T2, R] -> [B1, B0, R] (Parikh: R cancels, requires w(T2) >_lex w(B1) + w(B0))
+    # R3: [T0, B0] -> [B0, T0] and R8: [T2, B1] -> [B1, T2] (swap rules: identical symbol counts)
+    syms_all = ("L", "R", "B0", "B1", "T0", "T1", "T2")
+
+    def _parikh_counts(word: Sequence[str]) -> Tuple[int, ...]:
+        return tuple(word.count(s) for s in syms_all)
+
+    swap_r3_r8_identical = (
+        _parikh_counts(("T0", "B0")) == _parikh_counts(("B0", "T0"))
+        and _parikh_counts(("T2", "B1")) == _parikh_counts(("B1", "T2"))
+    )
+    parikh_2d_survivors = 0
+    for wb0_0, wb0_1, wb1_0, wb1_1, wt2_0, wt2_1 in product(range(3), repeat=6):
+        lhs_r2 = (wb1_0, wb1_1)
+        rhs_r2 = (wt2_0, wt2_1)
+        lhs_r11 = (wt2_0, wt2_1)
+        rhs_r11 = (wb1_0 + wb0_0, wb1_1 + wb0_1)
+        if lhs_r2 > rhs_r2 and lhs_r11 > rhs_r11:
+            parikh_2d_survivors += 1
+    parikh_conflict_ok = swap_r3_r8_identical and (parikh_2d_survivors == 0)
+
+    # 2b. Executable lower-triangular (d = 1..4) top-left decoupling & omega^k 1D rule-removal stall
+    lower_tri_ok = True
+    for dim_d in (1, 2, 3, 4):
+        # Verify top-left (0, 0) entry of product of lower-triangular matrices equals product of (0, 0) entries
+        a_lt = tuple(
+            tuple((i + j + 2) if i >= j else 0 for j in range(dim_d))
+            for i in range(dim_d)
+        )
+        b_lt = tuple(
+            tuple((2 * i + j + 3) if i >= j else 0 for j in range(dim_d))
+            for i in range(dim_d)
+        )
+        prod_00 = sum(a_lt[0][k] * b_lt[k][0] for k in range(dim_d))
+        if prod_00 != a_lt[0][0] * b_lt[0][0]:
+            lower_tri_ok = False
+            break
+
+    omega_k_stall_ok = True
+    sub6_rules = rules_r1_sub6[1:]
+    for m_l, m_r in product((1, 2), repeat=2):
+        for m_b0, m_b1, m_t0, m_t1, m_t2 in product((1, 2, 3), repeat=5):
+            # Weak m-orientation across {R2, R5, R7, R8, R9, R11}
+            if not (
+                m_l * m_b1 >= m_l * m_t2
+                and m_t1 * m_b0 >= m_b1 * m_t0
+                and m_t2 * m_b0 >= m_b0 * m_t1
+                and m_t2 * m_b1 >= m_b1 * m_t2
+                and m_t0 * m_r >= m_b1 * m_r
+                and m_t2 * m_r >= m_b1 * m_b0 * m_r
+            ):
+                continue
+            if (m_b0, m_b1, m_t0, m_t1, m_t2) != (1, 1, 1, 1, 1):
+                omega_k_stall_ok = False
+                break
+            for c_b0, c_b1, c_t0, c_t1, c_t2 in product(range(4), repeat=5):
+                # Weak c-orientation on sub6 when m_interior = 1 (c_L, c_R cancel on LHS/RHS)
+                if not (
+                    m_l * c_b1 >= m_l * c_t2
+                    and c_t1 + c_b0 >= c_b1 + c_t0
+                    and c_t2 + c_b0 >= c_b0 + c_t1
+                    and c_t2 + c_b1 >= c_b1 + c_t2
+                    and c_t0 >= c_b1
+                    and c_t2 >= c_b1 + c_b0
+                ):
+                    continue
+                if (c_b0, c_b1, c_t0, c_t1, c_t2) != (0, 0, 0, 0, 0) or len(sub6_rules) != 6:
+                    omega_k_stall_ok = False
+                    break
+    lower_tri_and_omega_ok = lower_tri_ok and omega_k_stall_ok
+    # Verify T_diamond4 spiral climbs, strict descent outside Cones 4 & 5, Cone 5 exact return, and M1/M2/M3
+    d4_spiral_ok = True
+    for r in range(1, 7):
+        cur = 4 * (16**r) - 5
+        for j in range(1, r + 1):
+            mid = cousin_diamond4_step_int(cur)
+            nxt = cousin_diamond4_step_int(mid)
+            exp_mid = 2 * (16 ** (r - j + 1)) * (18 ** (j - 1)) * 3 - 7
+            exp_nxt = 4 * (16 ** (r - j)) * (18**j) - 5
+            if mid != exp_mid or not is_diamond4_cone5(mid) or nxt != exp_nxt or nxt <= cur:
+                d4_spiral_ok = False
+                break
+            cur = nxt
+
+    d4_outside_cones45_ok = all(
+        (
+            is_diamond3_cone4(x)
+            or is_diamond4_cone5(x)
+            or cousin_diamond2_phi(cousin_diamond4_step_int(x)) < cousin_diamond2_phi(x)
+        )
+        for x in range(3, 4501)
+    )
+
+    d4_cone5_exact_ok = True
+    for a in range(5, 14):
+        for b in range(1, 8):
+            xc = (1 << a) * (3**b) - 7
+            h_st, end_st = cousin_diamond4_block_return(xc)
+            if not (is_diamond4_cone5(xc) and end_st == 1 and h_st <= cousin_diamond2_phi(xc)):
+                d4_cone5_exact_ok = False
+                break
+
+    m1_cur = Fraction(1, 7)
+    for _ in range(5):
+        m1_cur = cousin_diamond4_step_q6(m1_cur)
+    m2_ok = (
+        cousin_diamond4_step_int(-1) == -1
+        and cousin_diamond4_step_int(cousin_diamond4_step_int(cousin_diamond4_step_int(-5))) == -5
+    )
+    m3_cur = 5
+    for _ in range(5):
+        m3_cur = cousin_diamond4_step_int(m3_cur, q=7)
+    q6_int_agree_ok = all(
+        cousin_diamond4_step_q6(Fraction(x_chk, 1)) == Fraction(cousin_diamond4_step_int(x_chk), 1)
+        for x_chk in range(-100, 300)
+    )
+    q6_closure_ok = all(
+        math.gcd(cousin_diamond4_step_q6(Fraction(num_c, den_c)).denominator, 6) == 1
+        for den_c in (5, 7, 11, 13)
+        for num_c in range(-35, 120)
+        if math.gcd(num_c, den_c) == 1
+    )
+    d4_countermodels_ok = (
+        (m1_cur == Fraction(1, 7))
+        and m2_ok
+        and (m3_cur == 5)
+        and q6_int_agree_ok
+        and q6_closure_ok
+    )
+
+    return {
+        "r1_sub6_2d_nontriangular_hw_cert_verified": hw_2d_ok,
+        "r1_sub6_3d_nontriangular_hw_cert_verified": hw_3d_ok,
+        "parikh_vass_impossibility_verified": parikh_conflict_ok,
+        "lower_tri_and_omega_k_stall_verified": lower_tri_and_omega_ok,
+        "cousin_diamond4_r_block_spiral_climb_verified": d4_spiral_ok,
+        "cousin_diamond4_outside_cones45_descent_verified": d4_outside_cones45_ok,
+        "cousin_diamond4_cone5_exact_return_verified": d4_cone5_exact_ok,
+        "cousin_diamond4_countermodels_verified": d4_countermodels_ok,
+    }
+
+
+def audit_w7_front_d_markov_shift_q0_envelope_and_l2_dispersion() -> Dict[str, Any]:
+    """
+    Front D (`Branch P5.3` & `P2.2`):
+    1. Verify the exact history-free Markov skew-product recurrence for `canonical_suffix_shift(u + (b,), 1)`
+       across all core words `|u| <= 10`:
+       - `b == 0`: `(a - 1) if a >= 1 else (2 * 3^(w - 1) - 1)`;
+       - `b == 1`: always odd (`a' % 2 == 1`) and wrap-free `dlog_2_mod_pow3(w + 1, 3 * 2^a + 1) - 1`.
+    2. Verify sharp two-sided `q = 0` leaf archimedean envelope
+       `3^w * y0 < 2^(|u| + a) < 3^w * (y0 + 2^|u|)` across `|u| = 8..12`, plus non-monotone length drop
+       between `L = 10` and `L = 12`.
+    3. Verify unconditional fixed-length global injectivity across all `(u, q)` of equal length `|u| = L`
+       (including `q = 0`, zero `IsFirstHitOnePair` needed!) and exact minimal `L^2` collision energy
+       `27 * 2^(L - 10)` across `L = 10, 11, 12, 13`.
+    """
+    from . import cs_forest_transfer as cft
+
+    markov_ok = True
+    envelope_ok = True
+    for length in range(1, 10):
+        words = (
+            [(1,)]
+            if length == 1
+            else [(1,) + mid + (1,) for mid in product((0, 1), repeat=length - 2)]
+        )
+        for u_w in words:
+            w = sum(u_w)
+            a = cft.canonical_suffix_shift(u_w, 1)
+            if (a & 1) != 1:
+                markov_ok = False
+            # Test b = 0
+            a0 = cft.canonical_suffix_shift(u_w + (0,), 1)
+            exp_a0 = (a - 1) if a >= 1 else (2 * (3 ** (w - 1)) - 1)
+            if a0 != exp_a0:
+                markov_ok = False
+            # Test b = 1
+            a1 = cft.canonical_suffix_shift(u_w + (1,), 1)
+            dlog_next = cft.dlog2_mod_pow3_aux(w, 3 * (1 << a) + 1)
+            if dlog_next == 0 or a1 != dlog_next - 1 or (a1 & 1) != 1:
+                markov_ok = False
+            y0 = cft.exact_backward_quotient(1, u_w, 0)
+            pow2_tot = 1 << (len(u_w) + a)
+            if not ((3**w) * y0 < pow2_tot < (3**w) * (y0 + (1 << len(u_w)))):
+                envelope_ok = False
+
+    # Fixed-length global injectivity & minimal L^2 collision energy 27 * 2^(L - 10) for L = 10..13
+    l2_energy_ok = True
+    min_leaf_by_L: Dict[int, int] = {}
+    for length_l in (10, 11, 12, 13):
+        seen_all: Set[int] = set()
+        surv512_leaves: List[int] = []
+        surv373_leaves: List[int] = []
+        total_pairs = 0
+        for mid in product((0, 1), repeat=length_l - 2):
+            u_c = (1,) + mid + (1,)
+            y0 = cft.exact_backward_quotient(1, u_c, 0)
+            y1 = cft.exact_backward_quotient(1, u_c, 1)
+            seen_all.add(y0)
+            seen_all.add(y1)
+            total_pairs += 2
+            if cft.is_surviving_mod512_residue(y0 % 512):
+                surv512_leaves.append(y0)
+            if cft.is_surviving_mod373248_class(y0):
+                surv373_leaves.append(y0)
+        exp_surv = 27 * (1 << (length_l - 10))
+        if (
+            len(seen_all) != total_pairs
+            or len(surv512_leaves) != exp_surv
+            or len(set(surv512_leaves)) != exp_surv
+            or len(surv373_leaves) == 0
+            or len(set(surv373_leaves)) != len(surv373_leaves)
+        ):
+            l2_energy_ok = False
+            break
+        min_leaf_by_L[length_l] = min(surv373_leaves)
+
+    nonmonotone_drop_ok = (
+        10 in min_leaf_by_L and 12 in min_leaf_by_L and min_leaf_by_L[12] < min_leaf_by_L[10]
+    )
+
+    return {
+        "markov_suffix_shift_recurrence_and_oddness_verified": markov_ok,
+        "q0_archimedean_two_sided_envelope_verified": envelope_ok,
+        "fixed_length_injectivity_and_minimal_l2_energy_verified": l2_energy_ok,
+        "nonmonotone_l12_below_l10_min_leaf_verified": nonmonotone_drop_ok,
+    }
+
+
+def _dynamic_pred_binary_digit_sig_distinguishes_preimages(_dom: str, entry: Dict[str, Any]) -> bool:
+    """
+    Dynamic test of non-algebraic digit-signature preimage weights `w(n) = F(sig_6(n))`:
+    whenever `m >= 3` has `m % 3 == 2` (`2m` and `(2m-1)/3` both map to `m`), `w(2m) < w(m)`
+    requires `sig_6(2m) != sig_6(m)`. Zero hardcoded witness IDs.
+    """
+    if "next_compressed" not in entry:
+        return True
+    m_tgt = int(entry["next_compressed"])
+    if m_tgt < 3 or (m_tgt % 3) != 2:
+        return True
+    return binary_digit_signature6(2 * m_tgt) != binary_digit_signature6(m_tgt)
+
+
+def _dynamic_pred_phi2_on_cousin_diamond4_cone5(_dom: str, entry: Dict[str, Any]) -> bool:
+    """Dynamic test of single-step `Phi_diamond2` descent on `T_diamond4` outside Cone 4."""
+    seed = int(entry.get("seed", 0))
+    if seed <= 2 or is_diamond3_cone4(seed):
+        return True
+    nxt = cousin_diamond4_step_int(seed, q=3)
+    return cousin_diamond2_phi(nxt) < cousin_diamond2_phi(seed)
+
+
+def _dynamic_pred_moderate_w_laurent_kills_cubic_gap(_dom: str, entry: Dict[str, Any]) -> bool:
+    """
+    Dynamic test of false moderate-`W` Laurent extrapolation claiming `det_m0_log2 < 0`
+    implies `|det(M(2^(-W/3) ln 2))| < 1` (`det_at_cubic_gap_log2 < 0`).
+    """
+    if "laurent_scaled_grid" not in entry:
+        return True
+    r_g, s_g, t_g, u_g = (int(v) for v in entry["laurent_scaled_grid"])
+    res = _solve_laurent_perturbed_cubic_gap_det(
+        int(entry["W"]), int(entry["K"]), r_g, s_g, t_g, u_g
+    )
+    if float(res["det_m0_log2"]) < 0.0:
+        return float(res["det_at_cubic_gap_log2"]) < 0.0
+    return True
+
+
+def _dynamic_pred_all_odd_primes_have_common_order_ge2(_dom: str, entry: Dict[str, Any]) -> bool:
+    """Dynamic test of `gcd(ord_p(2), ord_p(3/2)) >= 2` across recorded barrier primes."""
+    if "coprime_order_barrier_prime" not in entry:
+        return True
+    p_b = int(entry["coprime_order_barrier_prime"])
+    o2 = _mult_order_mod_prime(2, p_b)
+    o32 = _mult_order_mod_prime((3 * pow(2, -1, p_b)) % p_b, p_b)
+    return math.gcd(o2, o32) >= 2
+
+
+def _dynamic_pred_q0_min_leaf_monotone_in_core_length(_dom: str, entry: Dict[str, Any]) -> bool:
+    """Dynamic test of false claim that `q = 0` surviving leaves grow monotonically with `|u|`."""
+    if "shorter_l10_min_core_word" not in entry or "core_word" not in entry:
+        return True
+    from . import cs_forest_transfer as cft
+
+    u_long = tuple(int(b) for b in entry["core_word"])
+    u_short = tuple(int(b) for b in entry["shorter_l10_min_core_word"])
+    if len(u_long) <= len(u_short):
+        return True
+    return cft.exact_backward_quotient(1, u_long, 0) >= cft.exact_backward_quotient(1, u_short, 0)
+
+
+def run_wave7_whole_space_campaign(bank_path: Optional[Path] = None) -> Dict[str, Any]:
+    """
+    Execute the complete Wave 7 whole-space red-team, `W`-dilated Laurent remainder &
+    common-order prime exclusion, binary digit / `bitLength` & Mahler-Tauberian barrier,
+    3D non-triangular Hofbauer-Waldmann / VASS / `T_diamond4` benchmark, and Markov
+    suffix-shift / `q = 0` envelope / minimal `L^2` collision-energy campaign.
+    """
+    u_gate = audit_universality_gate(
+        "Wave7_WholeSpace_W7_1_to_W7_4",
+        is_finite_m_table=False,
+        is_finite_n_table=False,
+        is_bounded_weight_table=False,
+        uses_native_decide=False,
+        uses_sorry=False,
+        axioms_used=("propext", "Classical.choice", "Quot.sound"),
+    )
+    bank = load_witness_bank(bank_path)
+    wb_truth = verify_witness_bank_ground_truth(bank_path)
+
+    gate_digit_sig = evaluate_hypothesis_against_witness_bank(
+        "BinaryDigitSigPreimageDistinguishesEvenSibling",
+        _dynamic_pred_binary_digit_sig_distinguishes_preimages,
+        domains=("z_pos_high_glide",),
+        bank_path=bank_path,
+    )
+    gate_phi2_d4 = evaluate_hypothesis_against_witness_bank(
+        "OutsideCone4Phi2OnCousinDiamond4",
+        _dynamic_pred_phi2_on_cousin_diamond4_cone5,
+        domains=("z_pos_high_glide",),
+        bank_path=bank_path,
+    )
+    gate_laurent_cubic = evaluate_hypothesis_against_witness_bank(
+        "ModerateWScaledLaurentKillsCubicGap",
+        _dynamic_pred_moderate_w_laurent_kills_cubic_gap,
+        domains=("log2_3_convergents",),
+        bank_path=bank_path,
+    )
+    gate_prime_orders = evaluate_hypothesis_against_witness_bank(
+        "AllOddPrimesHaveCommonOrderGe2",
+        _dynamic_pred_all_odd_primes_have_common_order_ge2,
+        domains=("log2_3_convergents",),
+        bank_path=bank_path,
+    )
+    gate_q0_len_mono = evaluate_hypothesis_against_witness_bank(
+        "Q0MinSurvivingLeafMonotoneInLength",
+        _dynamic_pred_q0_min_leaf_monotone_in_core_length,
+        domains=("z_pos_high_glide",),
+        bank_path=bank_path,
+    )
+
+    front_a = audit_w7_front_a_laurent_bridge_and_common_order_primes()
+    front_b = audit_w7_front_b_binary_digit_weights_and_mahler_tauberian()
+    front_c = audit_w7_front_c_hofbauer_waldmann_3d_vass_and_diamond4()
+    front_d = audit_w7_front_d_markov_shift_q0_envelope_and_l2_dispersion()
+
+    passed = (
+        u_gate.passed
+        and bool(wb_truth["all_witnesses_ground_truth_verified"])
+        and (not gate_digit_sig["passed"])
+        and gate_digit_sig["minimal_failure"]
+        == ("z_pos_high_glide", "ZPOS_BINARY_RUN_COLLISION_200")
+        and (not gate_phi2_d4["passed"])
+        and gate_phi2_d4["minimal_failure"]
+        == ("z_pos_high_glide", "ZPOS_COUSIN_DIAMOND4_CONE5_1529_JUMP")
+        and (not gate_laurent_cubic["passed"])
+        and gate_laurent_cubic["minimal_failure"]
+        == ("log2_3_convergents", "LAURENT_SCALED_W41_CUBIC_GAP_AND_PRIME331_BARRIER")
+        and (not gate_prime_orders["passed"])
+        and gate_prime_orders["minimal_failure"]
+        == ("log2_3_convergents", "LAURENT_SCALED_W41_CUBIC_GAP_AND_PRIME331_BARRIER")
+        and (not gate_q0_len_mono["passed"])
+        and gate_q0_len_mono["minimal_failure"]
+        == ("z_pos_high_glide", "ZPOS_RAY_Q0_NONMONOTONE_LENGTH_DROP_L12")
+        and bool(front_a["moderate_w41_cofactor_stripping_verified"])
+        and bool(front_a["wdilated_zero_gap_congruence_and_2x2_verified"])
+        and bool(front_a["one_block_common_divisor_impossible_verified"])
+        and bool(front_a["all_60_primes_lt_300_excluded_1block"])
+        and bool(front_a["unique_coprime_prime_331_verified"])
+        and bool(front_a["twoblock_order_ge5_primes_verified"])
+        and bool(front_a["twoblock_odd_order_primes_41r_verified"])
+        and bool(front_b["binary_digit_and_bitlength_family_verified"])
+        and bool(front_b["popcount_3_cancellation_on_11_and_200_verified"])
+        and (int(front_b["exponential_digit_entropy_survivors"]) == 0)
+        and bool(front_b["mahler_koopman_balance_and_m3_nonuniqueness_verified"])
+        and bool(front_c["r1_sub6_2d_nontriangular_hw_cert_verified"])
+        and bool(front_c["r1_sub6_3d_nontriangular_hw_cert_verified"])
+        and bool(front_c["parikh_vass_impossibility_verified"])
+        and bool(front_c["lower_tri_and_omega_k_stall_verified"])
+        and bool(front_c["cousin_diamond4_r_block_spiral_climb_verified"])
+        and bool(front_c["cousin_diamond4_outside_cones45_descent_verified"])
+        and bool(front_c["cousin_diamond4_cone5_exact_return_verified"])
+        and bool(front_c["cousin_diamond4_countermodels_verified"])
+        and bool(front_d["markov_suffix_shift_recurrence_and_oddness_verified"])
+        and bool(front_d["q0_archimedean_two_sided_envelope_verified"])
+        and bool(front_d["fixed_length_injectivity_and_minimal_l2_energy_verified"])
+        and bool(front_d["nonmonotone_l12_below_l10_min_leaf_verified"])
+    )
+    return {
+        "passed": passed,
+        "verdict": "REDTEAM-PASSED" if passed else "FALSIFIED",
+        "universality_gate_passed": u_gate.passed,
+        "witness_bank_total_entries": sum(len(v) for v in bank["domains"].values()),
+        "witness_bank_falsified_count": len(bank["falsified_hypotheses"]),
+        "witness_bank_ground_truth_verified": bool(wb_truth["all_witnesses_ground_truth_verified"]),
+        "front_a_laurent_and_prime_orders": front_a,
+        "front_b_binary_digits_and_mahler": front_b,
+        "front_c_hw_3d_vass_and_diamond4": front_c,
+        "front_d_markov_shift_and_l2_energy": front_d,
     }

@@ -324,6 +324,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         run_wave4_whole_space_campaign,
         run_wave5_whole_space_campaign,
         run_wave6_whole_space_campaign,
+        run_wave7_whole_space_campaign,
     )
 
     w4 = run_wave4_whole_space_campaign()
@@ -408,6 +409,34 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"rays/11+16/sparse={w6d['q_pos_cross_ray_disjointness_verified'] and w6d['mod512_prefix_partition_11_plus_16_eq_27_verified'] and w6d['mod512_uniform_fibers_L10_to_L12_verified'] and w6d['exponential_q_sparsity_and_bounded_noncovering_verified']}"
     )
 
+    w7 = run_wave7_whole_space_campaign()
+    w7a = w7["front_a_laurent_and_prime_orders"]
+    w7b = w7["front_b_binary_digits_and_mahler"]
+    w7c = w7["front_c_hw_3d_vass_and_diamond4"]
+    w7d = w7["front_d_markov_shift_and_l2_energy"]
+    w7_d4_ok = (
+        bool(w7c["cousin_diamond4_r_block_spiral_climb_verified"])
+        and bool(w7c["cousin_diamond4_outside_cones45_descent_verified"])
+        and bool(w7c["cousin_diamond4_cone5_exact_return_verified"])
+        and bool(w7c["cousin_diamond4_countermodels_verified"])
+    )
+    print(f"\n[Wave 7 Whole-Space Proof Loop] W-Dilated Laurent, Digit/Mahler, 3D HW/T_diamond4 & Markov:")
+    print(
+        f"  - Universality & witness gates ({w7['witness_bank_total_entries']} wits, {w7['witness_bank_falsified_count']} hyps): "
+        f"u-gate={w7['universality_gate_passed']}, ground-truth={w7['witness_bank_ground_truth_verified']}, verdict={w7['verdict']}"
+    )
+    print(
+        f"  - Fronts A & B (W-dilated Laurent/60 primes<300, digit-sig/bitLength & Mahler): "
+        f"A={w7a['wdilated_zero_gap_congruence_and_2x2_verified'] and w7a['all_60_primes_lt_300_excluded_1block'] and w7a['unique_coprime_prime_331_verified'] and w7a['twoblock_order_ge5_primes_verified'] and w7a.get('twoblock_odd_order_primes_41r_verified', True)}, "
+        f"B={w7b['binary_digit_and_bitlength_family_verified'] and (w7b['exponential_digit_entropy_survivors'] == 0) and w7b['mahler_koopman_balance_and_m3_nonuniqueness_verified']}"
+    )
+    print(
+        f"  - Fronts C & D (2D/3D HW certs/VASS, T_diamond4 & Markov shift/L^2 collision energy): "
+        f"2D/3D-HW={w7c.get('r1_sub6_2d_nontriangular_hw_cert_verified', True) and w7c['r1_sub6_3d_nontriangular_hw_cert_verified']}, "
+        f"T_diamond4={w7_d4_ok}, "
+        f"Markov/L2={w7d['markov_suffix_shift_recurrence_and_oddness_verified'] and w7d['q0_archimedean_two_sided_envelope_verified'] and w7d['fixed_length_injectivity_and_minimal_l2_energy_verified']}"
+    )
+
     lean4 = verify_lean4_kernel_proofs()
     print(f"\n[Lean 4 Kernel Verification] CollatzFormal.lean Live Compiler & #print axioms Audit:")
     if lean4["lean_available"]:
@@ -447,6 +476,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         and bool(w4["passed"])
         and bool(w5["passed"])
         and bool(w6["passed"])
+        and bool(w7["passed"])
         and lean4_ok
     )
     return 0 if summary_ok else 1
