@@ -326,6 +326,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         run_wave6_whole_space_campaign,
         run_wave7_whole_space_campaign,
         run_wave8_whole_space_campaign,
+        run_wave9_whole_space_campaign,
     )
 
     w4 = run_wave4_whole_space_campaign()
@@ -481,6 +482,50 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"T_diamond5={w8_d5_ok}, D={w8_d_ok}"
     )
 
+    w9 = run_wave9_whole_space_campaign()
+    w9a = w9["front_a_srs_d3_and_zantema"]
+    w9b = w9["front_b_laurent_4x4_and_coprime_sieve"]
+    w9c = w9["front_c_stateful_automaton_and_diamond6"]
+    w9d = w9["front_d_global_collision_and_markov_pow3"]
+    w9_srs_ok = (
+        bool(w9a["omit_r9_10_of_11_5level_3d_tower_verified"])
+        and bool(w9a["zantema_mod_m_semantic_algebra_verified"])
+        and bool(w9a["s9_mod2_labelled_7level_2d_tower_verified"])
+        and bool(w9a["s9_subseq_pumping_zero_diag_obstruction_verified"])
+        and bool(w9a["s9_parikh_syzygy_and_boundary_nontri_2d_collapse_verified"])
+    )
+    w9_b_ok = (
+        bool(w9b["laurent_4x4_three_closed_forms_and_cone_verified"])
+        and bool(w9b["twobase_4x4_resonant_zero_9_16_2_verified"])
+        and bool(w9b["coprime_primes_p3_45661129_and_p4_107889071_verified"])
+        and bool(w9b["joint_331_and_107889071_floors_verified"])
+    )
+    w9_d6_ok = (
+        bool(w9c["cousin_diamond6_outside_cones4567_descent_verified"])
+        and bool(w9c["cousin_diamond6_cone7_return_and_spiral_verified"])
+        and bool(w9c["cousin_diamond6_countermodels_verified"])
+    )
+    w9_d_ok = (
+        bool(w9d["global_all_pairs_classification_verified"])
+        and bool(w9d["global_first_hit_injectivity_verified"])
+        and bool(w9d["markov_mod18_and_pow3_memory_annihilation_verified"])
+        and bool(w9d["markov_mod18_table_and_multistep_equidistribution_verified"])
+    )
+    print(f"\n[Wave 9 Whole-Space Proof Loop] 3D omit-R9/Zantema S9, 4x4 Laurent/p4 Sieve, Stateful Transducer/T_diamond6 & Global (u,q):")
+    print(
+        f"  - Universality & witness gates ({w9['witness_bank_total_entries']} wits, {w9['witness_bank_falsified_count']} hyps): "
+        f"u-gate={w9['universality_gate_passed']}, ground-truth={w9['witness_bank_ground_truth_verified']}, verdict={w9['verdict']}"
+    )
+    print(
+        f"  - Fronts A & B (3D omit-R9/Zantema M=2 S9/2D barrier, 4x4 Laurent & p3/p4 mod-8 sieve): "
+        f"A={w9_srs_ok}, B={w9_b_ok}"
+    )
+    print(
+        f"  - Fronts C & D (stateful Q!-automaton/Mealy transducer barriers, T_diamond6 & global (u,q)/3^k Markov): "
+        f"C={w9c['stateful_automaton_q_factorial_family_verified'] and w9c['stateful_transducer_affine_and_mersenne_barrier_verified']}, "
+        f"T_diamond6={w9_d6_ok}, D={w9_d_ok}"
+    )
+
     lean4 = verify_lean4_kernel_proofs()
     print(f"\n[Lean 4 Kernel Verification] CollatzFormal.lean Live Compiler & #print axioms Audit:")
     if lean4["lean_available"]:
@@ -522,6 +567,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         and bool(w6["passed"])
         and bool(w7["passed"])
         and bool(w8["passed"])
+        and bool(w9["passed"])
         and lean4_ok
     )
     return 0 if summary_ok else 1

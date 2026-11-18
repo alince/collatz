@@ -337,6 +337,7 @@ _LAKE_SEQUENTIAL_TARGETS: Tuple[str, ...] = (
     "+CollatzFormal.Wave6WholeSpace",
     "+CollatzFormal.Wave7WholeSpace",
     "+CollatzFormal.Wave8WholeSpace",
+    "+CollatzFormal.Wave9WholeSpace",
     "+CollatzFormal",
 )
 
@@ -816,6 +817,7 @@ def generate_full_proof_suite_report() -> Dict[str, object]:
         run_wave6_whole_space_campaign,
         run_wave7_whole_space_campaign,
         run_wave8_whole_space_campaign,
+        run_wave9_whole_space_campaign,
     )
 
     thm23_25_boost = verify_boost_three_line_counter_model_matrix()
@@ -825,6 +827,7 @@ def generate_full_proof_suite_report() -> Dict[str, object]:
     wave6_cert = run_wave6_whole_space_campaign()
     wave7_cert = run_wave7_whole_space_campaign()
     wave8_cert = run_wave8_whole_space_campaign()
+    wave9_cert = run_wave9_whole_space_campaign()
     lean4_cert = verify_lean4_kernel_proofs()
 
     return {
@@ -893,5 +896,6 @@ def generate_full_proof_suite_report() -> Dict[str, object]:
         "wave6_whole_space_campaign": wave6_cert,
         "wave7_whole_space_campaign": wave7_cert,
         "wave8_whole_space_campaign": wave8_cert,
+        "wave9_whole_space_campaign": wave9_cert,
         "lean4_kernel_verification": lean4_cert,
     }

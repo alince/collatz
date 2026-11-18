@@ -18,6 +18,7 @@ import CollatzFormal.Wave5WholeSpace
 import CollatzFormal.Wave6WholeSpace
 import CollatzFormal.Wave7WholeSpace
 import CollatzFormal.Wave8WholeSpace
+import CollatzFormal.Wave9WholeSpace
 
 
 
