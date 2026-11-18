@@ -325,6 +325,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         run_wave5_whole_space_campaign,
         run_wave6_whole_space_campaign,
         run_wave7_whole_space_campaign,
+        run_wave8_whole_space_campaign,
     )
 
     w4 = run_wave4_whole_space_campaign()
@@ -437,6 +438,49 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"Markov/L2={w7d['markov_suffix_shift_recurrence_and_oddness_verified'] and w7d['q0_archimedean_two_sided_envelope_verified'] and w7d['fixed_length_injectivity_and_minimal_l2_energy_verified']}"
     )
 
+    w8 = run_wave8_whole_space_campaign()
+    w8a = w8["front_a_srs_10_of_11_and_towers"]
+    w8b = w8["front_b_cyclotomic_331_and_laurent"]
+    w8c = w8["front_c_ripple_window_and_diamond5"]
+    w8d = w8["front_d_cross_scale_and_markov_mod6"]
+    w8_srs_ok = (
+        bool(w8a["omit_r2_10_of_11_single_2d_cert_verified"])
+        and bool(w8a["omit_r7_10_of_11_2level_2d_tower_verified"])
+        and bool(w8a["omit_r5_10_of_11_3level_2d_tower_verified"])
+        and bool(w8a["arts_giesl_1d_semantic_dp_verified"])
+        and bool(w8a["interior_pumping_and_omega_k_stall_verified"])
+    )
+    w8_b_ok = (
+        bool(w8b["exact_first_two_coprime_primes_verified"])
+        and bool(w8b["companion_factorizations_and_m1_cancellation_verified"])
+        and bool(w8b["twoblock_331_floor_99_159_verified"])
+        and bool(w8b["laurent_taylor_column_extrapolation_verified"])
+    )
+    w8_d5_ok = (
+        bool(w8c["cousin_diamond5_outside_cones456_descent_verified"])
+        and bool(w8c["cousin_diamond5_cone6_return_and_spiral_verified"])
+        and bool(w8c["cousin_diamond5_countermodels_verified"])
+    )
+    w8_d_ok = (
+        bool(w8d["cross_scale_q0_biconditional_verified"])
+        and bool(w8d["multiscale_surviving_q0_nodup_verified"])
+        and bool(w8d["markov_bijection_and_mod6_lock_verified"])
+    )
+    print(f"\n[Wave 8 Whole-Space Proof Loop] 10/11 SRS Towers, Cyclotomic 331/Laurent, Ripple/k-Gram/T_diamond5 & Cross-Scale q=0:")
+    print(
+        f"  - Universality & witness gates ({w8['witness_bank_total_entries']} wits, {w8['witness_bank_falsified_count']} hyps): "
+        f"u-gate={w8['universality_gate_passed']}, ground-truth={w8['witness_bank_ground_truth_verified']}, verdict={w8['verdict']}"
+    )
+    print(
+        f"  - Fronts A & B (10/11 2D HW towers/DP/omega^k, cyclotomic 331/mod8 & Laurent Taylor): "
+        f"A={w8_srs_ok}, B={w8_b_ok}"
+    )
+    print(
+        f"  - Fronts C & D (ripple-carry/W_win-gram barriers, T_diamond5 & cross-scale q=0/mod6): "
+        f"C={w8c['ripple_carry_cascade_mersenne_and_bernoulli_verified'] and w8c['sliding_window_kgram_family_verified']}, "
+        f"T_diamond5={w8_d5_ok}, D={w8_d_ok}"
+    )
+
     lean4 = verify_lean4_kernel_proofs()
     print(f"\n[Lean 4 Kernel Verification] CollatzFormal.lean Live Compiler & #print axioms Audit:")
     if lean4["lean_available"]:
@@ -477,6 +521,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         and bool(w5["passed"])
         and bool(w6["passed"])
         and bool(w7["passed"])
+        and bool(w8["passed"])
         and lean4_ok
     )
     return 0 if summary_ok else 1

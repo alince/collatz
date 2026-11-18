@@ -264,6 +264,60 @@
         "kills_mechanisms": [
           "monotone length-growth hypotheses claiming min_{|u|=L} exactBackwardQuotient 1 u 0 increases with core length L inside IsSurvivingMod373248Class (L = 12 min leaf drops > 2.7e11-fold below L = 10 min leaf via Markov shift wrap)"
         ]
+      },
+      {
+        "witness_id": "ZPOS_RIPPLE_CARRY_COLLAPSE_341",
+        "seed": 227,
+        "compressed_steps_to_1": 11,
+        "next_compressed": 341,
+        "even_sibling": 682,
+        "ripple_carry_count_seed": 6,
+        "ripple_carry_idx_sum_seed": 24,
+        "ripple_carry_count_target": 10,
+        "ripple_carry_idx_sum_target": 45,
+        "ripple_carry_count_even_sibling": 0,
+        "ripple_carry_idx_sum_even_sibling": 0,
+        "kills_mechanisms": [
+          "carry-penalized Berg-Meinardus preimage weights w(n) = P(bitLength(n)) / Q(bitLength(n), rippleCarryCount(n), rippleCarryIdxSum(n)): 341 = (4^5 - 1)/3 triggers a full 10-bit 3n+1 ripple-carry cascade of index sum 45, whereas 682 = 2 * 341 collapses to 0 ripple carries and 0 index sum",
+          "non-separable multivariate polynomial preimage weights in (rippleCarryCount(n), rippleCarryIdxSum(n), bitLength(n)) when paired with Mersenne preimage triples (2^r - 1, 3*2^(r-1) - 1, 3*2^r - 2)"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_SLIDING_WINDOW_COLLISION_800",
+        "seed": 533,
+        "next_compressed": 800,
+        "even_sibling": 1600,
+        "sliding_window_width": 5,
+        "nonzero_windows_seed": [21, 10, 5, 2, 1, 16, 8, 4, 2, 1],
+        "nonzero_windows_target": [16, 8, 4, 18, 25, 12, 6, 3, 1],
+        "nonzero_windows_even_sibling": [16, 8, 4, 18, 25, 12, 6, 3, 1],
+        "kills_mechanisms": [
+          "width-5 sliding-window k-gram preimage weights (which separate Wave 7's 200 vs 400 via 01000 vs 10000 yet collide identically on 800 = 25*32 vs 1600 = 25*64)",
+          "arbitrary W_win-bit non-zero sliding-window profile preimage weights coupled with non-separable (zeroWindowCount, bitLength) polynomials along m_{W,k} = 3*4^(W+k) + 2^(2W+1)"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_COUSIN_DIAMOND5_CONE6_2285_JUMP",
+        "seed": 2285,
+        "cousin_diamond5_next": 857,
+        "cousin_diamond5_steps_to_1": 11,
+        "phi_diamond2_seed": 4120094,
+        "phi_diamond2_next": 5849278,
+        "kills_mechanisms": [
+          "outside-Cones-4-and-5 single-step Phi_diamond2 descent on 5th solvable cousin T_diamond5 (genuine v_2(3x+1) = 3 step 2285 -> 857 jumps Phi_diamond2 4120094 -> 5849278 directly into Cone 5's spiral climb while reaching 1 in 11 steps)"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_RAY_Q0_MULTI_LOOP_COLLISION_3",
+        "seed": 3,
+        "compressed_steps_to_1": 5,
+        "odd_weight": 2,
+        "core_word": [1, 1],
+        "q_index": 0,
+        "loop_core_word": [1, 1, 0, 0, 0, 1, 0, 1],
+        "kills_mechanisms": [
+          "cross-scale |u1| < |u2| global q = 0 leaf injectivity claims omitting IsFirstHitOnePair or restricting collisions to single-loop m = 0 extensions (double {1,2}-loop m = 1 extension [1,1,0,0,0,1,0,1] collides with [1,1] at y0 = 3)"
+        ]
       }
     ],
     "m1_q2_pos": [
@@ -426,6 +480,29 @@
         "kills_mechanisms": [
           "proofs of T_diamond4 multi-block / ordinal convergence omitting Z-discreteness at 0 < x < 89"
         ]
+      },
+      {
+        "witness_id": "M1_331_CANCELLATION_529_OVER_6643574255",
+        "x0": "529/6643574255",
+        "numerator": 529,
+        "denominator": 6643574255,
+        "period_k": 41,
+        "weight_w": 11,
+        "m_blocks": 1,
+        "kills_mechanisms": [
+          "purely local mod-331 congruence claims asserting 331 cannot divide gcd(2^a1 - 1, 3^w1 - 2^w1, 2^(w1+a1) - 3^w1): at (w1, a1) = (11, 30), 331 cancels completely from x0 = (3^11 - 2^11)/(2^41 - 3^11) = 529/6643574255, requiring companion-prime global Z-integrality to eliminate"
+        ]
+      },
+      {
+        "witness_id": "M1_COUSIN_DIAMOND5_1_OVER_7",
+        "x0": "1/7",
+        "numerator": 1,
+        "denominator": 7,
+        "system": "T_diamond5",
+        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "kills_mechanisms": [
+          "proofs of T_diamond5 omega^3 Cone-6 -> Cone-5 convergence omitting Z-discreteness at 0 < x < 2285"
+        ]
       }
     ],
     "m2_z_neg": [
@@ -540,6 +617,16 @@
         "orbit": [5, 18, 9, 32, 10],
         "kills_mechanisms": [
           "T_diamond4 multi-block spiral / ordinal convergence claims omitting q = 3 carry-shift alignment"
+        ]
+      },
+      {
+        "witness_id": "M3_COUSIN_DIAMOND5_7X1_CYCLE5",
+        "seed": 5,
+        "multiplier_q": 7,
+        "system": "T_diamond5_q7",
+        "orbit": [5, 18, 9, 32, 10],
+        "kills_mechanisms": [
+          "T_diamond5 omega^3 Cone-6 -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
         ]
       }
     ],
@@ -663,6 +750,21 @@
         "kills_mechanisms": [
           "moderate-W (W = 41) scaled Schneider-Laurent determinant bounds attempting to discharge SubexponentialCubicGapProp (|Lambda| >= 2^(-W/3) ln 2) from |det(M0)| = 2^-697.58 << 1 alone: cofactor Schwarz-order stripping drives |det(M(2^(-41/3) ln 2))| = 2^+2382.47 >> 1",
           "universal 1-block prime-order exclusion claims assuming gcd(ord_p(2), ord_p(3/2)) >= 2 for all odd primes p >= 5: while all 60 odd primes 5 <= p < 300 satisfy gcd >= 2, p = 331 has ord_331(2) = 30 and ord_331(3/2) = 11 with gcd(30, 11) = 1"
+        ]
+      },
+      {
+        "witness_id": "COPRIME_PRIME_1210483_AND_MOD8_SUBGROUP_BARRIER",
+        "K": 41,
+        "W": 11,
+        "gap_sign": 1,
+        "abs_gap": 2199023078405,
+        "gap_mod8": 5,
+        "second_coprime_order_prime": 1210483,
+        "second_ord2_mod_p": 182,
+        "second_ord32_mod_p": 2217,
+        "kills_mechanisms": [
+          "uniqueness claims asserting p = 331 is the only odd prime in N with gcd(ord_p(2), ord_p(3/2)) == 1: p = 1,210,483 is the exact second coprime-order prime (ord_2 = 182, ord_{3/2} = 2217, gcd = 1, p % 24 = 19)",
+          "pure prime-power D = 331^e or D = 331^e1 * 1210483^e2 1-block cycle denominator models: 30 | a1 and gcd(w1, a1) = 1 force odd w1 and D == 5 (mod 8), escaping the closed multiplicative subgroup {1, 3} mod 8"
         ]
       }
     ]
@@ -840,6 +942,42 @@
       "minimal_witness_id": "LAURENT_SCALED_W41_CUBIC_GAP_AND_PRIME331_BARRIER",
       "secondary_witness_id": "ZPOS_RAY_Q0_NONMONOTONE_LENGTH_DROP_L12",
       "failure_diagnosis": "Perturbing 3^(s*u) = 2^(s*u*K/W) exp(-s*u*Lambda/W) strips single-variable Schwarz vanishing from high-order cofactors, keeping |det(M(2^(-41/3) ln 2))| = 2^+2382.47 >> 1 at W = 41 (requiring asymptotic Baker-LMN W >> 10^4 plus finite-cutoff verification below W_0); and while all 60 odd primes 5 <= p < 300 satisfy gcd(ord_p(2), ord_p(3/2)) >= 2 (eliminating {7, 19, 23, 31, 43, 47, 71, 73} unconditionally), p = 331 is the unique first prime (out of all 5,131 primes <= 50,000) with coprime orders ord_331(2) = 30 and ord_331(3/2) = 11."
+    },
+    {
+      "hypothesis_id": "W8_H1_NONSEPARABLE_RIPPLE_CARRY_AND_WINDOW_KGRAM_WEIGHTS",
+      "branch": "P1.2",
+      "statement": "There exists a positive rational Berg-Meinardus preimage weight w(n) (theta <= 1) built either from non-separable multivariate polynomials P/Q in (rippleCarryCount_{3n+1}(n), rippleCarryIdxSum_{3n+1}(n), bitLength(n)) or from arbitrary width-W_win non-zero sliding-window k-gram profiles coupled with non-separable polynomials in (zeroWindowCount_{W_win}(n), bitLength(n)).",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_RIPPLE_CARRY_COLLAPSE_341",
+      "secondary_witness_id": "ZPOS_SLIDING_WINDOW_COLLISION_800",
+      "failure_diagnosis": "Carry-penalized denominators collapse on alternating targets M_j = (4^(3j+2)-1)/3 (at j = 1, 341 has 10 ripple carries and index sum 45 while 682 = 2*341 has 0 carries and 0 index sum), and across Mersenne triples (2^r - 1, 3*2^(r-1) - 1, 3*2^r - 2) all three coordinates (carryCount, carryIdxSum, bitLength) satisfy (r/(r+2)) <= coord_pre/coord_m <= ((r+2)/r), driving (w(2m) + w(n_odd))/w(m) -> 2 > 1 for every non-separable polynomial quotient P/Q; meanwhile for every window width W_win >= 1, m_{W,k} = 3*4^(W+k) + 2^(2W+1) (minimal W = 2, k = 2: 800 vs 1600, defeating W_win = 5 which separated 200 vs 400) preserves identical non-zero W_win-window lists while (zeroWindowCount, bitLength) grow as 2k + O_W(1) (Wave8WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W8_H2_OMEGA_K_COORD_MONOTONE_AND_LOWER_TRI_MATRIX_TOWERS",
+      "branch": "P4.3",
+      "statement": "Multi-level Zantema-Hofbauer-Waldmann omega^k matrix rule-removal towers (allowing sequential weak orientation LHS >= RHS and strict removal v_0(LHS) > v_0(RHS) across k >= 1 levels in arbitrary dimension d >= 1) using coordinatewise-monotone matrices ((M_s)_{i,i} >= 1) or lower-triangular matrices ((M_s)_{0,0} >= 1, arbitrary zero lower diagonals) can terminate any Collatz SRS subset containing sub6.",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_COUSIN_DIAMOND5_CONE6_2285_JUMP",
+      "secondary_witness_id": "ZPOS_COUSIN_DIAMOND4_CONE5_1529_JUMP",
+      "failure_diagnosis": "Whereas non-triangular d = 2 Hofbauer-Waldmann interpretations and 2-to-3-level rule-removal towers push positive Collatz SRS termination from 7/11 all the way to 10/11 rules (all11OmitR2List in 1 step, all11OmitR7List in 2 levels, all11OmitR5List in 3 levels, [] axioms!), weak orientation of sub6 under (M_s)_{i,i} >= 1 forces M_s = I_d and v_s = 0 across {B0, B1, T0, T1, T2} at every level, and under lower-triangular (M_s)_{0,0} >= 1 forces (M_s)_{0,0} = 1 and (v_s)_0 = 0, removing 0 rules of sub6 for all d >= 1 and all k : Nat (Wave8WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W8_H3_LOCAL_MOD331_EXCLUSION_AND_UNIQUENESS_OF_331",
+      "branch": "P3.4",
+      "statement": "Either p = 331 is excluded from dividing gcd(2^a1 - 1, 3^w1 - 2^w1, 2^(w1+a1) - 3^w1) by local mod-331 congruences alone, or p = 331 is the unique odd prime in N with coprime multiplicative orders gcd(ord_p(2), ord_p(3/2)) = 1 so D = 331^e can occur without higher coprime-order primes.",
+      "status": "FALSIFIED",
+      "minimal_witness_id": "M1_331_CANCELLATION_529_OVER_6643574255",
+      "secondary_witness_id": "COPRIME_PRIME_1210483_AND_MOD8_SUBGROUP_BARRIER",
+      "failure_diagnosis": "At (w1, a1) = (11, 30), 331 divides 2^30 - 1, 3^11 - 2^11 = 529 * 331, and D = 2^41 - 3^11 = 331 * 6,643,574,255, cancelling out of the valid M1 1-block cycle x0 = 529/6643574255; in Z^+, cyclotomic companion exclusion of {3, 7, 11, 23, 31, 151} forces 3,243,933 | q0, 529 | x0, w1 >= 77, a1 >= 90, and D == 5 (mod 8), which escapes the closed subgroup {1, 3} mod 8 containing both 331 (% 8 = 3) and the exact second coprime-order prime 1,210,483 (ord_2 = 182, ord_{3/2} = 2217, % 8 = 3)."
+    },
+    {
+      "hypothesis_id": "W8_H4_RAW_CROSS_SCALE_Q0_LEAF_INJECTIVITY_WITHOUT_FIRST_HIT",
+      "branch": "P5.3",
+      "statement": "Unconditional equal-length q = 0 leaf injectivity (Wave 7 W7.4c) extends across unequal lengths |u1| < |u2| without filtering out {1, 2}-loop extensions (or only single-loop m = 0 extensions collide at q = 0).",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_RAY_Q0_MULTI_LOOP_COLLISION_3",
+      "secondary_witness_id": "ZPOS_RAY_Q0_LOOP_COLLISION_184111",
+      "failure_diagnosis": "Across unequal lengths |u1| < |u2|, exactBackwardQuotient 1 u1 0 = exactBackwardQuotient 1 u2 0 holds if and only if exists m : Nat, u2 = trivialLoopExt u1 m = u1 ++ replicate (canonicalSuffixShift u1 1) false ++ [true] ++ ([false, true]^m) (realized for m = 1 at [1,1] vs [1,1,0,0,0,1,0,1] -> y0 = 3); every such extension violates IsFirstHitOnePair(u2, 0), so enforcing IsFirstHitOnePair restores unconditional multi-scale NoDupNat across all lengths L <= L_max (Wave8WholeSpace.lean, zero custom axioms)."
     }
   ]
 }
