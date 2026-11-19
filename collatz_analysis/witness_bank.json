@@ -353,6 +353,45 @@
         "kills_mechanisms": [
           "raw cross-regime disjointness claims between q = 0 leaves and q >= 1 rays omitting IsFirstHitOnePair on the q = 0 leaf (loopUnroll([1], 1, 1) = [1,0,0,0,1,0,1] at q = 0 collides with ([1], q = 1) at y = 5)"
         ]
+      },
+      {
+        "witness_id": "ZPOS_STERN_AND_OCN_PREIMAGE_COLLAPSE_56_VS_224",
+        "seed": 37,
+        "next_compressed": 56,
+        "even_sibling": 112,
+        "stern_seed": 11,
+        "stern_target": 3,
+        "stern_even_sibling": 3,
+        "ocn_q1_multi_even_preimage": 224,
+        "kills_mechanisms": [
+          "2-regular Stern-Brocot (sternDiatomic) Berg-Meinardus preimage weights w(n) = f(stern(n)) or non-separable NatPoly2 quotients in (stern(n), bitLength(n)): stern(112) = stern(56) = 3 forces w(37) <= 0 on pure Stern weights, and Mersenne 1-spines (2r+1, 2r+1, r+1) collapse all polynomial quotients",
+          "non-regular Q = 1 MSB zero-testing 1-counter pushdown automaton (OCN) preimage weights: while 1^k 0^k zero-testing separates 56 = 111000_2 (c = 0) from 112 = 1110000_2 (c = 1), all 36 Q = 1 zero-testing OCNs lock (c == 0) identically on 56 vs 224 = 4 * 56 under w(4m) + w((2m-1)/3) <= w(m)"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_COUSIN_DIAMOND7_CONE8_JUMP",
+        "seed": 31153781151208965771182977975285973,
+        "cousin_diamond7_next": 730166745731460135262101046295765,
+        "cousin_diamond7_steps_to_1": 104,
+        "phi_diamond2_seed": 722646583547690288315340712581989092194421706788347282805836891299163480965753410436311972898,
+        "phi_diamond2_next": 133499189745056880149688856635152720932192307015908956442400108715096762913160269731537256026934,
+        "kills_mechanisms": [
+          "outside-Cones-4-5-6-7 single-step Phi_diamond2 descent and 4-tier omega^4 Cone-7 -> Cone-6 -> Cone-5 -> Phi_diamond2 rankings on 7th solvable cousin T_diamond7 (genuine v_2(3x+1) = 7 Cone-8 step jumps Phi_diamond2 upward 184.74x directly into Cone 7 -> Cone 6 -> Cone 5 while reaching 1 in 104 steps)"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_DYADIC_WINDOW_M8_L6_WEIGHT_SPLIT_301_VS_403",
+        "seed": 301,
+        "compressed_steps_to_1": 13,
+        "odd_weight": 3,
+        "core_word": [1, 0, 0, 1, 0, 1],
+        "q_index": 0,
+        "dyadic_window_exp_m": 8,
+        "dyadic_partner_seed": 403,
+        "dyadic_partner_core_word": [1, 1, 0, 0, 1, 1],
+        "kills_mechanisms": [
+          "weight-blind dyadic-window [2^M, 2^(M+1)) shift-pinning claims asserting equal (M, L) alone determines canonicalSuffixShift u 1 without fixing parityWeight w: inside [256, 512) (M = 8) at L = 6, first-hit leaves 301 (w = 3, a = 7) and 403 (w = 4, a = 9) realize distinct odd shifts"
+        ]
       }
     ],
     "m1_q2_pos": [
@@ -549,6 +588,17 @@
         "kills_mechanisms": [
           "proofs of T_diamond6 omega^4 Cone-7 -> Cone-6 -> Cone-5 convergence omitting Z-discreteness at 0 < x < 294101"
         ]
+      },
+      {
+        "witness_id": "M1_COUSIN_DIAMOND7_1_OVER_7",
+        "x0": "1/7",
+        "numerator": 1,
+        "denominator": 7,
+        "system": "T_diamond7",
+        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "kills_mechanisms": [
+          "proofs of T_diamond7 omega^5 Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 convergence omitting Z-discreteness at 0 < x < 12548309"
+        ]
       }
     ],
     "m2_z_neg": [
@@ -683,6 +733,16 @@
         "orbit": [5, 18, 9, 32, 10],
         "kills_mechanisms": [
           "T_diamond6 omega^4 Cone-7 -> Cone-6 -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
+        ]
+      },
+      {
+        "witness_id": "M3_COUSIN_DIAMOND7_7X1_CYCLE5",
+        "seed": 5,
+        "multiplier_q": 7,
+        "system": "T_diamond7_q7",
+        "orbit": [5, 18, 9, 32, 10],
+        "kills_mechanisms": [
+          "T_diamond7 omega^5 Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
         ]
       }
     ],
@@ -851,6 +911,37 @@
         "kills_mechanisms": [
           "claims that the 3rd coprime-order prime in N already escapes {1, 3} mod 8: p_3 = 45,661,129 (ord_2 = 12381, ord_{3/2} = 1844) satisfies 45661129 % 8 == 1, so D = 331^e1 * 1210483^e2 * 45661129^e3 remains trapped in {1, 3} mod 8",
           "small-prime D == 5 (mod 8) coprime-order escape models below 10^8: exhaustive sieve over all 50,847,533 odd primes <= 10^9 proves p_4 = 107,889,071 (ord_2 = 52835, ord_{3/2} = 1021, p_4 % 8 == 7) is the minimal coprime-order prime in N with p % 8 in {5, 7}"
+        ]
+      },
+      {
+        "witness_id": "LAURENT_TWOBASE_6X6_ODD_U1_ZERO_9_16_AND_U2_CONE_FLIP",
+        "W": 9,
+        "K": 16,
+        "gap_sign": 1,
+        "abs_gap": 45853,
+        "laurent_twobase_6x6_u": 1,
+        "laurent_twobase_6x6_det": 0,
+        "cone_flip_u2_neg_pair": [3, 5],
+        "cone_flip_u2_pos_pair": [5, 8],
+        "kills_mechanisms": [
+          "naive odd-u non-vanishing extrapolations from 4x4 to 6x6 two-base Schneider-Laurent grids rows=[(0,0),(1,0),(0,1),(1,1),(0,2),(1,2)], cols=[(0,0),(1,0),(0,u),(1,u),(0,2u),(1,2u)]: linear factor 2^u*(3^(2u)-1)*W - 3^u*(2^(2u)-1)*K vanishes at odd u = 1 on coprime (W, K) = (9, 16) (3^9 < 2^16)",
+          "u >= 2 positivity extrapolations inside 3*K <= 5*W on 6x6 two-base grids: at u = 2, det_6(3, 5, 2) = -59,570,380,800 < 0 whereas det_6(5, 8, 2) = +303,641,395,200 > 0, proving strict positivity inside 3*K <= 5*W requires u >= 3 (while det_6 != 0 holds for all u >= 1)"
+        ]
+      },
+      {
+        "witness_id": "COPRIME_PRIME_MOD24_11_13_RECIPROCITY_EXCLUSION_D13",
+        "W": 5,
+        "K": 8,
+        "gap_sign": 1,
+        "abs_gap": 13,
+        "mod24_excluded_prime": 13,
+        "mod24_ord2": 12,
+        "mod24_ord32": 4,
+        "mod24_companion_prime": 11,
+        "mod24_companion_ord2": 10,
+        "mod24_companion_ord32": 10,
+        "kills_mechanisms": [
+          "claims that primes q == 11 or 13 (mod 24) (such as D = 13 = 2^8 - 3^5 at M1 convergent (5, 8)) can be coprime-order primes or divide any nontrivial 1-block Z^+ cycle gap D = 2^(w1+a1) - 3^w1: quadratic reciprocity forces (2/q) = -1 and (3/q) = +1, hence 2 | gcd(ord_q(2), ord_q(3/2))"
         ]
       }
     ]
@@ -1100,6 +1191,41 @@
       "minimal_witness_id": "ZPOS_RAY_MIXED_Q0_Q1_COLLISION_5",
       "secondary_witness_id": "ZPOS_RAY_Q0_MULTI_LOOP_COLLISION_3",
       "failure_diagnosis": "Across mixed regimes q1 = 0 vs q2 >= 1, exactBackwardQuotient 1 u1 0 = exactBackwardQuotient 1 u2 q2 holds if and only if exists m : Nat, u1 = loopUnroll u2 q2 m = u2 ++ replicate (a2 + 2*3^(w2-1)*q2) false ++ [true] ++ ([false, true]^m) (realized for m = 1 at [1,0,0,0,1,0,1] vs ([1], 1) -> y = 5); every such u1 violates IsFirstHitOnePair(u1, 0), so IsFirstHitOnePair is globally injective across the entire CoreWords x Nat parameter space (Wave9WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W10_H1_STERN_BROCOT_2REGULAR_AND_ONE_COUNTER_OCN_PREIMAGE_WEIGHTS",
+      "branch": "P1.2",
+      "statement": "There exists a positive rational Berg-Meinardus preimage weight w(n) (theta <= 1) built from 2-regular Stern-Brocot diatomic invariants stern(n) or non-regular Q-state MSB zero-testing 1-counter pushdown automata (OCN, counter-bounded < B, unbounded 1-incrementing Dyck balance, or unbounded 0-incrementing floor-clamped zeroBitCount - oneBitCount) coupled with non-separable multivariate polynomials in (counterValue, bitLength).",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_STERN_AND_OCN_PREIMAGE_COLLAPSE_56_VS_224",
+      "secondary_witness_id": "ZPOS_STATEFUL_Q2_COLLISION_800_VS_3200",
+      "failure_diagnosis": "Because stern(2m) = stern(m) identically, every pure Stern-Brocot weight f(stern(n)) collapses at m = 56 (and m = 5: stern(112) = stern(56) = 3 => w(37) <= 0), alternating 01-cascades satisfy stern((4^e - 1)/3) = F_{2e}, and along Mersenne 1-spines (3*2^r - 1, 6*2^r - 2, 2^(r+1) - 1) exact closed forms (2r+1, 2r+1, r+1) collapse all non-separable NatPoly2 quotients in (stern(n), bitLength(n)); meanwhile for every Q >= 1 zero-testing 1-counter OCN, unary 0-run semilinear pumping with period P_Q = (Q*(2*Q + 3))! locks (state, counter == 0) identically on m_{Q,s} and 2^(P_Q) * m_{Q,s} (at Q = 1: 56 vs 224 = 4*56 across all 36 OCNs), while counter-bounded (< B) reductions, Mersenne 1-spines on 1-incrementing Dyck OCNs, and interior-zero-block triples (3*2^s + 2, 6*2^s + 4, 2^(s+1) + 1) on 0-incrementing zero-excess OCNs refute all corresponding NatPoly2 preimage weights (Wave10WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W10_H2_LABELLED_PARIKH_TOWERS_ON_SWAPS_AND_OMEGA4_DIAMOND7_BARRIER",
+      "branch": "P4.3",
+      "statement": "Right-to-left mod-2 or mod-4 Zantema Parikh towers remove rules of omit R8, omit R3, or all11; mod-3 Zantema Parikh towers reduce all11 past its 32-rule core all11_mod3 \\ {R2_1} (or omit R8 past 29 rules / omit R3 past 25 rules); two-sided (semL2 x collatzSemMod 2) Parikh towers remove rules of full all11 (or reduce omit R8 past 26 / omit R3 past 36); or 4-tier omega^4 Cone-7 -> Cone-6 -> Cone-5 -> Phi_diamond2 rankings orient 7th solvable cousin T_diamond7.",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_COUSIN_DIAMOND7_CONE8_JUMP",
+      "secondary_witness_id": "M2_NEG1_UNIT_CYCLE",
+      "failure_diagnosis": "Whereas M = 3 Zantema semantic labelling collapses S9 from 7 levels (M = 2, 2D) to a 2-level 1D-affine / 2D tower (27 -> 4 -> 0, choice-free!), strictly removes Garden-of-Eden rule R2_1 from FULL all11 (33 -> 32) and 5 rules from omit R3 (30 -> 25), TwoSided (semL2 x collatzSemMod 2) removes 14/40 rules from omit R8 (40 -> 26) and 4/40 rules from omit R3 (40 -> 36), AND TwoSided (semL2 x collatzSemMod 6) COMPLETELY TERMINATES swap-active omit R8 = all11 \\ {R8} (10/11 rules with R3 swap and all 4 recurrent rules {R2, R5, R7, R9} active!) via a 2-level 1D-affine / 2D tower (120 -> 15 -> 0!), for EVERY M >= 1 R3 at a = 0 and R8 at a = M - 1 == -1 (mod M) remain pure commutators [X, Y] -> [Y, X], locking M = 2 (20/20, 20/20, 22/22), M = 3 cores (32/32, 29/29, 25/25), M = 4 (40/40, 40/40, 44/44), and TwoSided(2x2) (44/44, 26/26, 36/36) into strictly positive Parikh syzygies removing 0 rules for all k : Nat; meanwhile T_diamond7 adds Cone-8 v_2(3x+1) = 7 jumps into Cone 7 -> Cone 6 -> Cone 5 requiring a genuine 5-tier omega^5 ranking (Wave10WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W10_H3_TWOBASE_6X6_ODD_U_NONVANISHING_AND_MOD24_11_13_COPRIME_PRIMES",
+      "branch": "P3.3",
+      "statement": "Wave 9's odd-u non-vanishing and u >= 2 convergent-cone (3*K <= 5*W) strict positivity extend unchanged from 4x4 to 6x6 two-base Schneider-Laurent grids [(0,0),(1,0),(0,1),(1,1),(0,2),(1,2)] x [(0,0),(1,0),(0,u),(1,u),(0,2u),(1,2u)], or primes q == 11, 13 (mod 24) can be coprime-order primes dividing 1-block Z^+ cycle gaps D.",
+      "status": "FALSIFIED",
+      "minimal_witness_id": "LAURENT_TWOBASE_6X6_ODD_U1_ZERO_9_16_AND_U2_CONE_FLIP",
+      "secondary_witness_id": "COPRIME_PRIME_MOD24_11_13_RECIPROCITY_EXCLUSION_D13",
+      "failure_diagnosis": "Exact factorization det_6 = P * Q^2 * q^3 * (P*(Q^2 - 1)*W - Q*(P^2 - 1)*K) * Q_2(W, K, u) (with Q_2 != 0 proved for ALL W, K, u >= 1 via 3-adic square descent!) proves det_6 == 0 iff 2^u*(3^(2u)-1)*W == 3^u*(2^(2u)-1)*K, which vanishes at odd u = 1 on coprime (9, 16) (3^9 < 2^16) and flips sign at u = 2 inside 3*K <= 5*W ((3, 5) < 0 vs (5, 8) > 0), while proving det_6 != 0 for ALL u >= 1 and det_6 > 0 for ALL u >= 3 inside 3*K <= 5*W; meanwhile quadratic reciprocity proves (2/q) = -1 and (3/q) = +1 for all primes q == 11, 13 (mod 24), forcing 2 | gcd(ord_q(2), ord_q(3/2)) and universally excluding q == 11, 13 (mod 24) from dividing D on any 1-block Z^+ cycle (Wave10WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W10_H4_WEIGHT_BLIND_DYADIC_WINDOW_SHIFT_PINNING",
+      "branch": "P5.3",
+      "statement": "Inside any dyadic interval [2^M, 2^(M+1)), fixing the scale pair (M, L) of a surviving first-hit q = 0 core word u (without conditioning on parityWeight w(u)) uniquely pins canonicalSuffixShift u 1.",
+      "status": "FALSIFIED",
+      "minimal_witness_id": "ZPOS_DYADIC_WINDOW_M8_L6_WEIGHT_SPLIT_301_VS_403",
+      "failure_diagnosis": "Inside [256, 512) (M = 8) at equal word length L = 6, surviving first-hit leaves 301 (u1 = [1,0,0,1,0,1], w1 = 3, a1 = 7) and 403 (u2 = [1,1,0,0,1,1], w2 = 4, a2 = 9) realize distinct odd shifts; conditioning on (M, L, w) with L <= M + w + 1 restores exact deterministic shift-pinning via 3^w * 2^M < 2^(L+a) < 4 * 3^w * 2^M, 3 | 3^w * 2^M, and oddness of a, alongside exact 18/54 mod-54 Markov confinement on w >= 4 (Wave10WholeSpace.lean, zero custom axioms)."
     }
   ]
 }

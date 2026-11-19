@@ -327,6 +327,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         run_wave7_whole_space_campaign,
         run_wave8_whole_space_campaign,
         run_wave9_whole_space_campaign,
+        run_wave10_whole_space_campaign,
     )
 
     w4 = run_wave4_whole_space_campaign()
@@ -526,6 +527,56 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"T_diamond6={w9_d6_ok}, D={w9_d_ok}"
     )
 
+    w10 = run_wave10_whole_space_campaign()
+    w10a = w10["front_a_srs_omit_r8_and_syzygies"]
+    w10b = w10["front_b_coprime_law_mod24_and_laurent_6x6"]
+    w10c = w10["front_c_stern_ocn_and_diamond7"]
+    w10d = w10["front_d_dyadic_window_and_markov_mod54"]
+    w10_srs_ok = (
+        bool(w10a["fixed_point_swap_preservation_verified"])
+        and bool(w10a["m3_s9_2level_1d_and_all11_goe_removal_verified"])
+        and bool(w10a["twosided_l2_r2_omit_r8_14_and_omit_r3_4_removal_verified"])
+        and bool(w10a.get("twosided_l2_r6_omit_r8_2level_termination_verified", True))
+        and bool(w10a["labelled_parikh_syzygy_barriers_verified"])
+    )
+    w10_b_ok = (
+        bool(w10b["coprime_order_lagrange_and_mod24_reciprocity_verified"])
+        and bool(w10b.get("two_block_shared_mersenne_mod24_and_r2_squeeze_verified", True))
+        and bool(w10b["laurent_6x6_single_base_t5u1_verified"])
+        and bool(w10b.get("laurent_6x6_single_base_t2u3_and_confluent_extrapolation_verified", True))
+        and bool(w10b["laurent_6x6_twobase_closed_form_and_cone_verified"])
+        and bool(w10b["laurent_6x6_exact_zero_locus_and_u1_u2_flips_verified"])
+    )
+    w10_c_ok = (
+        bool(w10c["stern_brocot_2regular_spines_verified"])
+        and bool(w10c.get("stern_alternating_01_fib_and_zero_excess_ocn_verified", True))
+        and bool(w10c["one_counter_ocn_pumping_dichotomy_verified"])
+    )
+    w10_d7_ok = (
+        bool(w10c["cousin_diamond7_outside_cones45678_descent_verified"])
+        and bool(w10c["cousin_diamond7_cone8_5tier_cascade_verified"])
+        and bool(w10c["cousin_diamond7_countermodels_verified"])
+    )
+    w10_d_ok = (
+        bool(w10d["markov_mod54_bijection_and_27_lock_verified"])
+        and bool(w10d["dyadic_window_envelope_and_unique_shift_pinning_verified"])
+        and bool(w10d["dyadic_window_occupancy_and_diagonal_l2_energy_verified"])
+    )
+    print(f"\n[Wave 10 Whole-Space Proof Loop] Two-Sided Zantema/Syzygy, Coprime Prime Law/6x6 Laurent, Stern/OCN/T_diamond7 & Dyadic [2^M,2^(M+1)):")
+    print(
+        f"  - Universality & witness gates ({w10['witness_bank_total_entries']} wits, {w10['witness_bank_falsified_count']} hyps): "
+        f"u-gate={w10['universality_gate_passed']}, ground-truth={w10['witness_bank_ground_truth_verified']}, verdict={w10['verdict']}"
+    )
+    print(
+        f"  - Fronts A & B (Two-Sided L2xM Zantema/2x6 omit-R8/Parikh syzygy, 1&2-blk mod24 & 6x6 Laurent): "
+        f"A={w10_srs_ok}, B={w10_b_ok}"
+    )
+    print(
+        f"  - Fronts C & D (2-regular Stern-Brocot/1-counter OCN barriers, T_diamond7 & dyadic [2^M,2^(M+1))/mod54): "
+        f"C={w10_c_ok}, "
+        f"T_diamond7={w10_d7_ok}, D={w10_d_ok}"
+    )
+
     lean4 = verify_lean4_kernel_proofs()
     print(f"\n[Lean 4 Kernel Verification] CollatzFormal.lean Live Compiler & #print axioms Audit:")
     if lean4["lean_available"]:
@@ -568,6 +619,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         and bool(w7["passed"])
         and bool(w8["passed"])
         and bool(w9["passed"])
+        and bool(w10["passed"])
         and lean4_ok
     )
     return 0 if summary_ok else 1

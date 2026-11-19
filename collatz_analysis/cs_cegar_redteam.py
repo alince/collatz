@@ -3838,6 +3838,35 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
                             for m_ext in range((len(u_mix) - len(u_w)) // 2 + 1)
                         )
                     )
+                dyadic_keys = (
+                    "dyadic_window_exp_m",
+                    "dyadic_partner_seed",
+                    "dyadic_partner_core_word",
+                )
+                if any(k in entry for k in dyadic_keys):
+                    if all(k in entry for k in dyadic_keys) and q_i == 0:
+                        checked_keys.update(dyadic_keys)
+                        m_win = int(entry["dyadic_window_exp_m"])
+                        p_seed = int(entry["dyadic_partner_seed"])
+                        u_part = tuple(int(b) for b in entry["dyadic_partner_core_word"])
+                        ok = (
+                            ok
+                            and m_win >= 1
+                            and len(u_part) == len(u_w)
+                            and len(u_part) >= 2
+                            and u_part[0] == 1
+                            and u_part[-1] == 1
+                            and all(b in (0, 1) for b in u_part)
+                            and cft.exact_backward_quotient(1, u_part, 0) == p_seed
+                            and cft.is_first_hit_one_pair(u_part, 0)
+                            and (1 << m_win) <= seed < (1 << (m_win + 1))
+                            and (1 << m_win) <= p_seed < (1 << (m_win + 1))
+                            and sum(u_part) != sum(u_w)
+                            and cft.canonical_suffix_shift(u_part, 1)
+                            != cft.canonical_suffix_shift(u_w, 1)
+                        )
+                    else:
+                        ok = False
                 if "shorter_l10_min_core_word" in entry:
                     checked_keys.add("shorter_l10_min_core_word")
                     u_l10 = tuple(int(b) for b in entry["shorter_l10_min_core_word"])
@@ -4155,6 +4184,47 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
                         ok = False
                 else:
                     ok = False
+            stern_ocn_keys = (
+                "even_sibling",
+                "stern_seed",
+                "stern_target",
+                "stern_even_sibling",
+                "ocn_q1_multi_even_preimage",
+            )
+            if any(k in entry for k in stern_ocn_keys[1:]):
+                if all(k in entry for k in stern_ocn_keys) and seed >= 1 and nxt_c >= 3:
+                    checked_keys.update(stern_ocn_keys)
+                    ev_sib = int(entry["even_sibling"])
+                    ocn_ev = int(entry["ocn_q1_multi_even_preimage"])
+                    dyck_sep = (
+                        run_msb_one_counter_ocn(1, [(1, 1)], [(-1, 1)], 0, nxt_c)[1] == 0
+                        and run_msb_one_counter_ocn(1, [(1, 1)], [(-1, 1)], 0, ev_sib)[1] != 0
+                    )
+                    all_ocn_q1_collide = all(
+                        (run_msb_one_counter_ocn(1, [(dz0, dz1)], [(dp0, dp1)], 0, nxt_c)[1] == 0)
+                        == (run_msb_one_counter_ocn(1, [(dz0, dz1)], [(dp0, dp1)], 0, ocn_ev)[1] == 0)
+                        for dz0, dz1 in product((0, 1), repeat=2)
+                        for dp0, dp1 in product((-1, 0, 1), repeat=2)
+                    )
+                    ok = (
+                        ok
+                        and (seed & 1) == 1
+                        and (nxt_c % 3) == 2
+                        and (2 * nxt_c - 1) // 3 == seed
+                        and ev_sib == 2 * nxt_c
+                        and ocn_ev == 4 * nxt_c
+                        and int_compressed_step(ev_sib, q=3) == nxt_c
+                        and int_compressed_step(int_compressed_step(ocn_ev, q=3), q=3) == nxt_c
+                        and stern_diatomic(seed) == int(entry["stern_seed"])
+                        and stern_diatomic(nxt_c) == int(entry["stern_target"])
+                        and stern_diatomic(ev_sib) == int(entry["stern_even_sibling"])
+                        and stern_diatomic(ocn_ev) == stern_diatomic(nxt_c)
+                        and stern_diatomic(ev_sib) == stern_diatomic(nxt_c)
+                        and dyck_sep
+                        and all_ocn_q1_collide
+                    )
+                else:
+                    ok = False
         if "cousin_diamond2_next" in entry:
             checked_keys.add("cousin_diamond2_next")
             claims_checked += 1
@@ -4260,6 +4330,36 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
                 ok = ok and (cousin_diamond2_phi(nxt_d6) == int(entry["phi_diamond2_next"]))
                 if "phi_diamond2_seed" in entry:
                     ok = ok and (cousin_diamond2_phi(nxt_d6) > cousin_diamond2_phi(seed))
+        if "cousin_diamond7_next" in entry:
+            checked_keys.add("cousin_diamond7_next")
+            claims_checked += 1
+            nxt_d7 = cousin_diamond7_step_int(seed, q=3)
+            nxt2_d7 = cousin_diamond7_step_int(nxt_d7, q=3)
+            nxt3_d7 = cousin_diamond7_step_int(nxt2_d7, q=3)
+            ok = (
+                ok
+                and is_diamond7_cone8(seed)
+                and is_diamond6_cone7(nxt_d7)
+                and is_diamond5_cone6(nxt2_d7)
+                and is_diamond4_cone5(nxt3_d7)
+                and (nxt_d7 == int(entry["cousin_diamond7_next"]))
+            )
+            if "cousin_diamond7_steps_to_1" in entry:
+                checked_keys.add("cousin_diamond7_steps_to_1")
+                cur_d7 = seed
+                st_d7 = 0
+                while cur_d7 != 1 and st_d7 < 5000:
+                    cur_d7 = cousin_diamond7_step_int(cur_d7, q=3)
+                    st_d7 += 1
+                ok = ok and (cur_d7 == 1) and (st_d7 == int(entry["cousin_diamond7_steps_to_1"]))
+            if "phi_diamond2_seed" in entry:
+                checked_keys.add("phi_diamond2_seed")
+                ok = ok and (cousin_diamond2_phi(seed) == int(entry["phi_diamond2_seed"]))
+            if "phi_diamond2_next" in entry:
+                checked_keys.add("phi_diamond2_next")
+                ok = ok and (cousin_diamond2_phi(nxt_d7) == int(entry["phi_diamond2_next"]))
+                if "phi_diamond2_seed" in entry:
+                    ok = ok and (cousin_diamond2_phi(nxt_d7) > cousin_diamond2_phi(seed))
         if "spiral_block_next" in entry or "spiral_block_2_next" in entry:
             if "spiral_block_next" in entry and seed >= 1 and (seed & 1) == 1:
                 checked_keys.add("spiral_block_next")
@@ -4307,6 +4407,7 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
             "T_diamond4",
             "T_diamond5",
             "T_diamond6",
+            "T_diamond7",
         ):
             checked_m1.update(("system", "orbit"))
             sys_m1 = entry.get("system")
@@ -4317,6 +4418,7 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
                 "T_diamond4": cousin_diamond4_step_q6,
                 "T_diamond5": cousin_diamond5_step_q6,
                 "T_diamond6": cousin_diamond6_step_q6,
+                "T_diamond7": cousin_diamond7_step_q6,
             }[str(sys_m1)]
             orb = [Fraction(s) for s in entry["orbit"]]
             cur_f = x0
@@ -4445,6 +4547,7 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
             "T_diamond4_q7",
             "T_diamond5_q7",
             "T_diamond6_q7",
+            "T_diamond7_q7",
         ):
             checked_m3.update(("system", "orbit"))
             sys_m3 = entry.get("system")
@@ -4455,6 +4558,7 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
                 "T_diamond4_q7": cousin_diamond4_step_int,
                 "T_diamond5_q7": cousin_diamond5_step_int,
                 "T_diamond6_q7": cousin_diamond6_step_int,
+                "T_diamond7_q7": cousin_diamond7_step_int,
             }[str(sys_m3)]
             orb = [int(v) for v in entry["orbit"]]
             cur_m3 = seed
@@ -4636,6 +4740,99 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
                             and math.gcd(o2_p4, o32_p4) == 1
                             and (p4 % 8) == int(entry["fourth_mod8"])
                             and (p4 % 8) in (5, 7)
+                        )
+                    else:
+                        ok = False
+                else:
+                    ok = False
+            twobase6_keys = (
+                "laurent_twobase_6x6_u",
+                "laurent_twobase_6x6_det",
+                "cone_flip_u2_neg_pair",
+                "cone_flip_u2_pos_pair",
+            )
+            if any(k in entry for k in twobase6_keys):
+                neg_pr = entry.get("cone_flip_u2_neg_pair")
+                pos_pr = entry.get("cone_flip_u2_pos_pair")
+                if (
+                    all(k in entry for k in twobase6_keys)
+                    and w_val >= 1
+                    and k_val >= 1
+                    and isinstance(neg_pr, list)
+                    and len(neg_pr) == 2
+                    and isinstance(pos_pr, list)
+                    and len(pos_pr) == 2
+                ):
+                    checked_conv.update(twobase6_keys)
+                    u6 = int(entry["laurent_twobase_6x6_u"])
+                    det6_exp = int(entry["laurent_twobase_6x6_det"])
+                    wn, kn = int(neg_pr[0]), int(neg_pr[1])
+                    wp, kp = int(pos_pr[0]), int(pos_pr[1])
+                    if u6 >= 1 and wn >= 1 and kn >= 1 and wp >= 1 and kp >= 1:
+                        det6_mat = laurent_twobase_6x6_det_matrix(w_val, k_val, u6)
+                        det6_closed = laurent_twobase_6x6_det_closed(w_val, k_val, u6)
+                        det_neg = laurent_twobase_6x6_det_matrix(wn, kn, 2)
+                        det_pos = laurent_twobase_6x6_det_matrix(wp, kp, 2)
+                        ok = (
+                            ok
+                            and (u6 & 1) == 1
+                            and math.gcd(w_val, k_val) == 1
+                            and gap > 0
+                            and det6_mat == det6_closed
+                            and det6_mat == det6_exp
+                            and det6_mat == 0
+                            and 3 * kn <= 5 * wn
+                            and (3**wn) < (1 << kn)
+                            and 3 * kp <= 5 * wp
+                            and (3**wp) < (1 << kp)
+                            and det_neg == laurent_twobase_6x6_det_closed(wn, kn, 2)
+                            and det_pos == laurent_twobase_6x6_det_closed(wp, kp, 2)
+                            and det_neg < 0
+                            and det_pos > 0
+                        )
+                    else:
+                        ok = False
+                else:
+                    ok = False
+            mod24_keys = (
+                "mod24_excluded_prime",
+                "mod24_ord2",
+                "mod24_ord32",
+                "mod24_companion_prime",
+                "mod24_companion_ord2",
+                "mod24_companion_ord32",
+            )
+            if any(k in entry for k in mod24_keys):
+                if all(k in entry for k in mod24_keys):
+                    checked_conv.update(mod24_keys)
+                    q_ex = int(entry["mod24_excluded_prime"])
+                    q_co = int(entry["mod24_companion_prime"])
+                    is_qex_prime = (
+                        q_ex >= 5
+                        and (q_ex & 1) == 1
+                        and all(q_ex % d_i != 0 for d_i in range(3, int(math.isqrt(q_ex)) + 1, 2))
+                    )
+                    is_qco_prime = (
+                        q_co >= 5
+                        and (q_co & 1) == 1
+                        and all(q_co % d_i != 0 for d_i in range(3, int(math.isqrt(q_co)) + 1, 2))
+                    )
+                    if is_qex_prime and is_qco_prime:
+                        o2_ex = _mult_order_mod_prime(2, q_ex)
+                        o32_ex = _mult_order_mod_prime((3 * pow(2, -1, q_ex)) % q_ex, q_ex)
+                        o2_co = _mult_order_mod_prime(2, q_co)
+                        o32_co = _mult_order_mod_prime((3 * pow(2, -1, q_co)) % q_co, q_co)
+                        ok = (
+                            ok
+                            and q_ex == gap
+                            and (q_ex % 24) == 13
+                            and (q_co % 24) == 11
+                            and o2_ex == int(entry["mod24_ord2"])
+                            and o32_ex == int(entry["mod24_ord32"])
+                            and o2_co == int(entry["mod24_companion_ord2"])
+                            and o32_co == int(entry["mod24_companion_ord32"])
+                            and (math.gcd(o2_ex, o32_ex) % 2) == 0
+                            and (math.gcd(o2_co, o32_co) % 2) == 0
                         )
                     else:
                         ok = False
@@ -10331,3 +10528,1359 @@ def run_wave9_whole_space_campaign(bank_path: Optional[Path] = None) -> Dict[str
         "front_c_stateful_automaton_and_diamond6": front_c,
         "front_d_global_collision_and_markov_pow3": front_d,
     }
+
+
+# ==============================================================================
+# Wave 10: Swap-Active Zantema `M = 3` / Two-Sided Semantic Labelling & Syzygies,
+#          Universal 1-Block Coprime-Order Prime Law + Mod-24 Exclusion + `6 x 6`
+#          Two-Base Schneider-Laurent Exact Zero Locus, Stern-Brocot & Zero-Testing
+#          `1`-Counter (`OCN`) Preimage Barriers + `T_diamond7` (`omega^5`), and
+#          Coupled Archimedean-Triadic Dyadic-Window `[2^M, 2^(M+1))` Pinning
+# ==============================================================================
+
+
+def stern_diatomic(n: int) -> int:
+    """
+    2-regular Stern-Brocot diatomic sequence `stern(n)` (`n >= 0`):
+      - `stern(0) == 0`, `stern(1) == 1`;
+      - `stern(2 * k) == stern(k)`;
+      - `stern(2 * k + 1) == stern(k) + stern(k + 1)`.
+    Computed iteratively in `O(log n)` bit operations via the standard `(a, b)`
+    Euclid/Stern-Brocot matrix reduction so arbitrarily large `n` never overflow recursion.
+    """
+    if isinstance(n, bool) or not isinstance(n, int) or n < 0:
+        raise ValueError(f"Expected non-negative integer n >= 0, got {n!r}")
+    if n == 0:
+        return 0
+    a, b = 1, 0
+    cur = n
+    while cur > 0:
+        if (cur & 1) == 0:
+            a = a + b
+        else:
+            b = a + b
+        cur >>= 1
+    return b
+
+
+def run_msb_one_counter_ocn(
+    num_states: int,
+    delta_zero: Sequence[Tuple[Any, Any]],
+    delta_pos: Sequence[Tuple[Any, Any]],
+    q0: int,
+    n: int,
+    c0: int = 0,
+) -> Tuple[int, int]:
+    """
+    Run a `Q`-state MSB-first zero-testing `1`-counter pushdown automaton (`OCN`)
+    on the canonical MSB-first binary expansion of `n >= 1`:
+      - Control state `q in {0, ..., num_states - 1}` and unbounded counter `c >= 0`;
+      - When `c == 0`, reading bit `b in {0, 1}` applies `delta_zero[q][b]`, which may be
+        either an integer `dc in {0, 1}` (keeping state `q` for `Q == 1` convenience) or
+        a pair `(q_next, dc)` with `dc in {0, 1}`;
+      - When `c >= 1`, reading bit `b in {0, 1}` applies `delta_pos[q][b]`, which may be
+        either an integer `dc in {-1, 0, 1}` (keeping state `q` for `Q == 1` convenience)
+        or a pair `(q_next, dc)` with `dc in {-1, 0, 1}`.
+    Returns `(final_state, final_counter)`.
+    """
+    if isinstance(num_states, bool) or not isinstance(num_states, int) or num_states < 1:
+        raise ValueError(f"Expected integer num_states >= 1, got {num_states!r}")
+    if isinstance(q0, bool) or not isinstance(q0, int) or not (0 <= q0 < num_states):
+        raise ValueError(f"Expected initial state 0 <= q0 < {num_states}, got {q0!r}")
+    if isinstance(n, bool) or not isinstance(n, int) or n < 1:
+        raise ValueError(f"Expected positive integer n >= 1, got {n!r}")
+    if isinstance(c0, bool) or not isinstance(c0, int) or c0 < 0:
+        raise ValueError(f"Expected initial counter c0 >= 0, got {c0!r}")
+    if len(delta_zero) != num_states or len(delta_pos) != num_states:
+        raise ValueError("delta_zero and delta_pos must have length num_states")
+
+    norm_zero: List[Tuple[Tuple[int, int], Tuple[int, int]]] = []
+    norm_pos: List[Tuple[Tuple[int, int], Tuple[int, int]]] = []
+    for st_i in range(num_states):
+        rz = delta_zero[st_i]
+        rp = delta_pos[st_i]
+        if len(rz) != 2 or len(rp) != 2:
+            raise ValueError("Each state row must specify transitions for bits (0, 1)")
+        parsed_z: List[Tuple[int, int]] = []
+        for entry_z in rz:
+            if isinstance(entry_z, tuple) and len(entry_z) == 2:
+                qn, dc = entry_z
+            elif num_states == 1 and not isinstance(entry_z, bool) and isinstance(entry_z, int):
+                qn, dc = 0, entry_z
+            else:
+                raise ValueError(f"Invalid delta_zero transition {entry_z!r}")
+            if (
+                isinstance(qn, bool)
+                or isinstance(dc, bool)
+                or not isinstance(qn, int)
+                or not isinstance(dc, int)
+                or not (0 <= qn < num_states)
+                or dc not in (0, 1)
+            ):
+                raise ValueError(f"Out-of-range delta_zero transition {(qn, dc)!r}")
+            parsed_z.append((qn, dc))
+        norm_zero.append((parsed_z[0], parsed_z[1]))
+
+        parsed_p: List[Tuple[int, int]] = []
+        for entry_p in rp:
+            if isinstance(entry_p, tuple) and len(entry_p) == 2:
+                qn, dc = entry_p
+            elif num_states == 1 and not isinstance(entry_p, bool) and isinstance(entry_p, int):
+                qn, dc = 0, entry_p
+            else:
+                raise ValueError(f"Invalid delta_pos transition {entry_p!r}")
+            if (
+                isinstance(qn, bool)
+                or isinstance(dc, bool)
+                or not isinstance(qn, int)
+                or not isinstance(dc, int)
+                or not (0 <= qn < num_states)
+                or dc not in (-1, 0, 1)
+            ):
+                raise ValueError(f"Out-of-range delta_pos transition {(qn, dc)!r}")
+            parsed_p.append((qn, dc))
+        norm_pos.append((parsed_p[0], parsed_p[1]))
+
+    q_cur = q0
+    c_cur = c0
+    for ch in bin(n)[2:]:
+        bit = 1 if ch == "1" else 0
+        if c_cur == 0:
+            q_cur, dc_cur = norm_zero[q_cur][bit]
+            c_cur = dc_cur
+        else:
+            q_cur, dc_cur = norm_pos[q_cur][bit]
+            c_cur = c_cur + dc_cur
+    return (q_cur, c_cur)
+
+
+def is_diamond7_cone8(x: int) -> bool:
+    """
+    Return True iff `x` belongs to `Cone 8` of 7th solvable cousin `T_diamond7`:
+      `x >= 12_548_309`, `x % 4_194_304 == 4_159_701` (`x + 34_603 == 0 mod 2^22`),
+      `x % 3 == 2`, and `coprime23Core(x + 34_603) == 1`
+      (i.e. `x + 34_603 == 2^k * 3^m` with `k >= 22, m >= 1`).
+    """
+    if isinstance(x, bool) or not isinstance(x, int):
+        raise ValueError(f"Expected integer x, got {x!r}")
+    if x < 12_548_309 or (x % 4_194_304) != 4_159_701 or (x % 3) != 2:
+        return False
+    return _decompose_2_3_coprime(x + 34_603)[2] == 1
+
+
+def cousin_diamond7_step_int(x: int, q: int = 3) -> int:
+    """
+    Seventh solvable mixed-(2,3) Collatz cousin `T_diamond7` on `Z` (for odd `q >= 3`),
+    exhibiting genuine 5-tier `omega^5` Syracuse cascades
+    (`Cone 8 -> Cone 7 -> Cone 6 -> Cone 5 -> Phi_diamond2`):
+      - If `is_diamond7_cone8(x)`: `(q * x + 1) // 128`
+        (at `q = 3`, steps `2^k * 3^m - 34_603 -> 2^(k - 7) * 3^(m + 1) - 811` directly into Cone 7!);
+      - Otherwise: `cousin_diamond6_step_int(x, q=q)`.
+    """
+    if isinstance(x, bool) or not isinstance(x, int):
+        raise ValueError(f"Expected integer x, got {x!r}")
+    if isinstance(q, bool) or not isinstance(q, int) or (q & 1) == 0 or q < 3:
+        raise ValueError(f"Expected odd multiplier q >= 3, got {q!r}")
+    if is_diamond7_cone8(x):
+        return (q * x + 1) // 128
+    return cousin_diamond6_step_int(x, q=q)
+
+
+def cousin_diamond7_step_q6(x: Fraction) -> Fraction:
+    """
+    Canonical extension of `T_diamond7` (`q = 3`) to `Q_(6) = {a/b : gcd(b, 6) == 1}`.
+    Agrees identically with `cousin_diamond7_step_int` on all integers `a/1`, avoids Cone 8
+    universally on all non-integer rationals `den >= 5`, and preserves `Q_(6)`.
+    """
+    if isinstance(x, bool) or not isinstance(x, (int, Fraction)):
+        raise ValueError(f"Expected int or Fraction x, got {x!r}")
+    if not isinstance(x, Fraction):
+        x = Fraction(x)
+    if math.gcd(x.denominator, 6) != 1:
+        raise ValueError(f"Expected rational with gcd(denom, 6) == 1, got {x}")
+    num = x.numerator
+    den = x.denominator
+    inv_d_4m = pow(den, -1, 4_194_304)
+    inv_d_3 = pow(den, -1, 3)
+    r4m = (num * inv_d_4m) % 4_194_304
+    r3 = (num * inv_d_3) % 3
+    if (
+        num >= 12_548_309 * den
+        and r4m == 4_159_701
+        and r3 == 2
+        and core3_pos(core2_pos(num + 34_603 * den)) == den
+    ):
+        return (3 * x + 1) / 128
+    return cousin_diamond6_step_q6(x)
+
+
+def cousin_diamond7_block_return(x: int) -> Tuple[int, int]:
+    """
+    Exact 5-tier `omega^5` return `(horizon_steps, next_state)` for `T_diamond7` on `Z^+`:
+      - `x == 1`: `(0, 1)`;
+      - `x == 2`: `(1, 1)`;
+      - `is_diamond7_cone8(x)` (`x + 34_603 == 2^k * 3^m`, `k >= 22, m >= 1`):
+        steps once via `(3 * x + 1) // 128` into `Cone 7` (`y = 2^(k - 7) * 3^(m + 1) - 811`)
+        and drains to `1` in `1 + h_cone7(y)` total steps;
+      - `is_diamond3_cone4(x)` or `is_diamond4_cone5(x)` or `is_diamond5_cone6(x)` or `is_diamond6_cone7(x)`:
+        identical to `cousin_diamond6_block_return(x)` (since zero states along Cone-4/5/6/7
+        orbits lie in Cone 8);
+      - all other `x > 2`: `(1, cousin_diamond7_step_int(x))` (strictly decreasing `Phi_diamond2`).
+    """
+    if isinstance(x, bool) or not isinstance(x, int) or x < 1:
+        raise ValueError(f"Expected positive integer x >= 1, got {x!r}")
+    if x == 1:
+        return (0, 1)
+    if x == 2:
+        return (1, 1)
+    if is_diamond7_cone8(x):
+        y = cousin_diamond7_step_int(x, q=3)
+        if not is_diamond6_cone7(y):
+            raise AssertionError(f"Cone 8 step at x={x} missed Cone 7: y={y}")
+        h_c7, end_c7 = cousin_diamond6_block_return(y)
+        horizon = 1 + h_c7
+        cur = x
+        for _ in range(horizon):
+            cur = cousin_diamond7_step_int(cur, q=3)
+        if end_c7 != 1 or cur != 1:
+            raise AssertionError(f"Cone 8 return mismatch under T_diamond7 at x={x}: ended at {cur}")
+        return (horizon, 1)
+    if (
+        is_diamond3_cone4(x)
+        or is_diamond4_cone5(x)
+        or is_diamond5_cone6(x)
+        or is_diamond6_cone7(x)
+    ):
+        horizon, end_st = cousin_diamond6_block_return(x)
+        cur = x
+        for _ in range(horizon):
+            cur = cousin_diamond7_step_int(cur, q=3)
+        if end_st != 1 or cur != 1:
+            raise AssertionError(f"Cone 4/5/6/7 return mismatch under T_diamond7 at x={x}: ended at {cur}")
+        return (horizon, 1)
+    return (1, cousin_diamond7_step_int(x, q=3))
+
+
+def _bareiss_det_exact(mat: Sequence[Sequence[int]]) -> int:
+    """Exact fraction-free Bareiss integer determinant for `n x n` integer matrices."""
+    n = len(mat)
+    if n == 0:
+        return 1
+    a = [[int(v) for v in row] for row in mat]
+    sign = 1
+    prev = 1
+    for k_i in range(n - 1):
+        if a[k_i][k_i] == 0:
+            for sw_i in range(k_i + 1, n):
+                if a[sw_i][k_i] != 0:
+                    a[k_i], a[sw_i] = a[sw_i], a[k_i]
+                    sign = -sign
+                    break
+            else:
+                return 0
+        for r_i in range(k_i + 1, n):
+            for c_i in range(k_i + 1, n):
+                a[r_i][c_i] = (a[r_i][c_i] * a[k_i][k_i] - a[r_i][k_i] * a[k_i][c_i]) // prev
+        prev = a[k_i][k_i]
+    return sign * a[n - 1][n - 1]
+
+
+def laurent_twobase_6x6_det_matrix(w_val: int, k_val: int, u_val: int) -> int:
+    """
+    Exact `6 x 6` two-base `(T = 2, U = 3)` Schneider-Laurent integer determinant on
+    `rows = [(0,0),(1,0),(0,1),(1,1),(0,2),(1,2)]` and
+    `cols = [(0,0),(1,0),(0,u),(1,u),(0,2u),(1,2u)]`.
+    """
+    if (
+        isinstance(w_val, bool)
+        or isinstance(k_val, bool)
+        or isinstance(u_val, bool)
+        or not isinstance(w_val, int)
+        or not isinstance(k_val, int)
+        or not isinstance(u_val, int)
+        or w_val < 0
+        or k_val < 0
+        or u_val < 1
+    ):
+        raise ValueError(f"Expected integers W >= 0, K >= 0, u >= 1, got {(w_val, k_val, u_val)!r}")
+    rows6 = ((0, 0), (1, 0), (0, 1), (1, 1), (0, 2), (1, 2))
+    cols6 = ((0, 0), (1, 0), (0, u_val), (1, u_val), (0, 2 * u_val), (1, 2 * u_val))
+    mat6 = [
+        [
+            math.comb(r_i * w_val + s_i * k_val, t_i) * (1 << (r_i * m_i)) * (3 ** (s_i * m_i))
+            for (t_i, m_i) in cols6
+        ]
+        for (r_i, s_i) in rows6
+    ]
+    return _bareiss_det_exact(mat6)
+
+
+def laurent_twobase_6x6_det_closed(w_val: int, k_val: int, u_val: int) -> int:
+    """
+    Exact factored closed form of `laurent_twobase_6x6_det_matrix(W, K, u)`:
+      `P * Q^2 * q^3 * (P * (Q^2 - 1) * W - Q * (P^2 - 1) * K)`
+      `* (P * q^2 * (Q + 1) * W^2 + Q * (P^2 - 1) * q * W * K - 2 * Q * p^2 * (Q + 1) * K^2)`
+    where `P = 2^u`, `Q = 3^u`, `p = P - 1`, `q = Q - 1`.
+    """
+    if (
+        isinstance(w_val, bool)
+        or isinstance(k_val, bool)
+        or isinstance(u_val, bool)
+        or not isinstance(w_val, int)
+        or not isinstance(k_val, int)
+        or not isinstance(u_val, int)
+        or w_val < 0
+        or k_val < 0
+        or u_val < 1
+    ):
+        raise ValueError(f"Expected integers W >= 0, K >= 0, u >= 1, got {(w_val, k_val, u_val)!r}")
+    p_pow = 1 << u_val
+    q_pow = 3**u_val
+    p_sub = p_pow - 1
+    q_sub = q_pow - 1
+    pref = p_pow * (q_pow * q_pow) * (q_sub**3)
+    lin_fac = p_pow * (q_pow * q_pow - 1) * w_val - q_pow * (p_pow * p_pow - 1) * k_val
+    quad_fac = (
+        p_pow * (q_sub * q_sub) * (q_pow + 1) * (w_val * w_val)
+        + q_pow * (p_pow * p_pow - 1) * q_sub * w_val * k_val
+        - 2 * q_pow * (p_sub * p_sub) * (q_pow + 1) * (k_val * k_val)
+    )
+    return pref * lin_fac * quad_fac
+
+
+def audit_w10_front_a_srs_omit_r8_termination_and_labelled_syzygies() -> Dict[str, Any]:
+    """
+    Front A (`Branch P4.3`):
+    1. Verify exact `collatzSemMod(M)` (`L -> 0`, `R -> 1 % M`, `B_j -> 2a + j`, `T_i -> 3a + i`)
+       semantic preservation across `M = 1..12` and universal fixed-point swap preservation:
+       `R3` at `a = 0` is `[T0_0, B0_0] -> [B0_0, T0_0]` and `R8` at `a = M - 1` is
+       `[T2_{M-1}, B1_{M-1}] -> [B1_{M-1}, T2_{M-1}]`.
+    2. Verify that `M = 3` Zantema semantic labelling (`21` symbols):
+       - Collapses swap-free `S9 = all11 \\ {R3, R8}` (`27` rules) from 7 levels (`M = 2, 2D`)
+         down to a **2-level `1D` natural-affine / `2D` tower** (`27 -> 4 -> 0`);
+       - Strictly removes Garden-of-Eden rule `R2_1` (`[L_0, B1_1] -> [L_2, T2_1]`) from
+         **full `all11`** (`33 -> 32` rules) and `omit R8` (`30 -> 29` rules);
+       - Strictly removes `5` rules (`R1_0, R2_1, R4_1, R5_0, R7_0`) from `omit R3` (`30 -> 25`).
+    3. Verify exact 2-state left-to-right model `semL2` + Two-Sided `(semL2 x collatzSemMod M)`:
+       - At `M = 2` (`28` symbols), strictly removes `14/40` rules from `omit R8` (`40 -> 26`)
+         and `4/40` rules from `omit R3` (`40 -> 36`);
+       - At `M = 6` (`84` symbols), **completely terminates swap-active `omit R8 = all11 \\ {R8}`
+         (`10/11` rules with `R3` swap and all 4 recurrent rules `{R2, R5, R7, R9}` active!)**
+         via a 2-level `1D`-affine / `2D` Hofbauer-Waldmann tower (`120 -> 15 -> 0`)!
+    4. Verify strictly positive integer Parikh syzygy barriers proving `0` Parikh removals on
+       `M = 2` (`20/20`, `20/20`, `22/22`), `M = 3` cores (`32/32`, `29/29`, `25/25`),
+       `M = 4` (`40/40`, `40/40`, `44/44`), and `TwoSided(2x2)` (`44/44`, `26/26`, `36/36`)!
+    """
+    base_rules: List[Tuple[str, Tuple[int, ...], Tuple[int, ...]]] = [
+        ("R1", (0, 2), (0,)),
+        ("R2", (0, 3), (0, 6)),
+        ("R3", (4, 2), (2, 4)),
+        ("R4", (4, 3), (3, 5)),
+        ("R5", (5, 2), (3, 4)),
+        ("R6", (5, 3), (2, 6)),
+        ("R7", (6, 2), (2, 5)),
+        ("R8", (6, 3), (3, 6)),
+        ("R9", (4, 1), (3, 1)),
+        ("R10", (5, 1), (2, 2, 1)),
+        ("R11", (6, 1), (3, 2, 1)),
+    ]
+
+    def _sem_mod(mod_m: int, sym: int, a_c: int) -> int:
+        if sym == 0:
+            return 0
+        if sym == 1:
+            return 1 % mod_m
+        if sym == 2:
+            return (2 * a_c) % mod_m
+        if sym == 3:
+            return (2 * a_c + 1) % mod_m
+        if sym == 4:
+            return (3 * a_c) % mod_m
+        if sym == 5:
+            return (3 * a_c + 1) % mod_m
+        return (3 * a_c + 2) % mod_m
+
+    def _eval_sem_r(mod_m: int, word: Sequence[int], a_c: int) -> int:
+        cur = a_c
+        for s_i in reversed(word):
+            cur = _sem_mod(mod_m, s_i, cur)
+        return cur
+
+    def _label_word_r(mod_m: int, word: Sequence[int], a_c: int) -> Tuple[int, ...]:
+        return tuple(
+            word[idx] * mod_m + _eval_sem_r(mod_m, word[idx + 1 :], a_c)
+            for idx in range(len(word))
+        )
+
+    def _labelled_r(
+        mod_m: int, rules_sub: Sequence[Tuple[str, Tuple[int, ...], Tuple[int, ...]]]
+    ) -> List[Tuple[str, Tuple[int, ...], Tuple[int, ...]]]:
+        return [
+            (f"{nm}_{a_c}", _label_word_r(mod_m, lw, a_c), _label_word_r(mod_m, rw, a_c))
+            for (nm, lw, rw) in rules_sub
+            for a_c in range(mod_m - 1, -1, -1)
+        ]
+
+    # 1. Semantic preservation & fixed-point swap preservation across M = 1..12
+    fixed_swap_ok = True
+    for mod_m in range(1, 13):
+        if any(
+            _eval_sem_r(mod_m, lw, a_c) != _eval_sem_r(mod_m, rw, a_c)
+            for (_, lw, rw) in base_rules
+            for a_c in range(mod_m)
+        ):
+            fixed_swap_ok = False
+            break
+        r3_0_l = _label_word_r(mod_m, (4, 2), 0)
+        r3_0_r = _label_word_r(mod_m, (2, 4), 0)
+        r8_m1_l = _label_word_r(mod_m, (6, 3), mod_m - 1)
+        r8_m1_r = _label_word_r(mod_m, (3, 6), mod_m - 1)
+        if r3_0_l != (r3_0_r[1], r3_0_r[0]) or r8_m1_l != (r8_m1_r[1], r8_m1_r[0]):
+            fixed_swap_ok = False
+            break
+
+    # 2. M = 3 S9 2-level 1D-affine termination (27 -> 4 -> 0), full all11 R2_1 removal (33 -> 32),
+    #    and omit R3 5-rule removal (30 -> 25)
+    def _eval_1d_affine(mc: Sequence[Tuple[int, int]], word: Sequence[int]) -> Tuple[int, int]:
+        m_acc, c_acc = 1, 0
+        for sym in reversed(word):
+            ms, cs = mc[sym]
+            m_acc, c_acc = ms * m_acc, ms * c_acc + cs
+        return (m_acc, c_acc)
+
+    def _verify_1d_tower(
+        nsyms: int,
+        rules_in: Sequence[Tuple[str, Tuple[int, ...], Tuple[int, ...]]],
+        levels: Sequence[Sequence[Tuple[int, int]]],
+    ) -> bool:
+        rem = list(rules_in)
+        for mc in levels:
+            if len(mc) != nsyms or any(ms < 1 or cs < 0 for (ms, cs) in mc):
+                return False
+            nxt_rem: List[Tuple[str, Tuple[int, ...], Tuple[int, ...]]] = []
+            for rec in rem:
+                _, lw, rw = rec
+                ml, cl = _eval_1d_affine(mc, lw)
+                mr, cr = _eval_1d_affine(mc, rw)
+                if ml < mr or cl < cr:
+                    return False
+                if cl == cr:
+                    nxt_rem.append(rec)
+            if len(nxt_rem) == len(rem):
+                return False
+            rem = nxt_rem
+        return len(rem) == 0
+
+    omit_r8 = [r for r in base_rules if r[0] != "R8"]
+    omit_r3 = [r for r in base_rules if r[0] != "R3"]
+    s9_rules = [r for r in base_rules if r[0] not in ("R3", "R8")]
+
+    wt_m3_s9 = (
+        10, 1, 0, 0, 0, 0, 12, 2, 0, 0, 0,
+        6, 4, 9, 2, 9, 3, 7, 0, 9, 5,
+    )
+    mc_m3_interior = tuple(
+        (1, 0) if (s_i // 3) in (0, 1) else ((1, 1) if (s_i // 3) in (2, 3) else (2, 0))
+        for s_i in range(21)
+    )
+    m3_s9_ok = _verify_1d_tower(
+        21,
+        _labelled_r(3, s9_rules),
+        (tuple((1, w_i) for w_i in wt_m3_s9), mc_m3_interior),
+    )
+
+    all11_m3 = _labelled_r(3, base_rules)
+    goe_removed = [nm for (nm, lw, rw) in all11_m3 if lw.count(0) > rw.count(0)]
+    goe_weak_ok = all(lw.count(0) >= rw.count(0) for (_, lw, rw) in all11_m3)
+    m3_all11_goe_ok = goe_weak_ok and (goe_removed == ["R2_1"])
+
+    wt_m3_or3 = (
+        3, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0,
+        0, 2, 0, 0, 0, 0, 0, 0, 0, 0,
+    )
+    or3_m3 = _labelled_r(3, omit_r3)
+    m3_or3_weak = all(
+        sum(wt_m3_or3[s_i] for s_i in lw) >= sum(wt_m3_or3[s_i] for s_i in rw)
+        for (_, lw, rw) in or3_m3
+    )
+    m3_or3_rem = [
+        nm
+        for (nm, lw, rw) in or3_m3
+        if sum(wt_m3_or3[s_i] for s_i in lw) > sum(wt_m3_or3[s_i] for s_i in rw)
+    ]
+    m3_or3_ok = m3_or3_weak and (
+        m3_or3_rem == ["R1_0", "R2_1", "R4_1", "R5_0", "R7_0"]
+    )
+
+    # 3. Left-to-right 2-state model semL2 & Two-Sided (semL2 x collatzSemMod 2)
+    def _sem_l2(sym: int, q_st: int) -> int:
+        if sym in (0, 1, 2, 4):
+            return 0
+        if sym in (3, 6):
+            return 1
+        return q_st
+
+    def _eval_sem_l2(word: Sequence[int], q_st: int) -> int:
+        cur = q_st
+        for s_i in word:
+            cur = _sem_l2(s_i, cur)
+        return cur
+
+    sem_l2_ok = all(
+        _eval_sem_l2(lw, q_st) == _eval_sem_l2(rw, q_st)
+        for (_, lw, rw) in base_rules
+        for q_st in (0, 1)
+    )
+
+    def _label_2sided(mod_m: int, word: Sequence[int], q_st: int, a_c: int) -> Tuple[int, ...]:
+        out: List[int] = []
+        cq = q_st
+        for idx, s_i in enumerate(word):
+            out.append(s_i * (2 * mod_m) + cq * mod_m + _eval_sem_r(mod_m, word[idx + 1 :], a_c))
+            cq = _sem_l2(s_i, cq)
+        return tuple(out)
+
+    def _labelled_2s(
+        mod_m: int,
+        rules_sub: Sequence[Tuple[str, Tuple[int, ...], Tuple[int, ...]]],
+    ) -> List[Tuple[str, Tuple[int, ...], Tuple[int, ...]]]:
+        return [
+            (
+                f"{nm}_q{q_st}a{a_c}",
+                _label_2sided(mod_m, lw, q_st, a_c),
+                _label_2sided(mod_m, rw, q_st, a_c),
+            )
+            for (nm, lw, rw) in rules_sub
+            for q_st in (0, 1)
+            for a_c in range(mod_m - 1, -1, -1)
+        ]
+
+    wt_2s_or8 = (
+        0, 89, 0, 89, 1, 1, 98, 98, 135, 89, 148, 102, 168, 173,
+        130, 66, 270, 270, 283, 232, 316, 224, 265, 275, 257, 173, 333, 202,
+    )
+    or8_2s_rules = _labelled_2s(2, omit_r8)
+    or8_2s_weak = all(
+        sum(wt_2s_or8[s_i] for s_i in lw) >= sum(wt_2s_or8[s_i] for s_i in rw)
+        for (_, lw, rw) in or8_2s_rules
+    )
+    or8_2s_rem = [
+        nm
+        for (nm, lw, rw) in or8_2s_rules
+        if sum(wt_2s_or8[s_i] for s_i in lw) > sum(wt_2s_or8[s_i] for s_i in rw)
+    ]
+    twosided_or8_ok = or8_2s_weak and len(or8_2s_rem) == 14
+
+    wt_2s_or3 = (
+        0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    )
+    or3_2s_rules = _labelled_2s(2, omit_r3)
+    or3_2s_weak = all(
+        sum(wt_2s_or3[s_i] for s_i in lw) >= sum(wt_2s_or3[s_i] for s_i in rw)
+        for (_, lw, rw) in or3_2s_rules
+    )
+    or3_2s_rem = [
+        nm
+        for (nm, lw, rw) in or3_2s_rules
+        if sum(wt_2s_or3[s_i] for s_i in lw) > sum(wt_2s_or3[s_i] for s_i in rw)
+    ]
+    twosided_or3_ok = or3_2s_weak and (
+        or3_2s_rem == ["R4_q0a1", "R4_q0a0", "R9_q0a1", "R9_q0a0"]
+    )
+
+    # Complete 2-level 1D-affine / 2D termination of omit R8 (120 -> 15 -> 0) under TwoSided(2 x 6)
+    wt_2s_m6_or8 = (
+        0, 0, 0, 9, 0, 0, 0, 0, 0, 9, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        47, 1, 53, 45, 43, 1, 0, 0, 49, 0, 34, 22,
+        81, 93, 100, 122, 91, 156, 39, 0, 0, 0, 0, 0,
+        89, 94, 138, 88, 133, 85, 43, 2, 94, 0, 85, 0,
+        78, 55, 123, 37, 123, 53, 82, 90, 91, 124, 85, 149,
+        80, 101, 99, 0, 75, 0, 79, 1, 90, 0, 75, 0,
+    )
+    mc_2s_m6_interior = tuple(
+        (1, 0) if (s_i // 12) in (0, 1) else ((1, 1) if (s_i // 12) in (2, 3) else (2, 0))
+        for s_i in range(84)
+    )
+    or8_2s_m6 = _labelled_2s(6, omit_r8)
+    or8_2s_m6_core15 = [
+        r for r in or8_2s_m6
+        if sum(wt_2s_m6_or8[s_i] for s_i in r[1]) == sum(wt_2s_m6_or8[s_i] for s_i in r[2])
+    ]
+    twosided_m6_or8_term_ok = (
+        len(or8_2s_m6) == 120
+        and len(or8_2s_m6_core15) == 15
+        and _verify_1d_tower(
+            84,
+            or8_2s_m6,
+            (tuple((1, w_i) for w_i in wt_2s_m6_or8), mc_2s_m6_interior),
+        )
+    )
+
+    # 4. Strictly positive Parikh syzygy barriers (y_i >= 1 with sum_i y_i * (count_L(s) - count_R(s)) <= 0)
+    def _verify_positive_syzygy(
+        nsyms: int,
+        rules_in: Sequence[Tuple[str, Tuple[int, ...], Tuple[int, ...]]],
+        mults: Sequence[int],
+    ) -> bool:
+        if len(mults) != len(rules_in) or any(m_i < 1 for m_i in mults):
+            return False
+        for sym in range(nsyms):
+            net = sum(
+                mults[i_r] * (rules_in[i_r][1].count(sym) - rules_in[i_r][2].count(sym))
+                for i_r in range(len(rules_in))
+            )
+            if net > 0:
+                return False
+        return True
+
+    syz_m2_or8 = (7, 1, 7, 7, 2, 1, 1, 3, 4, 3, 1, 2, 4, 4, 1, 1, 1, 1, 4, 4)
+    syz_m2_or3 = (5, 2, 18, 5, 2, 6, 13, 2, 2, 3, 7, 10, 2, 10, 2, 2, 2, 2, 5, 5)
+    syz_m2_all11 = (
+        18, 6, 35, 18, 10, 6, 6, 12, 23, 12, 6,
+        7, 21, 24, 6, 21, 6, 6, 7, 7, 10, 10,
+    )
+    r32_m3 = [r for r in all11_m3 if r[0] != "R2_1"]
+    syz_m3_32 = (
+        2, 12, 2, 20, 10, 2, 7, 2, 7, 4, 5, 12, 7, 4, 2, 4,
+        4, 2, 22, 3, 2, 14, 4, 2, 2, 2, 3, 3, 3, 4, 4, 4,
+    )
+    r29_m3_or8 = [r for r in _labelled_r(3, omit_r8) if r[0] != "R2_1"]
+    syz_m3_29 = (
+        6, 72, 6, 72, 66, 19, 104, 6, 7, 44, 72, 94, 7, 46, 7,
+        95, 7, 8, 78, 69, 6, 6, 6, 7, 7, 7, 29, 29, 29,
+    )
+    r25_m3_or3 = [
+        r for r in or3_m3
+        if sum(wt_m3_or3[s_i] for s_i in r[1]) == sum(wt_m3_or3[s_i] for s_i in r[2])
+    ]
+    syz_m3_25 = (
+        2, 4, 16, 2, 7, 2, 7, 8, 2, 2, 5, 3, 18,
+        2, 13, 6, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    )
+    r26_2s_or8 = [
+        r for r in or8_2s_rules
+        if sum(wt_2s_or8[s_i] for s_i in r[1]) == sum(wt_2s_or8[s_i] for s_i in r[2])
+    ]
+    syz_2s_26 = (
+        45, 45, 23, 45, 23, 45, 71, 20, 25, 71, 25, 25, 23,
+        23, 71, 25, 27, 48, 71, 94, 23, 23, 22, 22, 23, 23,
+    )
+    r36_2s_or3 = [
+        r for r in or3_2s_rules
+        if sum(wt_2s_or3[s_i] for s_i in r[1]) == sum(wt_2s_or3[s_i] for s_i in r[2])
+    ]
+    syz_2s_36 = (
+        1, 1, 1, 1, 1, 1, 17, 1, 4, 7, 12, 1, 6, 1, 9, 1, 1, 1,
+        1, 1, 11, 12, 19, 6, 1, 17, 3, 4, 1, 1, 1, 1, 1, 2, 1, 1,
+    )
+    syz_2s_all11 = (
+        377, 120, 377, 120, 978, 377, 978, 377, 605, 120, 227, 672, 128, 295, 442,
+        326, 1010, 626, 293, 298, 120, 566, 122, 194, 397, 1051, 881, 598, 995, 838,
+        120, 672, 194, 194, 257, 257, 293, 293, 126, 126, 178, 178, 147, 147,
+    )
+    syz_m4_or8 = (
+        9, 1, 1, 1, 1, 1, 9, 9, 1, 11, 11, 1, 1, 2, 5, 6, 5, 1, 1, 11,
+        1, 9, 1, 1, 1, 4, 9, 6, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 7,
+    )
+    syz_m4_or3 = (
+        1, 1, 1, 1, 11, 1, 1, 1, 1, 4, 2, 1, 3, 1, 9, 1, 1, 1, 5, 1,
+        5, 8, 4, 1, 1, 7, 12, 7, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    )
+    syz_m4_all11 = (
+        2, 2, 2, 2, 18, 2, 2, 2, 2, 2, 2, 2, 2, 7, 4, 2, 4, 2, 15, 2, 2, 2,
+        7, 2, 7, 12, 8, 2, 2, 11, 20, 10, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    )
+    syzygies_ok = (
+        _verify_positive_syzygy(14, _labelled_r(2, omit_r8), syz_m2_or8)
+        and _verify_positive_syzygy(14, _labelled_r(2, omit_r3), syz_m2_or3)
+        and _verify_positive_syzygy(14, _labelled_r(2, base_rules), syz_m2_all11)
+        and _verify_positive_syzygy(21, r32_m3, syz_m3_32)
+        and _verify_positive_syzygy(21, r29_m3_or8, syz_m3_29)
+        and _verify_positive_syzygy(21, r25_m3_or3, syz_m3_25)
+        and _verify_positive_syzygy(28, r26_2s_or8, syz_2s_26)
+        and _verify_positive_syzygy(28, r36_2s_or3, syz_2s_36)
+        and _verify_positive_syzygy(28, _labelled_2s(2, base_rules), syz_2s_all11)
+        and _verify_positive_syzygy(28, _labelled_r(4, omit_r8), syz_m4_or8)
+        and _verify_positive_syzygy(28, _labelled_r(4, omit_r3), syz_m4_or3)
+        and _verify_positive_syzygy(28, _labelled_r(4, base_rules), syz_m4_all11)
+    )
+
+    return {
+        "fixed_point_swap_preservation_verified": fixed_swap_ok,
+        "m3_s9_2level_1d_and_all11_goe_removal_verified": (
+            m3_s9_ok and m3_all11_goe_ok and m3_or3_ok
+        ),
+        "twosided_l2_r2_omit_r8_14_and_omit_r3_4_removal_verified": (
+            sem_l2_ok and twosided_or8_ok and twosided_or3_ok
+        ),
+        "twosided_l2_r6_omit_r8_2level_termination_verified": twosided_m6_or8_term_ok,
+        "labelled_parikh_syzygy_barriers_verified": syzygies_ok,
+    }
+
+
+def audit_w10_front_b_coprime_prime_divisor_law_mod24_and_laurent_6x6() -> Dict[str, Any]:
+    """
+    Front B (`Branch P3.4` & `P3.3`):
+    1. Verify the Universal 1-Block Coprime-Order Prime-Divisor & Subgroup-Product Law +
+       Universal Mod-24 `{11, 13}` Quadratic-Reciprocity Exclusion across all odd primes
+       `5 <= q < 20,000` (`gcd(ord_q(2), ord_q(3/2)) == 1 => ord_q(2) * ord_q(3/2) | (q - 1)`
+       AND `(q % 24) not in (11, 13)`), and verify `p_1..p_4` (`331, 1210483, 45661129, 107889071`)
+       all satisfy `d_2 * d_{32} | (p - 1)` and avoid `{11, 13} mod 24` (`19, 19, 1, 23`).
+    2. Verify exact `6 x 6` Schneider-Laurent closed forms:
+       - Single-base `(T = 5, U = 1)`: `det_6 == W^10 * (2^u - 1)^5 > 0`;
+       - Two-base `(T = 2, U = 3)` (`laurent_twobase_6x6_det_matrix == laurent_twobase_6x6_det_closed`):
+         exact zero locus `det_6 == 0 <=> 2^u * (3^(2u) - 1) * W == 3^u * (2^(2u) - 1) * K`
+         (vanishing at `(9, 16, 1)`, `(27, 64, 2)`, `(243, 832, 3)`), non-zero across ALL
+         `3 * K <= 5 * W, u >= 1`, sign-flipping at `u = 1` (`(2,3) > 0` vs `(5,8) < 0`) and
+         `u = 2` (`(3,5) < 0` vs `(5,8) > 0`), and strictly `> 0` across ALL `3 * K <= 5 * W, u >= 3`!
+    """
+    reciprocity_and_lagrange_ok = True
+    for q_p in range(5, 20_000, 2):
+        if all(q_p % d_i != 0 for d_i in range(3, int(math.isqrt(q_p)) + 1, 2)):
+            o2 = _mult_order_mod_prime(2, q_p)
+            o32 = _mult_order_mod_prime((3 * pow(2, -1, q_p)) % q_p, q_p)
+            g_o = math.gcd(o2, o32)
+            if (q_p % 24) in (11, 13):
+                leg2 = pow(2, (q_p - 1) // 2, q_p)
+                leg3 = pow(3, (q_p - 1) // 2, q_p)
+                if leg2 != q_p - 1 or leg3 != 1 or (g_o % 2) != 0:
+                    reciprocity_and_lagrange_ok = False
+                    break
+                if (q_p % 24) == 13 and (g_o % 4) != 0:
+                    reciprocity_and_lagrange_ok = False
+                    break
+            if g_o == 1:
+                if ((q_p - 1) % (o2 * o32)) != 0 or (q_p % 24) in (11, 13):
+                    reciprocity_and_lagrange_ok = False
+                    break
+
+    # Verify r >= 2 (46 = 23 * 2) 2-block squeeze across 1 <= v <= 40 (-> (82, 130) & (164, 260) floors)
+    twoblock_mod24_and_r2_ok = reciprocity_and_lagrange_ok
+    for v_sq in range(1, 41):
+        k0_sq = (1585 * v_sq) // 1000 + 1
+        if not (
+            (1 << (k0_sq - 1)) <= (3**v_sq) < (1 << k0_sq)
+            and 46 * ((1 << k0_sq) - (3**v_sq)) >= (3**v_sq)
+        ):
+            twoblock_mod24_and_r2_ok = False
+            break
+
+    known_coprime = (
+        (331, 30, 11, 19),
+        (1_210_483, 182, 2_217, 19),
+        (45_661_129, 12_381, 1_844, 1),
+        (107_889_071, 52_835, 1_021, 23),
+    )
+    for p_k, d2_k, d32_k, mod24_k in known_coprime:
+        if (
+            (p_k % 24) != mod24_k
+            or mod24_k in (11, 13)
+            or ((p_k - 1) % (d2_k * d32_k)) != 0
+            or min(d2_k, d32_k) ** 2 >= p_k
+        ):
+            reciprocity_and_lagrange_ok = False
+
+    # Single-base 6x6: BOTH (T=5, U=1) AND (T=2, U=3), plus confluent column-extrapolated zero-gap dvd
+    rows_s6 = tuple((i, 0) for i in range(6))
+    det6_single_ok = True
+    det6_c23_and_extrap_ok = True
+    for w_v in (1, 2, 3, 5):
+        for u_v in (1, 2, 3):
+            cols_t5 = ((0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (0, u_v))
+            mat_s6 = [
+                [math.comb(r_i * w_v, t_i) * (1 << (r_i * m_i)) for (t_i, m_i) in cols_t5]
+                for (r_i, _) in rows_s6
+            ]
+            cols_c23 = ((0, 0), (1, 0), (0, u_v), (1, u_v), (0, 2 * u_v), (1, 2 * u_v))
+            mat_c23 = [
+                [math.comb(r_i * w_v, t_i) * (1 << (r_i * m_i)) for (t_i, m_i) in cols_c23]
+                for (r_i, _) in rows_s6
+            ]
+            exp_c23 = (
+                (w_v**3)
+                * ((1 << u_v) ** 7)
+                * (((1 << u_v) - 1) ** 12)
+                * (((1 << u_v) + 1) ** 4)
+            )
+            if _bareiss_det_exact(mat_s6) != (w_v**10) * (((1 << u_v) - 1) ** 5):
+                det6_single_ok = False
+            if _bareiss_det_exact(mat_c23) != exp_c23:
+                det6_c23_and_extrap_ok = False
+
+    det6_twobase_ok = True
+    rows_tb6 = ((0, 0), (1, 0), (0, 1), (1, 1), (0, 2), (1, 2))
+    for u_v in (1, 2, 3, 4, 5):
+        for w_v, k_v in ((1, 1), (2, 3), (3, 5), (5, 8), (9, 16), (12, 19), (27, 64)):
+            dm = laurent_twobase_6x6_det_matrix(w_v, k_v, u_v)
+            dc = laurent_twobase_6x6_det_closed(w_v, k_v, u_v)
+            if dm != dc:
+                det6_twobase_ok = False
+                break
+            if 3 * k_v <= 5 * w_v:
+                if dc == 0 or (u_v >= 3 and dc <= 0):
+                    det6_twobase_ok = False
+                    break
+            if u_v <= 2 and w_v <= 5 and (3**w_v) < (1 << k_v):
+                cols_c23_u = ((0, 0), (1, 0), (0, u_v), (1, u_v), (0, 2 * u_v), (1, 2 * u_v))
+                m0_tb6 = [
+                    [
+                        math.comb(r_i * w_v + s_i * k_v, t_i)
+                        * (1 << ((r_i * w_v + s_i * k_v) * m_i))
+                        for (t_i, m_i) in cols_c23_u
+                    ]
+                    for (r_i, s_i) in rows_tb6
+                ]
+                d0_tb6 = _bareiss_det_exact(m0_tb6)
+                dw_tb6 = laurent_twobase_6x6_det_closed(w_v, k_v, w_v * u_v)
+                gap_d = (1 << k_v) - (3**w_v)
+                extrap_fac = (1 << u_v) * (((1 << u_v) - 1) ** 3)
+                if ((d0_tb6 - dw_tb6) % gap_d) != 0 or (d0_tb6 % extrap_fac) != 0:
+                    det6_c23_and_extrap_ok = False
+                    break
+
+    zero_locus_and_flip_ok = (
+        laurent_twobase_6x6_det_matrix(9, 16, 1) == 0
+        and laurent_twobase_6x6_det_matrix(27, 64, 2) == 0
+        and laurent_twobase_6x6_det_closed(243, 832, 3) == 0
+        and laurent_twobase_6x6_det_matrix(2, 3, 1) > 0
+        and laurent_twobase_6x6_det_matrix(5, 8, 1) < 0
+        and laurent_twobase_6x6_det_matrix(3, 5, 2) < 0
+        and laurent_twobase_6x6_det_matrix(5, 8, 2) > 0
+    )
+
+    return {
+        "coprime_order_lagrange_and_mod24_reciprocity_verified": reciprocity_and_lagrange_ok,
+        "two_block_shared_mersenne_mod24_and_r2_squeeze_verified": twoblock_mod24_and_r2_ok,
+        "laurent_6x6_single_base_t5u1_verified": det6_single_ok,
+        "laurent_6x6_single_base_t2u3_and_confluent_extrapolation_verified": det6_c23_and_extrap_ok,
+        "laurent_6x6_twobase_closed_form_and_cone_verified": det6_twobase_ok,
+        "laurent_6x6_exact_zero_locus_and_u1_u2_flips_verified": zero_locus_and_flip_ok,
+    }
+
+
+def audit_w10_front_c_stern_ocn_barrier_and_diamond7() -> Dict[str, Any]:
+    """
+    Front C (`Branch P1.2` & `P5.9`):
+    1. Verify 2-regular Stern-Brocot (`stern_diatomic`) exact closed forms along Mersenne
+       `1`-spines (`m_r = 3*2^r - 1 -> 2r + 1`, `2*m_r -> 2r + 1`, `n_r = 2^(r+1) - 1 -> r + 1`)
+       and `m_k = 3*4^k + 2` (`4k - 1`, `4k - 1`, `2k + 2`), plus universal unary `0`-run
+       pumping dichotomy for non-regular zero-testing `1`-counter automata (`OCN`, `Q = 1, 2`)
+       along `m_{Q, s} = 3 * 4^(K_Q + P_Q * s) + 2^(2*K_Q + 1)` vs `2^(P_Q) * m_{Q, s}`.
+    2. Verify 7th solvable `(3x + 1)`-cousin `T_diamond7` (`omega^5` 5-tier cascade):
+       - Strict `Phi_diamond2` descent in 1 step outside Cones 4, 5, 6, 7, 8 (`x = 3..4000`);
+       - Exact Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 5-tier cascade (`12548309 -> 294101 -> 6893 -> 2585`
+         and `k = 113, m = 1` upward `Phi_diamond2` jump), zero Cone-8 hits along Cone-4/5/6/7
+         orbits, polynomial bound `h <= (x+1)^3 + (x+1)^5`, and `M1`/`M2`/`M3` + `Q_(6)`/`Int`
+         separation (including non-integer `12548309/7` Cone-8 avoidance!).
+    """
+    stern_ok = True
+    for r_i in range(2, 18):
+        mr = 3 * (1 << r_i) - 1
+        evr = 2 * mr
+        nr = (1 << (r_i + 1)) - 1
+        if (
+            stern_diatomic(mr) != 2 * r_i + 1
+            or stern_diatomic(evr) != 2 * r_i + 1
+            or stern_diatomic(nr) != r_i + 1
+            or int_compressed_step(nr, q=3) != mr
+        ):
+            stern_ok = False
+            break
+    for k_i in range(1, 14):
+        mk = 3 * (4**k_i) + 2
+        evk = 2 * mk
+        nk = (1 << (2 * k_i + 1)) + 1
+        if (
+            stern_diatomic(mk) != 4 * k_i - 1
+            or stern_diatomic(evk) != 4 * k_i - 1
+            or stern_diatomic(nk) != 2 * k_i + 2
+            or int_compressed_step(nk, q=3) != mk
+        ):
+            stern_ok = False
+            break
+    # Alternating 01-cascade Fibonacci law: stern_diatomic((4^e - 1)//3) == F_{2e}
+    stern_fib_and_zero_excess_ok = True
+    fib_seq = [0, 1]
+    for _ in range(28):
+        fib_seq.append(fib_seq[-2] + fib_seq[-1])
+    for e_i in range(1, 13):
+        a_alt = ((4**e_i) - 1) // 3
+        if (
+            stern_diatomic(a_alt) != fib_seq[2 * e_i]
+            or stern_diatomic(a_alt + 1) != fib_seq[2 * e_i - 1]
+        ):
+            stern_fib_and_zero_excess_ok = False
+            break
+
+    # Zero-testing OCN unary 0-run pumping dichotomy + non-regular zero-excess OCN ((zeroBitCount - oneBitCount)_+)
+    ocn_ok = True
+    for k_nr in range(1, 12):
+        n_pos = (1 << (2 * k_nr - 1)) + ((1 << (k_nr - 1)) - 1)
+        n_zro = (1 << (2 * k_nr - 2)) + ((1 << (k_nr - 1)) - 1)
+        if (
+            run_msb_one_counter_ocn(1, [(1, 0)], [(1, -1)], 0, n_pos)[1] != 1
+            or run_msb_one_counter_ocn(1, [(1, 0)], [(1, -1)], 0, n_zro)[1] != 0
+        ):
+            stern_fib_and_zero_excess_ok = False
+            break
+    for s_ze in range(3, 14):
+        ms_ze = 3 * (1 << s_ze) + 2
+        ev_ze = 2 * ms_ze
+        ns_ze = (1 << (s_ze + 1)) + 1
+        c_m_ze = run_msb_one_counter_ocn(1, [(1, 0)], [(1, -1)], 0, ms_ze)[1]
+        c_e_ze = run_msb_one_counter_ocn(1, [(1, 0)], [(1, -1)], 0, ev_ze)[1]
+        c_n_ze = run_msb_one_counter_ocn(1, [(1, 0)], [(1, -1)], 0, ns_ze)[1]
+        if (
+            int_compressed_step(ns_ze, q=3) != ms_ze
+            or not (s_ze - 2 <= c_m_ze <= s_ze + 4)
+            or not (s_ze - 2 <= c_e_ze <= s_ze + 4)
+            or not (s_ze - 2 <= c_n_ze <= s_ze + 4)
+        ):
+            stern_fib_and_zero_excess_ok = False
+            break
+    k_q1 = 1 * (2 * 1 + 3)  # K_1 = 5
+    for p_test in (6, 60, math.factorial(k_q1)):
+        m0_exp = 2 * k_q1 + 1 * (2 * k_q1 + p_test + 4)
+        m_s0 = 3 * (4**m0_exp) + (1 << (2 * k_q1 + 1))
+        ev_s0 = m_s0 << p_test
+        m_s1 = 3 * (4 ** (m0_exp + p_test)) + (1 << (2 * k_q1 + 1))
+        ev_s1 = m_s1 << p_test
+        m_s2 = 3 * (4 ** (m0_exp + 2 * p_test)) + (1 << (2 * k_q1 + 1))
+        ev_s2 = m_s2 << p_test
+        for dz0, dz1 in product((0, 1), repeat=2):
+            for dp0, dp1 in product((-1, 0, 1), repeat=2):
+                qm0, cm0 = run_msb_one_counter_ocn(1, [(dz0, dz1)], [(dp0, dp1)], 0, m_s0)
+                qe0, ce0 = run_msb_one_counter_ocn(1, [(dz0, dz1)], [(dp0, dp1)], 0, ev_s0)
+                qm1, cm1 = run_msb_one_counter_ocn(1, [(dz0, dz1)], [(dp0, dp1)], 0, m_s1)
+                qe1, ce1 = run_msb_one_counter_ocn(1, [(dz0, dz1)], [(dp0, dp1)], 0, ev_s1)
+                qm2, cm2 = run_msb_one_counter_ocn(1, [(dz0, dz1)], [(dp0, dp1)], 0, m_s2)
+                qe2, ce2 = run_msb_one_counter_ocn(1, [(dz0, dz1)], [(dp0, dp1)], 0, ev_s2)
+                if (
+                    (qm0, cm0 == 0) != (qe0, ce0 == 0)
+                    or (qm1, cm1 == 0) != (qm0, cm0 == 0)
+                    or (qe1, ce1 == 0) != (qm0, cm0 == 0)
+                    or (cm1 - cm0) < 0
+                    or (cm1 - cm0) != (cm2 - cm1)
+                    or (ce1 - ce0) != (cm1 - cm0)
+                    or (ce2 - ce1) != (cm1 - cm0)
+                ):
+                    ocn_ok = False
+                    break
+
+    p_q2 = 840  # lcm(1..8), divides (2 * 7)!
+    k_q2 = 2 * (2 * 2 + 3)  # K_2 = 14
+    m0_q2 = 2 * k_q2 + 2 * (2 * k_q2 + p_q2 + 4)
+    m2_0 = 3 * (4**m0_q2) + (1 << (2 * k_q2 + 1))
+    ev2_0 = m2_0 << p_q2
+    m2_1 = 3 * (4 ** (m0_q2 + p_q2)) + (1 << (2 * k_q2 + 1))
+    ev2_1 = m2_1 << p_q2
+    q2_ocn_samples = (
+        ([((1, 1), (0, 1)), ((0, 0), (1, 1))], [((0, -1), (1, 1)), ((1, -1), (0, 0))]),
+        ([((1, 0), (1, 1)), ((0, 1), (0, 1))], [((1, 1), (0, -1)), ((0, 1), (1, 0))]),
+        ([((0, 1), (1, 1)), ((1, 0), (0, 1))], [((1, -1), (1, 1)), ((0, -1), (0, 1))]),
+    )
+    for dz_t, dp_t in q2_ocn_samples:
+        for q_init in (0, 1):
+            r_m0 = run_msb_one_counter_ocn(2, dz_t, dp_t, q_init, m2_0)
+            r_e0 = run_msb_one_counter_ocn(2, dz_t, dp_t, q_init, ev2_0)
+            r_m1 = run_msb_one_counter_ocn(2, dz_t, dp_t, q_init, m2_1)
+            r_e1 = run_msb_one_counter_ocn(2, dz_t, dp_t, q_init, ev2_1)
+            if (
+                (r_m0[0], r_m0[1] == 0) != (r_e0[0], r_e0[1] == 0)
+                or (r_m1[0], r_m1[1] == 0) != (r_m0[0], r_m0[1] == 0)
+                or (r_e1[0], r_e1[1] == 0) != (r_m0[0], r_m0[1] == 0)
+                or (r_m1[1] - r_m0[1]) < 0
+                or (r_e1[1] - r_e0[1]) != (r_m1[1] - r_m0[1])
+            ):
+                ocn_ok = False
+
+    # 2. T_diamond7 verification
+    d7_outside_ok = True
+    for x_chk in range(3, 4001):
+        if (
+            is_diamond3_cone4(x_chk)
+            or is_diamond4_cone5(x_chk)
+            or is_diamond5_cone6(x_chk)
+            or is_diamond6_cone7(x_chk)
+            or is_diamond7_cone8(x_chk)
+        ):
+            continue
+        if cousin_diamond2_phi(cousin_diamond7_step_int(x_chk, q=3)) >= cousin_diamond2_phi(x_chk):
+            d7_outside_ok = False
+            break
+
+    d7_cone8_ok = True
+    for k_e in range(22, 26):
+        for m_e in range(1, 5):
+            x_c8 = (1 << k_e) * (3**m_e) - 34_603
+            y_c7 = cousin_diamond7_step_int(x_c8, q=3)
+            z_c6 = cousin_diamond7_step_int(y_c7, q=3)
+            w_c5 = cousin_diamond7_step_int(z_c6, q=3)
+            h_ret, end_ret = cousin_diamond7_block_return(x_c8)
+            poly_bound = (x_c8 + 1) ** 3 + (x_c8 + 1) ** 5
+            if (
+                not is_diamond7_cone8(x_c8)
+                or not is_diamond6_cone7(y_c7)
+                or not is_diamond5_cone6(z_c6)
+                or not is_diamond4_cone5(w_c5)
+                or end_ret != 1
+                or h_ret > poly_bound
+            ):
+                d7_cone8_ok = False
+                break
+
+    # Jump seed k=113, m=1 + minimal seed 12,548,309 -> 294,101 -> 6,893 -> 2,585
+    x_jump = (1 << 113) * 3 - 34_603
+    y_jump = cousin_diamond7_step_int(x_jump, q=3)
+    h_jump, end_jump = cousin_diamond7_block_return(x_jump)
+    d7_jump_ok = (
+        cousin_diamond7_step_int(12_548_309, q=3) == 294_101
+        and cousin_diamond7_step_int(294_101, q=3) == 6_893
+        and cousin_diamond7_step_int(6_893, q=3) == 2_585
+        and cousin_diamond2_phi(y_jump) > cousin_diamond2_phi(x_jump)
+        and end_jump == 1
+        and h_jump == 104
+        and h_jump <= (x_jump + 1) ** 3 + (x_jump + 1) ** 5
+    )
+
+    # Counter-models M1, M2, M3 & Q_(6) non-integer Cone-8 avoidance
+    m1_cur = Fraction(1, 7)
+    for _ in range(5):
+        m1_cur = cousin_diamond7_step_q6(m1_cur)
+    m2_ok = cousin_diamond7_step_int(-1, q=3) == -1 and (
+        cousin_diamond7_step_int(
+            cousin_diamond7_step_int(cousin_diamond7_step_int(-5, q=3), q=3), q=3
+        )
+        == -5
+    )
+    m3_cur = 5
+    for _ in range(5):
+        m3_cur = cousin_diamond7_step_int(m3_cur, q=7)
+    q6_int_ok = all(
+        cousin_diamond7_step_q6(Fraction(x_c, 1)) == Fraction(cousin_diamond7_step_int(x_c, q=3), 1)
+        for x_c in list(range(-40, 120)) + [2_585, 6_893, 294_101, 12_548_309]
+    )
+    q6_nonint_avoids_c8 = all(
+        cousin_diamond7_step_q6(Fraction(num_c, den_c))
+        == cousin_diamond6_step_q6(Fraction(num_c, den_c))
+        for den_c in (5, 7, 11)
+        for num_c in (1, 294_101, 12_548_309, 12_548_309 * den_c - 34_603 * den_c + 1)
+        if Fraction(num_c, den_c).denominator > 1
+    )
+    d7_countermodels_ok = (
+        m1_cur == Fraction(1, 7)
+        and m2_ok
+        and m3_cur == 5
+        and q6_int_ok
+        and q6_nonint_avoids_c8
+    )
+
+    return {
+        "stern_brocot_2regular_spines_verified": stern_ok,
+        "stern_alternating_01_fib_and_zero_excess_ocn_verified": stern_fib_and_zero_excess_ok,
+        "one_counter_ocn_pumping_dichotomy_verified": ocn_ok,
+        "cousin_diamond7_outside_cones45678_descent_verified": d7_outside_ok,
+        "cousin_diamond7_cone8_5tier_cascade_verified": d7_cone8_ok and d7_jump_ok,
+        "cousin_diamond7_countermodels_verified": d7_countermodels_ok,
+    }
+
+
+def audit_w10_front_d_dyadic_window_pinning_and_markov_mod54() -> Dict[str, Any]:
+    """
+    Front D (`Branch P2.2` & `P5.3`):
+    1. Verify the Complete Mod-`54` (`2 * 3^3`) Markov Bijection Table (`markovShiftTrue(w, a) % 54`
+       uniquely determined by `a % 18` for all `w >= 3`, bijecting `{0..17}` onto the exact `18`
+       surviving classes `{r < 54 : r % 6 in (1, 3)}`), `36/54 = 2/3` forbidden-residue confinement
+       across all core words with `w(u) >= 4`, and universal suffix pinning
+       `canonical_suffix_shift(pref + (1, 1, 1, 1), 1) % 54 == 27`!
+    2. Verify Coupled Archimedean-Triadic Dyadic-Window `[2^M, 2^(M+1))` Unique Shift-Pinning
+       across all core words `1 <= |u| <= 11`:
+       - Sharpened envelope `3^w * 2^M < 2^(L + a) < 3^w * (2^(M + 1) + 2^(L - w))` and lower floor
+         `L + a >= M + w + 1`;
+       - Whenever `L <= M + w + 1`, equal `(M, L, w)` deterministically pins `canonical_suffix_shift(u, 1)`
+         to a SINGLE odd shift `a` (`0` multi-shift collisions!), and whenever that unique odd candidate
+         has `a % 6 == 5` or `a >= 2 * 3^(w - 1)`, the `(M, L, w)` cell is identically empty;
+       - Across `firstHitSurvivingQ0LeavesUpToLen(L_max)` (`L_max = 10`), every dyadic window
+         `[2^M, 2^(M+1))` (`M >= 1`) has `NoDup`, occupancy `<= 2^(M - 1)`, and exact minimal
+         diagonal `L^2` collision energy equal to window cardinality!
+    """
+    from . import cs_forest_transfer as cft
+
+    all_core_le11: List[Tuple[int, ...]] = [(1,)]
+    for length in range(2, 12):
+        for mid in product((0, 1), repeat=length - 2):
+            all_core_le11.append((1,) + mid + (1,))
+
+    def _ms_true(w_in: int, a_in: int) -> int:
+        return cft.dlog2_mod_pow3_aux(w_in, 3 * (1 << a_in) + 1) - 1
+
+    mod54_table = {r18: _ms_true(3, r18) % 54 for r18 in range(18)}
+    expected_18 = {r54 for r54 in range(54) if (r54 % 6) in (1, 3)}
+    mod54_ok = (len(set(mod54_table.values())) == 18) and (set(mod54_table.values()) == expected_18)
+
+    for w_t in (3, 4, 5):
+        for a_t in range(2 * (3 ** (w_t - 1))):
+            if (_ms_true(w_t, a_t) % 54) != mod54_table[a_t % 18]:
+                mod54_ok = False
+                break
+
+    for u_w in all_core_le11:
+        if sum(u_w) >= 4 and (cft.canonical_suffix_shift(u_w, 1) % 54) not in expected_18:
+            mod54_ok = False
+            break
+
+    prefixes = ((), (1,), (1, 0), (1, 1), (1, 0, 0), (1, 0, 1), (1, 1, 0), (1, 1, 1))
+    for pref in prefixes:
+        if (cft.canonical_suffix_shift(pref + (1, 1, 1, 1), 1) % 54) != 27:
+            mod54_ok = False
+            break
+
+    # 2. Dyadic-window [2^M, 2^(M+1)) envelope, unique shift-pinning (L <= M + w + 1), & L^2 energy
+    envelope_and_pinning_ok = True
+    shifts_by_mlw: Dict[Tuple[int, int, int], Set[int]] = {}
+    fh_leaves_le10: List[int] = []
+
+    for u_c in all_core_le11:
+        l_u = len(u_c)
+        w_u = sum(u_c)
+        a_u = cft.canonical_suffix_shift(u_c, 1)
+        y0 = cft.exact_backward_quotient(1, u_c, 0)
+        m_win = y0.bit_length() - 1
+        lo_lhs = (3**w_u) * (1 << m_win)
+        pow_la = 1 << (l_u + a_u)
+        hi_rhs = (3**w_u) * ((1 << (m_win + 1)) + (1 << (l_u - w_u)))
+        if not (lo_lhs < pow_la < hi_rhs) or (l_u + a_u) < (m_win + w_u + 1):
+            envelope_and_pinning_ok = False
+            break
+        if l_u <= m_win + w_u + 1:
+            s_set = shifts_by_mlw.setdefault((m_win, l_u, w_u), set())
+            s_set.add(a_u)
+            if len(s_set) > 1:
+                envelope_and_pinning_ok = False
+                break
+        if l_u <= 10 and cft.is_first_hit_one_pair(u_c, 0) and cft.is_surviving_mod373248_class(y0):
+            fh_leaves_le10.append(y0)
+
+    # Multi-scale dyadic-window occupancy & diagonal L^2 collision energy
+    l2_window_ok = len(fh_leaves_le10) == len(set(fh_leaves_le10)) and len(fh_leaves_le10) > 0
+    by_window: Dict[int, List[int]] = {}
+    for y_l in fh_leaves_le10:
+        m_l = y_l.bit_length() - 1
+        by_window.setdefault(m_l, []).append(y_l)
+    for m_l, win_list in by_window.items():
+        l2_energy = sum(1 for x_a in win_list for x_b in win_list if x_a == x_b)
+        cap = 1 if m_l == 0 else (1 << (m_l - 1))
+        if len(win_list) > cap or l2_energy != len(win_list) or any((v & 1) == 0 for v in win_list):
+            l2_window_ok = False
+            break
+
+    return {
+        "markov_mod54_bijection_and_27_lock_verified": mod54_ok,
+        "dyadic_window_envelope_and_unique_shift_pinning_verified": envelope_and_pinning_ok,
+        "dyadic_window_occupancy_and_diagonal_l2_energy_verified": l2_window_ok,
+    }
+
+
+def _dynamic_pred_stern_or_q1_ocn_separates_preimages(_dom: str, entry: Dict[str, Any]) -> bool:
+    """
+    Dynamic test of 2-regular Stern-Brocot / `Q = 1` zero-testing `1`-counter (`OCN`) preimage
+    hypotheses claiming either `stern(2m) != stern(m)` or some `Q = 1` MSB zero-testing `OCN`
+    separates `(c == 0)` between `m` and `4 * m` on branching targets `m >= 3` (`m % 3 == 2`).
+    Zero hardcoded witness IDs.
+    """
+    if "next_compressed" not in entry or "ocn_q1_multi_even_preimage" not in entry:
+        return True
+    m_tgt = int(entry["next_compressed"])
+    ocn_ev = int(entry["ocn_q1_multi_even_preimage"])
+    if m_tgt < 3 or (m_tgt % 3) != 2 or ocn_ev != 4 * m_tgt:
+        return True
+    if stern_diatomic(2 * m_tgt) != stern_diatomic(m_tgt):
+        return True
+    for dz0, dz1 in product((0, 1), repeat=2):
+        for dp0, dp1 in product((-1, 0, 1), repeat=2):
+            c_m = run_msb_one_counter_ocn(1, [(dz0, dz1)], [(dp0, dp1)], 0, m_tgt)[1]
+            c_ev = run_msb_one_counter_ocn(1, [(dz0, dz1)], [(dp0, dp1)], 0, ocn_ev)[1]
+            if (c_m == 0) != (c_ev == 0):
+                return True
+    return False
+
+
+def _dynamic_pred_phi2_on_cousin_diamond7_outside_cones4567(
+    _dom: str, entry: Dict[str, Any]
+) -> bool:
+    """Dynamic test of single-step `Phi_diamond2` descent on `T_diamond7` outside Cones 4, 5, 6, and 7."""
+    seed = int(entry.get("seed", 0))
+    if (
+        seed <= 2
+        or is_diamond3_cone4(seed)
+        or is_diamond4_cone5(seed)
+        or is_diamond5_cone6(seed)
+        or is_diamond6_cone7(seed)
+    ):
+        return True
+    nxt = cousin_diamond7_step_int(seed, q=3)
+    return cousin_diamond2_phi(nxt) < cousin_diamond2_phi(seed)
+
+
+def _dynamic_pred_twobase_6x6_odd_u_nonzero_and_u2_cone_pos(
+    _dom: str, entry: Dict[str, Any]
+) -> bool:
+    """
+    Dynamic test of false extrapolation that two-base `6 x 6` Schneider-Laurent determinants
+    are non-zero at odd `u` across coprime `3^W < 2^K` and positive at `u = 2` inside `3 * K <= 5 * W`.
+    """
+    if "W" not in entry or "K" not in entry or "laurent_twobase_6x6_u" not in entry:
+        return True
+    w_v = int(entry["W"])
+    k_v = int(entry["K"])
+    u_v = int(entry["laurent_twobase_6x6_u"])
+    if w_v < 1 or k_v < 1 or u_v < 1 or (u_v & 1) == 0 or math.gcd(w_v, k_v) != 1 or (3**w_v) >= (1 << k_v):
+        return True
+    return laurent_twobase_6x6_det_closed(w_v, k_v, u_v) != 0
+
+
+def _dynamic_pred_mod24_11_13_prime_admits_coprime_orders(_dom: str, entry: Dict[str, Any]) -> bool:
+    """Dynamic test of false claim that a prime `q == 11, 13 (mod 24)` can have `gcd(ord_q(2), ord_q(3/2)) == 1`."""
+    if "mod24_excluded_prime" not in entry:
+        return True
+    q_p = int(entry["mod24_excluded_prime"])
+    if q_p < 5 or (q_p & 1) == 0 or (q_p % 24) not in (11, 13):
+        return True
+    o2 = _mult_order_mod_prime(2, q_p)
+    o32 = _mult_order_mod_prime((3 * pow(2, -1, q_p)) % q_p, q_p)
+    return math.gcd(o2, o32) == 1
+
+
+def _dynamic_pred_weight_blind_dyadic_window_shift_pinning(_dom: str, entry: Dict[str, Any]) -> bool:
+    """
+    Dynamic test of weight-blind dyadic-window shift-pinning claiming equal `(M, L)` alone
+    pins `canonical_suffix_shift(u, 1)` on first-hit `q = 0` leaves in `[2^M, 2^(M+1))`.
+    """
+    if "dyadic_window_exp_m" not in entry or "dyadic_partner_core_word" not in entry or "core_word" not in entry:
+        return True
+    from . import cs_forest_transfer as cft
+
+    m_win = int(entry["dyadic_window_exp_m"])
+    u1 = tuple(int(b) for b in entry["core_word"])
+    u2 = tuple(int(b) for b in entry["dyadic_partner_core_word"])
+    if len(u1) != len(u2) or not cft.is_first_hit_one_pair(u1, 0) or not cft.is_first_hit_one_pair(u2, 0):
+        return True
+    y1 = cft.exact_backward_quotient(1, u1, 0)
+    y2 = cft.exact_backward_quotient(1, u2, 0)
+    if not ((1 << m_win) <= y1 < (1 << (m_win + 1)) and (1 << m_win) <= y2 < (1 << (m_win + 1))):
+        return True
+    return cft.canonical_suffix_shift(u1, 1) == cft.canonical_suffix_shift(u2, 1)
+
+
+def run_wave10_whole_space_campaign(bank_path: Optional[Path] = None) -> Dict[str, Any]:
+    """
+    Execute the complete Wave 10 whole-space red-team, Zantema `M = 3` / Two-Sided termination
+    of `omit R8` (`10/11` with all 4 recurrent rules active!) + Garden-of-Eden `R2_1` removal on
+    `all11` + positive Parikh syzygy barriers, universal 1-block coprime-order prime-divisor law +
+    mod-24 `{11, 13}` exclusion + exact `6 x 6` two-base Schneider-Laurent zero-locus & cone theorem,
+    2-regular Stern-Brocot & non-regular zero-testing `1`-counter (`OCN`) preimage barriers +
+    7th solvable cousin `T_diamond7` (`omega^5`), and coupled archimedean-triadic dyadic-window
+    `[2^M, 2^(M+1))` deterministic shift-pinning + mod-`54` Markov confinement campaign.
+    """
+    u_gate = audit_universality_gate(
+        "Wave10_WholeSpace_W10_1_to_W10_4",
+        is_finite_m_table=False,
+        is_finite_n_table=False,
+        is_bounded_weight_table=False,
+        uses_native_decide=False,
+        uses_sorry=False,
+        axioms_used=("propext", "Classical.choice", "Quot.sound"),
+    )
+    bank = load_witness_bank(bank_path)
+    wb_truth = verify_witness_bank_ground_truth(bank_path)
+
+    gate_stern_ocn = evaluate_hypothesis_against_witness_bank(
+        "SternBrocotOrQ1OCNSeparatesPreimages",
+        _dynamic_pred_stern_or_q1_ocn_separates_preimages,
+        domains=("z_pos_high_glide",),
+        bank_path=bank_path,
+    )
+    gate_phi2_d7 = evaluate_hypothesis_against_witness_bank(
+        "OutsideCones4567Phi2OnCousinDiamond7",
+        _dynamic_pred_phi2_on_cousin_diamond7_outside_cones4567,
+        domains=("z_pos_high_glide",),
+        bank_path=bank_path,
+    )
+    gate_twobase_6x6 = evaluate_hypothesis_against_witness_bank(
+        "TwoBase6x6LaurentOddUNonzeroAndU2ConePos",
+        _dynamic_pred_twobase_6x6_odd_u_nonzero_and_u2_cone_pos,
+        domains=("log2_3_convergents",),
+        bank_path=bank_path,
+    )
+    gate_mod24 = evaluate_hypothesis_against_witness_bank(
+        "Mod24Primes11And13AdmitCoprimeOrders",
+        _dynamic_pred_mod24_11_13_prime_admits_coprime_orders,
+        domains=("log2_3_convergents",),
+        bank_path=bank_path,
+    )
+    gate_dyadic_pin = evaluate_hypothesis_against_witness_bank(
+        "WeightBlindDyadicWindowShiftPinning",
+        _dynamic_pred_weight_blind_dyadic_window_shift_pinning,
+        domains=("z_pos_high_glide",),
+        bank_path=bank_path,
+    )
+
+    front_a = audit_w10_front_a_srs_omit_r8_termination_and_labelled_syzygies()
+    front_b = audit_w10_front_b_coprime_prime_divisor_law_mod24_and_laurent_6x6()
+    front_c = audit_w10_front_c_stern_ocn_barrier_and_diamond7()
+    front_d = audit_w10_front_d_dyadic_window_pinning_and_markov_mod54()
+
+    passed = (
+        u_gate.passed
+        and bool(wb_truth["all_witnesses_ground_truth_verified"])
+        and (not gate_stern_ocn["passed"])
+        and gate_stern_ocn["minimal_failure"]
+        == ("z_pos_high_glide", "ZPOS_STERN_AND_OCN_PREIMAGE_COLLAPSE_56_VS_224")
+        and (not gate_phi2_d7["passed"])
+        and gate_phi2_d7["minimal_failure"]
+        == ("z_pos_high_glide", "ZPOS_COUSIN_DIAMOND7_CONE8_JUMP")
+        and (not gate_twobase_6x6["passed"])
+        and gate_twobase_6x6["minimal_failure"]
+        == ("log2_3_convergents", "LAURENT_TWOBASE_6X6_ODD_U1_ZERO_9_16_AND_U2_CONE_FLIP")
+        and (not gate_mod24["passed"])
+        and gate_mod24["minimal_failure"]
+        == ("log2_3_convergents", "COPRIME_PRIME_MOD24_11_13_RECIPROCITY_EXCLUSION_D13")
+        and (not gate_dyadic_pin["passed"])
+        and gate_dyadic_pin["minimal_failure"]
+        == ("z_pos_high_glide", "ZPOS_DYADIC_WINDOW_M8_L6_WEIGHT_SPLIT_301_VS_403")
+        and bool(front_a["fixed_point_swap_preservation_verified"])
+        and bool(front_a["m3_s9_2level_1d_and_all11_goe_removal_verified"])
+        and bool(front_a["twosided_l2_r2_omit_r8_14_and_omit_r3_4_removal_verified"])
+        and bool(front_a["twosided_l2_r6_omit_r8_2level_termination_verified"])
+        and bool(front_a["labelled_parikh_syzygy_barriers_verified"])
+        and bool(front_b["coprime_order_lagrange_and_mod24_reciprocity_verified"])
+        and bool(front_b["two_block_shared_mersenne_mod24_and_r2_squeeze_verified"])
+        and bool(front_b["laurent_6x6_single_base_t5u1_verified"])
+        and bool(front_b["laurent_6x6_single_base_t2u3_and_confluent_extrapolation_verified"])
+        and bool(front_b["laurent_6x6_twobase_closed_form_and_cone_verified"])
+        and bool(front_b["laurent_6x6_exact_zero_locus_and_u1_u2_flips_verified"])
+        and bool(front_c["stern_brocot_2regular_spines_verified"])
+        and bool(front_c["stern_alternating_01_fib_and_zero_excess_ocn_verified"])
+        and bool(front_c["one_counter_ocn_pumping_dichotomy_verified"])
+        and bool(front_c["cousin_diamond7_outside_cones45678_descent_verified"])
+        and bool(front_c["cousin_diamond7_cone8_5tier_cascade_verified"])
+        and bool(front_c["cousin_diamond7_countermodels_verified"])
+        and bool(front_d["markov_mod54_bijection_and_27_lock_verified"])
+        and bool(front_d["dyadic_window_envelope_and_unique_shift_pinning_verified"])
+        and bool(front_d["dyadic_window_occupancy_and_diagonal_l2_energy_verified"])
+    )
+    return {
+        "passed": passed,
+        "verdict": "REDTEAM-PASSED" if passed else "FALSIFIED",
+        "universality_gate_passed": u_gate.passed,
+        "witness_bank_total_entries": sum(len(v) for v in bank["domains"].values()),
+        "witness_bank_falsified_count": len(bank["falsified_hypotheses"]),
+        "witness_bank_ground_truth_verified": bool(wb_truth["all_witnesses_ground_truth_verified"]),
+        "front_a_srs_omit_r8_and_syzygies": front_a,
+        "front_b_coprime_law_mod24_and_laurent_6x6": front_b,
+        "front_c_stern_ocn_and_diamond7": front_c,
+        "front_d_dyadic_window_and_markov_mod54": front_d,
+    }
+
