@@ -3293,13 +3293,13 @@ class TestWave10WholeSpaceCampaign(unittest.TestCase):
             self.assertTrue(hasattr(ca, exported_sym), f"Missing package export: {exported_sym}")
 
         bank = load_witness_bank()
-        self.assertEqual(len(bank["domains"]["z_pos_high_glide"]), 30)
-        self.assertEqual(len(bank["domains"]["m1_q2_pos"]), 16)
-        self.assertEqual(len(bank["domains"]["m2_z_neg"]), 4)
-        self.assertEqual(len(bank["domains"]["m3_supercritical"]), 10)
-        self.assertEqual(len(bank["domains"]["log2_3_convergents"]), 15)
-        self.assertEqual(sum(len(v) for v in bank["domains"].values()), 75)
-        self.assertEqual(len(bank["falsified_hypotheses"]), 32)
+        self.assertGreaterEqual(len(bank["domains"]["z_pos_high_glide"]), 30)
+        self.assertGreaterEqual(len(bank["domains"]["m1_q2_pos"]), 16)
+        self.assertGreaterEqual(len(bank["domains"]["m2_z_neg"]), 4)
+        self.assertGreaterEqual(len(bank["domains"]["m3_supercritical"]), 10)
+        self.assertGreaterEqual(len(bank["domains"]["log2_3_convergents"]), 15)
+        self.assertGreaterEqual(sum(len(v) for v in bank["domains"].values()), 75)
+        self.assertGreaterEqual(len(bank["falsified_hypotheses"]), 32)
         hyp_ids = {h["hypothesis_id"] for h in bank["falsified_hypotheses"]}
         for hid in (
             "W10_H1_STERN_BROCOT_2REGULAR_AND_ONE_COUNTER_OCN_PREIMAGE_WEIGHTS",
@@ -3311,15 +3311,15 @@ class TestWave10WholeSpaceCampaign(unittest.TestCase):
 
         truth = verify_witness_bank_ground_truth()
         self.assertTrue(truth["all_witnesses_ground_truth_verified"])
-        self.assertEqual(truth["verified_witness_count"], 75)
+        self.assertGreaterEqual(truth["verified_witness_count"], 75)
         self.assertEqual(truth["failed_witness_ids"], ())
 
         w10 = run_wave10_whole_space_campaign()
         self.assertTrue(w10["passed"])
         self.assertEqual(w10["verdict"], "REDTEAM-PASSED")
         self.assertTrue(w10["universality_gate_passed"])
-        self.assertEqual(w10["witness_bank_total_entries"], 75)
-        self.assertEqual(w10["witness_bank_falsified_count"], 32)
+        self.assertGreaterEqual(w10["witness_bank_total_entries"], 75)
+        self.assertGreaterEqual(w10["witness_bank_falsified_count"], 32)
 
         fa = audit_w10_front_a_srs_omit_r8_termination_and_labelled_syzygies()
         self.assertTrue(fa["fixed_point_swap_preservation_verified"])
@@ -3627,7 +3627,7 @@ class TestWave10WholeSpaceCampaign(unittest.TestCase):
         self.assertTrue(res["pure_kernel_verified"])
         self.assertTrue(res["zero_sorry_verified"])
         self.assertTrue(res["zero_warnings_verified"])
-        self.assertEqual(len(res["lean_files"]), 59)
+        self.assertGreaterEqual(len(res["lean_files"]), 59)
         self.assertGreaterEqual(res["theorems_audited"], 2129)
         self.assertGreaterEqual(res["axiom_free_theorem_count"], 599)
         self.assertTrue(any(Path(p).name == "Wave10WholeSpace.lean" for p in res["lean_files"]))
@@ -3825,6 +3825,741 @@ class TestWave10WholeSpaceCampaign(unittest.TestCase):
         self.assertEqual(rc_fail, 1)
         self.assertIn("A=False, B=False", buf_fail.getvalue())
         self.assertIn("T_diamond7=False, D=False", buf_fail.getvalue())
+
+
+class TestWave11WholeSpaceCampaign(unittest.TestCase):
+    """End-to-end verification of Wave 11 whole-space red-team, Lean 4 kernel, & CLI gates."""
+
+    def test_wave11_whole_space_campaign_and_witness_bank(self) -> None:
+        import collatz_analysis as ca
+        from collatz_analysis.cs_cegar_redteam import (
+            audit_w11_front_a_left_anchored_dp_and_mersenne_r8_barrier,
+            audit_w11_front_b_reciprocity_sylow_and_laurent_t3u2,
+            audit_w11_front_c_general_mixed_sign_ocn_and_diamond8,
+            audit_w11_front_d_supercritical_dyadic_and_markov_mod162,
+            load_witness_bank,
+            run_wave11_whole_space_campaign,
+            verify_witness_bank_ground_truth,
+        )
+        from collatz_analysis.formal_proofs import generate_full_proof_suite_report
+
+        for exported_sym in (
+            "run_lsb_one_counter_ocn",
+            "run_msb_pda_stack",
+            "mod9_backward_collatz_branch_next",
+            "is_diamond8_cone9",
+            "cousin_diamond8_step_int",
+            "cousin_diamond8_step_q6",
+            "cousin_diamond8_block_return",
+            "laurent_twobase_6x6_t3u2_det_matrix",
+            "laurent_twobase_6x6_t3u2_det_closed",
+            "laurent_twobase_8x8_t4u2_det_matrix",
+            "audit_w11_front_a_left_anchored_dp_and_mersenne_r8_barrier",
+            "audit_w11_front_b_reciprocity_sylow_and_laurent_t3u2",
+            "audit_w11_front_c_general_mixed_sign_ocn_and_diamond8",
+            "audit_w11_front_d_supercritical_dyadic_and_markov_mod162",
+            "run_wave11_whole_space_campaign",
+        ):
+            self.assertTrue(hasattr(ca, exported_sym), f"Missing package export: {exported_sym}")
+
+        bank = load_witness_bank()
+        self.assertEqual(len(bank["domains"]["z_pos_high_glide"]), 35)
+        self.assertEqual(len(bank["domains"]["m1_q2_pos"]), 17)
+        self.assertEqual(len(bank["domains"]["m2_z_neg"]), 4)
+        self.assertEqual(len(bank["domains"]["m3_supercritical"]), 11)
+        self.assertEqual(len(bank["domains"]["log2_3_convergents"]), 18)
+        self.assertEqual(sum(len(v) for v in bank["domains"].values()), 85)
+        self.assertEqual(len(bank["falsified_hypotheses"]), 36)
+        hyp_ids = {h["hypothesis_id"] for h in bank["falsified_hypotheses"]}
+        for hid in (
+            "W11_H1_GENERAL_MIXED_SIGN_OCN_MODE_AND_SLOPE_PREIMAGE_WEIGHTS",
+            "W11_H2_FINITE_LEFT_RIGHT_CARRIER_MERSENNE_R8_AND_OMEGA5_DIAMOND8_BARRIER",
+            "W11_H3_TWOBASE_6X6_T3U2_EVEN_U_NONVANISHING_AND_MOD24_5_17_EVEN_GCD",
+            "W11_H4_LENGTH_BLIND_DYADIC_SHIFT_PINNING_AND_SUBCRITICAL_LENGTH_CEILING",
+        ):
+            self.assertIn(hid, hyp_ids)
+
+        truth = verify_witness_bank_ground_truth()
+        self.assertTrue(truth["all_witnesses_ground_truth_verified"])
+        self.assertEqual(truth["verified_witness_count"], 85)
+        self.assertEqual(truth["failed_witness_ids"], ())
+
+        w11 = run_wave11_whole_space_campaign()
+        self.assertTrue(w11["passed"])
+        self.assertEqual(w11["verdict"], "REDTEAM-PASSED")
+        self.assertTrue(w11["universality_gate_passed"])
+        self.assertEqual(w11["witness_bank_total_entries"], 85)
+        self.assertEqual(w11["witness_bank_falsified_count"], 36)
+
+        fa = audit_w11_front_a_left_anchored_dp_and_mersenne_r8_barrier()
+        self.assertTrue(fa["left_anchored_dp_and_omit_r2_termination_verified"])
+        self.assertTrue(fa["twosided_m3_m6_omit_r3_and_all11_cascades_verified"])
+        self.assertTrue(fa["universal_mersenne_b1_t2_lock_and_r8_cycle_verified"])
+        self.assertTrue(fa["higher_carriers_k2_4_8_m6_12_18_and_flip2_verified"])
+
+        fb = audit_w11_front_b_reciprocity_sylow_and_laurent_t3u2()
+        self.assertTrue(fb["reciprocity_mod24_complete_and_sylow_verified"])
+        self.assertTrue(fb["twoblock_cubic_quintic_octic_floors_verified"])
+        self.assertTrue(fb["companion_quotient_cascades_and_mblock_sylow_verified"])
+        self.assertTrue(fb["confluent_t2_t3_extrapolation_8x8_and_laplace_verified"])
+        self.assertTrue(fb["laurent_8x8_twobase_t4u2_divisibility_and_cone_flip_verified"])
+        self.assertTrue(fb["laurent_6x6_t3u2_closed_form_odd_u_and_cone_pos_verified"])
+
+        fc = audit_w11_front_c_general_mixed_sign_ocn_and_diamond8()
+        self.assertTrue(fc["general_mixed_sign_ocn_mode_and_dual_pumping_verified"])
+        self.assertTrue(fc["lsb_raw_counter_ocn_and_pda_two_counter_verified"])
+        self.assertTrue(fc["all_ocn_raw_counter_and_mod9_branch_descent_verified"])
+        self.assertTrue(fc["cousin_diamond8_outside_cones4to9_descent_verified"])
+        self.assertTrue(fc["cousin_diamond8_cone9_6tier_cascade_verified"])
+        self.assertTrue(fc["cousin_diamond8_countermodels_verified"])
+
+        fd = audit_w11_front_d_supercritical_dyadic_and_markov_mod162()
+        self.assertTrue(fd["first_hit_shift_ge3_and_pow3_ones_verified"])
+        self.assertTrue(fd["markov_mod162_bijection_and_81_lock_verified"])
+        self.assertTrue(fd["dyadic_supercritical_shift_multiplicity_verified"])
+        self.assertTrue(fd["surviving_window_leaves_mod162_and_fiber_equidist_verified"])
+
+        suite_rep = generate_full_proof_suite_report()
+        self.assertIn("wave11_whole_space_campaign", suite_rep)
+        self.assertTrue(suite_rep["wave11_whole_space_campaign"]["passed"])
+
+    def test_wave11_edge_cases_error_paths_and_witness_corruption(self) -> None:
+        import copy
+        from fractions import Fraction
+        import json
+        import tempfile
+        from collatz_analysis.cs_cegar_redteam import (
+            _canonical_pda_q2_g3_table,
+            _dynamic_pred_asym_slope_q2_ocn_mersenne_bypass_weight,
+            _dynamic_pred_length_blind_dyadic_shift_pinning_or_subcritical,
+            _dynamic_pred_mixed_sign_q2_ocn_mode_separates_preimages,
+            _dynamic_pred_mod24_5_17_prime_forces_even_gcd,
+            _dynamic_pred_pda_q2_g3_stack_separates_preimages,
+            _dynamic_pred_phi2_on_cousin_diamond8_outside_cones4to8,
+            _dynamic_pred_twobase_6x6_t3u2_even_u_nonzero_and_all_pos,
+            _dynamic_pred_twobase_8x8_t4u2_cone_positivity,
+            cousin_diamond2_phi,
+            cousin_diamond7_step_q6,
+            cousin_diamond8_block_return,
+            cousin_diamond8_step_int,
+            cousin_diamond8_step_q6,
+            evaluate_hypothesis_against_witness_bank,
+            is_diamond7_cone8,
+            is_diamond8_cone9,
+            laurent_twobase_6x6_t3u2_det_closed,
+            laurent_twobase_6x6_t3u2_det_matrix,
+            laurent_twobase_8x8_t4u2_det_matrix,
+            load_witness_bank,
+            mod9_backward_collatz_branch_next,
+            run_lsb_one_counter_ocn,
+            run_msb_one_counter_ocn,
+            run_msb_pda_stack,
+            verify_witness_bank_ground_truth,
+        )
+
+        # Mixed-sign Q = 2 OCN boundary checks (separates 56 vs 224, yet collapses 12416 vs 49664)
+        dz_mix = [((1, 0), (0, 1)), ((0, 0), (1, 1))]
+        dp_mix = [((1, 0), (0, 1)), ((0, -1), (1, -1))]
+        self.assertEqual(run_msb_one_counter_ocn(2, dz_mix, dp_mix, 0, 56)[1], 2)
+        self.assertEqual(run_msb_one_counter_ocn(2, dz_mix, dp_mix, 0, 224)[1], 1)
+        self.assertEqual(run_msb_one_counter_ocn(2, dz_mix, dp_mix, 0, 12_416), (1, 0))
+        self.assertEqual(run_msb_one_counter_ocn(2, dz_mix, dp_mix, 0, 49_664), (1, 0))
+        self.assertEqual(run_lsb_one_counter_ocn(1, [(0, 1)], [(-1, 1)], 0, 1), (0, 1))
+        self.assertEqual(run_lsb_one_counter_ocn(1, [(0, 1)], [(-1, 1)], 0, 1, c0=2), (0, 3))
+        self.assertEqual(
+            run_lsb_one_counter_ocn(2, dz_mix, dp_mix, 0, 12_416)[0],
+            run_lsb_one_counter_ocn(2, dz_mix, dp_mix, 0, 49_664)[0],
+        )
+
+        # Boundary, odd-u non-vanishing, all-u cone positivity, & even-u resonant-zero checks on T3U2 6x6
+        for w_e, k_e, u_e in ((0, 0, 1), (0, 5, 2), (5, 0, 2), (1, 1, 1), (1, 2, 1), (3, 8, 2), (9, 16, 1)):
+            self.assertEqual(
+                laurent_twobase_6x6_t3u2_det_matrix(w_e, k_e, u_e),
+                laurent_twobase_6x6_t3u2_det_closed(w_e, k_e, u_e),
+            )
+        self.assertEqual(laurent_twobase_6x6_t3u2_det_matrix(3, 8, 2), 0)
+        self.assertEqual(laurent_twobase_6x6_t3u2_det_matrix(1, 2, 1), -96)
+        self.assertEqual(laurent_twobase_6x6_t3u2_det_matrix(2, 3, 1), -675)  # 3^2 > 2^3 (sharpness of 3^W < 2^K)
+        self.assertEqual(laurent_twobase_6x6_t3u2_det_matrix(12, 19, 1), -165_699)  # 3^12 > 2^19 (sharpness of 3^W < 2^K)
+        self.assertNotEqual(laurent_twobase_6x6_t3u2_det_matrix(9, 16, 1), 0)
+        for u_c in (1, 2, 3, 4):
+            for w_c, k_c in ((3, 5), (5, 8), (17, 27), (41, 65), (306, 485)):
+                self.assertGreater(laurent_twobase_6x6_t3u2_det_closed(w_c, k_c, u_c), 0)
+
+        # Boundary & cone sign-flip checks on 8x8 two-base T4U2 & multi-symbol context-free PDA stack
+        self.assertEqual(laurent_twobase_8x8_t4u2_det_matrix(0, 0, 1), 0)
+        self.assertEqual(laurent_twobase_8x8_t4u2_det_matrix(3, 5, 1), -559_794_375)
+        self.assertEqual(laurent_twobase_8x8_t4u2_det_matrix(3, 5, 4), -20_487_059_690_701_585_693_359_375)
+        self.assertGreater(laurent_twobase_8x8_t4u2_det_matrix(5, 8, 4), 0)
+
+        pda_tbl = _canonical_pda_q2_g3_table()
+        self.assertEqual(run_msb_pda_stack(2, 3, pda_tbl, 0, 1), (1, 1, 1))
+        self.assertEqual(run_msb_pda_stack(2, 3, pda_tbl, 0, 56), (0, 1, 1))
+        self.assertEqual(run_msb_pda_stack(2, 3, pda_tbl, 0, 224), (1, 0, 0))
+        self.assertEqual(run_msb_pda_stack(2, 3, pda_tbl, 0, 12_416), (0, 1, 1))
+        self.assertEqual(run_msb_pda_stack(2, 3, pda_tbl, 0, 49_664), (1, 0, 0))
+        self.assertEqual(run_msb_pda_stack(2, 3, pda_tbl, 0, 8), (0, 1, 1))
+        self.assertEqual(run_msb_pda_stack(2, 3, pda_tbl, 0, 32), (1, 0, 0))
+        self.assertEqual(run_msb_pda_stack(2, 3, pda_tbl, 0, 512), (0, 1, 1))
+
+        # Boundary & 6-tier cascade checks for T_diamond8 and Cone 9
+        self.assertFalse(is_diamond8_cone9(33_462_157))
+        self.assertFalse(is_diamond8_cone9(100_571_020))
+        self.assertTrue(is_diamond8_cone9(100_571_021))  # 2^25 * 3 - 92275 (minimal Cone 9)
+        self.assertFalse(is_diamond8_cone9((1 << 25) * 15 - 92_275))  # coprime23 == 5 != 1
+        y_c8 = cousin_diamond8_step_int(100_571_021)
+        self.assertEqual(y_c8, 37_714_133)
+        self.assertTrue(is_diamond7_cone8(y_c8))
+        self.assertGreater(cousin_diamond2_phi(y_c8), cousin_diamond2_phi(100_571_021))
+        self.assertEqual(cousin_diamond8_step_int(37_714_133), 883_925)
+        self.assertEqual(cousin_diamond8_step_int(883_925), 20_717)
+        self.assertEqual(cousin_diamond8_step_int(20_717), 7_769)
+        self.assertEqual(cousin_diamond8_block_return(1), (0, 1))
+        self.assertEqual(cousin_diamond8_block_return(2), (1, 1))
+        self.assertEqual(cousin_diamond8_block_return(3), (1, 5))
+        self.assertEqual(cousin_diamond8_block_return(100_571_021), (16, 1))
+        self.assertEqual(cousin_diamond8_step_int(-1), -1)
+        self.assertEqual(cousin_diamond8_step_int(-5), -7)
+
+        # Non-integer Q_(6)^+ rationals (including 100571021/7) ALWAYS bypass Cone 9
+        cyc_1_7 = [Fraction(1, 7)]
+        for _ in range(5):
+            cyc_1_7.append(cousin_diamond8_step_q6(cyc_1_7[-1]))
+        self.assertEqual(cyc_1_7[5], Fraction(1, 7))
+        for den in (5, 7, 11, 13):
+            for num in (1, 19, 12_548_309, 100_571_021, 100_571_021 * den - 92_275 * den + 1):
+                f_q6 = Fraction(num, den)
+                if f_q6.denominator > 1:
+                    self.assertEqual(
+                        cousin_diamond8_step_q6(f_q6),
+                        cousin_diamond7_step_q6(f_q6),
+                    )
+
+        # Error-path validation across all Wave 11 primitives
+        for bad_q in (0, -1, True, False, 1.5, "1"):
+            with self.assertRaises(ValueError):
+                run_lsb_one_counter_ocn(bad_q, [(0, 0)], [(0, 0)], 0, 5)  # type: ignore[arg-type]
+        for bad_q0 in (-1, 1, True, False, "0"):
+            with self.assertRaises(ValueError):
+                run_lsb_one_counter_ocn(1, [(0, 0)], [(0, 0)], bad_q0, 5)  # type: ignore[arg-type]
+        for bad_n_ocn in (0, -2, True, False, 2.5, "56"):
+            with self.assertRaises(ValueError):
+                run_lsb_one_counter_ocn(1, [(0, 0)], [(0, 0)], 0, bad_n_ocn)  # type: ignore[arg-type]
+        for bad_c0 in (-1, True, False, 1.5, "0"):
+            with self.assertRaises(ValueError):
+                run_lsb_one_counter_ocn(1, [(0, 0)], [(0, 0)], 0, 5, c0=bad_c0)  # type: ignore[arg-type]
+        for bad_dz in ([], [(0,)], [(-1, 0)], [(0, 2)], [(0, True)], [((1, 0), (0, 0))]):
+            with self.assertRaises(ValueError):
+                run_lsb_one_counter_ocn(1, bad_dz, [(0, 0)], 0, 5)  # type: ignore[arg-type]
+        for bad_dp in ([], [(0,)], [(-2, 0)], [(0, 2)], [(0, True)], [((1, 0), (0, 0))]):
+            with self.assertRaises(ValueError):
+                run_lsb_one_counter_ocn(1, [(0, 0)], bad_dp, 0, 5)  # type: ignore[arg-type]
+        with self.assertRaises(ValueError):
+            run_lsb_one_counter_ocn(2, [(0, 0), (0, 0)], [(0, 0), (0, 0)], 0, 5)
+
+        for det_fn in (
+            laurent_twobase_6x6_t3u2_det_matrix,
+            laurent_twobase_6x6_t3u2_det_closed,
+            laurent_twobase_8x8_t4u2_det_matrix,
+        ):
+            for bad_args in ((-1, 2, 1), (2, -1, 1), (2, 3, 0), (True, 3, 1), (2, 3, False), (2.5, 3, 1)):
+                with self.assertRaises(ValueError):
+                    det_fn(*bad_args)  # type: ignore[arg-type]
+
+        for bad_pda_args in (
+            (0, 3, pda_tbl, 0, 8),
+            (2, 0, pda_tbl, 0, 8),
+            (True, 3, pda_tbl, 0, 8),
+            (2, 3, pda_tbl, -1, 8),
+            (2, 3, pda_tbl, 2, 8),
+            (2, 3, pda_tbl, 0, 0),
+            (2, 3, pda_tbl, 0, True),
+            (2, 3, [], 0, 8),
+            (2, 3, {}, 0, 8),
+        ):
+            with self.assertRaises(ValueError):
+                run_msb_pda_stack(*bad_pda_args)  # type: ignore[arg-type]
+        for bad_op in (("unknown",), ("pop", 1), ("replace", 3), ("push", 0, 3)):
+            bad_tbl = dict(pda_tbl)
+            bad_tbl[(0, 0, 1)] = (0, bad_op)
+            with self.assertRaises(ValueError):
+                run_msb_pda_stack(2, 3, bad_tbl, 0, 8)
+
+        for bad_x in (True, False, 2.5, "100571021"):
+            with self.assertRaises(ValueError):
+                is_diamond8_cone9(bad_x)  # type: ignore[arg-type]
+            with self.assertRaises(ValueError):
+                cousin_diamond8_step_int(bad_x)  # type: ignore[arg-type]
+            with self.assertRaises(ValueError):
+                cousin_diamond8_step_q6(bad_x)  # type: ignore[arg-type]
+        for bad_mul in (1, 2, 4, -3, True):
+            with self.assertRaises(ValueError):
+                cousin_diamond8_step_int(7, q=bad_mul)  # type: ignore[arg-type]
+        for bad_pos in (0, -1, True):
+            with self.assertRaises(ValueError):
+                cousin_diamond8_block_return(bad_pos)  # type: ignore[arg-type]
+        for bad_frac in (Fraction(1, 2), Fraction(1, 3), Fraction(5, 6)):
+            with self.assertRaises(ValueError):
+                cousin_diamond8_step_q6(bad_frac)
+
+        # Constructive Mod-9 backward Collatz branch-descent happy/boundary/error checks
+        for x_res9 in (5, 7, 8, 10, 11, 13):  # covers all 6 invertible mod-9 classes {5,7,8,1,2,4}
+            nxt_b = mod9_backward_collatz_branch_next(lambda n_v: (1, n_v.bit_length()), x_res9)
+            self.assertGreater(nxt_b, x_res9)
+            self.assertGreaterEqual(nxt_b, 5)
+            self.assertNotEqual(nxt_b % 3, 0)
+            self.assertLessEqual(nxt_b, 128 * x_res9)
+        for m0_cut in (3, 10, 25):
+            cur_ev = 6 * m0_cut + 5
+            for _ in range(5):
+                nxt_ev = mod9_backward_collatz_branch_next(lambda n_v: (1, 1), cur_ev)
+                self.assertGreater(nxt_ev, cur_ev)
+                self.assertGreaterEqual(nxt_ev, 2 * m0_cut)
+                self.assertNotEqual(nxt_ev % 3, 0)
+                cur_ev = nxt_ev
+        with self.assertRaises(ValueError):
+            mod9_backward_collatz_branch_next("not_callable", 5)  # type: ignore[arg-type]
+        for bad_bx in (0, 4, 6, 9, -5, True, False, 5.5, "5"):
+            with self.assertRaises(ValueError):
+                mod9_backward_collatz_branch_next(lambda n_v: (1, 1), bad_bx)  # type: ignore[arg-type]
+        for bad_wt in ((0, 1), (1, 0), (-1, 2), (True, 1), (1,), "1/2"):
+            with self.assertRaises(ValueError):
+                mod9_backward_collatz_branch_next(lambda _n: bad_wt, 5)  # type: ignore[return-value]
+
+        # Synthetic witness-bank check on all 5 Wave 11 dynamic predicates (proving zero hardcoded IDs)
+        base_bank = load_witness_bank()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            synth_bank = copy.deepcopy(base_bank)
+            synth_bank["falsified_hypotheses"] = []
+            synth_bank["domains"]["z_pos_high_glide"] = [
+                {
+                    "witness_id": "SYNTH_MIXED_Q2_OCN_794624_VS_3178496",
+                    "seed": 529_749,
+                    "next_compressed": 794_624,  # 97 * 2^13 (% 3 == 2): both MSB & LSB mixed Q=2 modes collide!
+                    "ocn_q2_multi_even_preimage": 3_178_496,
+                    "kills_mechanisms": ["mixed_q2_ocn"],
+                },
+                {
+                    "witness_id": "SYNTH_D8_CONE9_K27_M1",
+                    "seed": 3 * (1 << 27) - 92_275,  # 402560909: Cone 9 jumps Phi_2 upward into Cone 8!
+                    "kills_mechanisms": ["phi2_on_diamond8"],
+                },
+                {
+                    "witness_id": "SYNTH_DYADIC_LEN_M7_W3_SPLIT_141_VS_151",
+                    "seed": 141,
+                    "core_word": [1, 0, 0, 1, 0, 0, 0, 0, 1],
+                    "dyadic_length_window_m": 7,
+                    "dyadic_length_partner_word": [1, 1, 1],
+                    "kills_mechanisms": ["length_blind_dyadic"],
+                },
+                {
+                    "witness_id": "SYNTH_PDA_Q2_G3_20_VS_1280",
+                    "seed": 13,
+                    "next_compressed": 20,  # 20 % 3 == 2: PDA (Q=2, G=3) locks 20 vs 64 * 20 = 1280!
+                    "pda_q2_g3_multi_even_preimage": 1_280,
+                    "kills_mechanisms": ["pda_q2_g3"],
+                },
+                {
+                    "witness_id": "SYNTH_ASYM_SLOPE_Q2_OCN_M8",
+                    "seed": 5,
+                    "next_compressed": 8,  # 8 % 3 == 2: w(16) + w(5) = 31/75 > 1/8 = w(8)!
+                    "asym_ocn_even_preimage": 16,
+                    "kills_mechanisms": ["asym_slope_q2_ocn"],
+                },
+            ]
+            synth_bank["domains"]["log2_3_convergents"] = [
+                {
+                    "witness_id": "SYNTH_T3U2_EVEN_U2_ZERO_3_8_SYN",
+                    "W": 3,
+                    "K": 8,
+                    "gap_sign": 1,
+                    "laurent_twobase_6x6_t3u2_u": 2,
+                    "kills_mechanisms": ["t3u2_even_u"],
+                },
+                {
+                    "witness_id": "SYNTH_MOD24_5_17_ESCAPE_101_AND_233",
+                    "W": 2,
+                    "K": 4,
+                    "gap_sign": 1,
+                    "mod24_5_escape_prime": 101,
+                    "mod24_17_escape_prime": 233,
+                    "kills_mechanisms": ["mod24_5_17_escape"],
+                },
+                {
+                    "witness_id": "SYNTH_T4U2_8X8_CONE_NEG_3_5",
+                    "W": 3,
+                    "K": 5,
+                    "gap_sign": 1,
+                    "laurent_twobase_8x8_t4u2_u1_det": -559_794_375,
+                    "kills_mechanisms": ["t4u2_8x8_cone_pos"],
+                },
+            ]
+            synth_p = Path(tmpdir) / "synth_w11.json"
+            synth_p.write_text(json.dumps(synth_bank), encoding="utf-8")
+
+            g1 = evaluate_hypothesis_against_witness_bank(
+                "SynthMixedOCN", _dynamic_pred_mixed_sign_q2_ocn_mode_separates_preimages,
+                domains=("z_pos_high_glide",), bank_path=synth_p,
+            )
+            self.assertEqual(g1["minimal_failure"], ("z_pos_high_glide", "SYNTH_MIXED_Q2_OCN_794624_VS_3178496"))
+            g2 = evaluate_hypothesis_against_witness_bank(
+                "SynthD8", _dynamic_pred_phi2_on_cousin_diamond8_outside_cones4to8,
+                domains=("z_pos_high_glide",), bank_path=synth_p,
+            )
+            self.assertEqual(g2["minimal_failure"], ("z_pos_high_glide", "SYNTH_D8_CONE9_K27_M1"))
+            g3 = evaluate_hypothesis_against_witness_bank(
+                "SynthT3U2", _dynamic_pred_twobase_6x6_t3u2_even_u_nonzero_and_all_pos,
+                domains=("log2_3_convergents",), bank_path=synth_p,
+            )
+            self.assertEqual(g3["minimal_failure"], ("log2_3_convergents", "SYNTH_T3U2_EVEN_U2_ZERO_3_8_SYN"))
+            g4 = evaluate_hypothesis_against_witness_bank(
+                "SynthMod24Escape", _dynamic_pred_mod24_5_17_prime_forces_even_gcd,
+                domains=("log2_3_convergents",), bank_path=synth_p,
+            )
+            self.assertEqual(g4["minimal_failure"], ("log2_3_convergents", "SYNTH_MOD24_5_17_ESCAPE_101_AND_233"))
+            g5 = evaluate_hypothesis_against_witness_bank(
+                "SynthDyadicLenPin", _dynamic_pred_length_blind_dyadic_shift_pinning_or_subcritical,
+                domains=("z_pos_high_glide",), bank_path=synth_p,
+            )
+            self.assertEqual(g5["minimal_failure"], ("z_pos_high_glide", "SYNTH_DYADIC_LEN_M7_W3_SPLIT_141_VS_151"))
+            g6 = evaluate_hypothesis_against_witness_bank(
+                "SynthPDAQ2G3", _dynamic_pred_pda_q2_g3_stack_separates_preimages,
+                domains=("z_pos_high_glide",), bank_path=synth_p,
+            )
+            self.assertEqual(g6["minimal_failure"], ("z_pos_high_glide", "SYNTH_PDA_Q2_G3_20_VS_1280"))
+            g7 = evaluate_hypothesis_against_witness_bank(
+                "SynthT4U2Cone", _dynamic_pred_twobase_8x8_t4u2_cone_positivity,
+                domains=("log2_3_convergents",), bank_path=synth_p,
+            )
+            self.assertEqual(g7["minimal_failure"], ("log2_3_convergents", "SYNTH_T4U2_8X8_CONE_NEG_3_5"))
+            g8 = evaluate_hypothesis_against_witness_bank(
+                "SynthAsymSlopeOCN", _dynamic_pred_asym_slope_q2_ocn_mersenne_bypass_weight,
+                domains=("z_pos_high_glide",), bank_path=synth_p,
+            )
+            self.assertEqual(g8["minimal_failure"], ("z_pos_high_glide", "SYNTH_ASYM_SLOPE_Q2_OCN_M8"))
+
+            # Verify primary ground-truth corruption detection across all 10 new Wave 11 witnesses
+            corruptions = [
+                ("z_pos_high_glide", "ZPOS_MIXED_SIGN_Q2_OCN_PREIMAGE_COLLAPSE", "ocn_q2_56_counter", 1),
+                ("z_pos_high_glide", "ZPOS_COUSIN_DIAMOND8_CONE9_100571021_JUMP", "cousin_diamond8_steps_to_1", 15),
+                ("z_pos_high_glide", "ZPOS_DYADIC_WINDOW_M6_W3_LENGTH_SPLIT_69_VS_75", "dyadic_length_partner_seed", 77),
+                ("z_pos_high_glide", "ZPOS_PDA_STACK_Q2_G3_COLLISION_8_VS_512", "pda_q2_g3_multi_even_preimage", 256),
+                ("z_pos_high_glide", "ZPOS_ASYMMETRIC_SLOPE_Q2_OCN_MERSENNE_BYPASS", "asym_ocn_target_sum", "5/16"),
+                ("m1_q2_pos", "M1_COUSIN_DIAMOND8_1_OVER_7", "orbit", ["1/7", "5/7", "11/7", "20/7", "3/7"]),
+                ("m3_supercritical", "M3_COUSIN_DIAMOND8_7X1_CYCLE5", "orbit", [5, 18, 9, 32, 11]),
+                ("log2_3_convergents", "LAURENT_TWOBASE_6X6_T3U2_EVEN_U2_ZERO_3_8_AND_OUTER_FLIP", "laurent_twobase_6x6_t3u2_det", 1),
+                ("log2_3_convergents", "RECIPROCITY_MOD24_5_17_ODD_GCD_ESCAPE_29_AND_89", "mod24_5_escape_ord32", 14),
+                ("log2_3_convergents", "LAURENT_TWOBASE_8X8_T4U2_CONE_FLIP_3_5_VS_5_8", "laurent_twobase_8x8_t4u2_u1_det", 1),
+            ]
+            bad_b = copy.deepcopy(base_bank)
+            for dom, wid, field, bad_val in corruptions:
+                for item in bad_b["domains"][dom]:
+                    if item["witness_id"] == wid:
+                        item[field] = bad_val
+            bad_p = Path(tmpdir) / "corrupt_w11_all10.json"
+            bad_p.write_text(json.dumps(bad_b), encoding="utf-8")
+            chk = verify_witness_bank_ground_truth(bad_p)
+            self.assertFalse(chk["all_witnesses_ground_truth_verified"])
+            for _, wid, _, _ in corruptions:
+                self.assertIn(wid, chk["failed_witness_ids"], f"Missed corruption on {wid}")
+
+            # Verify subtle secondary-field corruptions on Wave 11 witnesses
+            subtle_corruptions = [
+                ("z_pos_high_glide", "ZPOS_MIXED_SIGN_Q2_OCN_PREIMAGE_COLLAPSE", "ocn_q2_multi_even_preimage", 24_832),
+                ("z_pos_high_glide", "ZPOS_COUSIN_DIAMOND8_CONE9_100571021_JUMP", "cousin_diamond8_next", 37_714_131),
+                ("z_pos_high_glide", "ZPOS_DYADIC_WINDOW_M6_W3_LENGTH_SPLIT_69_VS_75", "dyadic_supercritical_excess", 10),
+                ("z_pos_high_glide", "ZPOS_PDA_STACK_Q2_G3_COLLISION_8_VS_512", "pda_q2_g3_12416_height", 0),
+                ("z_pos_high_glide", "ZPOS_ASYMMETRIC_SLOPE_Q2_OCN_MERSENNE_BYPASS", "asym_ocn_mersenne_k4_sum", "200/1225"),
+                ("log2_3_convergents", "LAURENT_TWOBASE_6X6_T3U2_EVEN_U2_ZERO_3_8_AND_OUTER_FLIP", "t3u2_outer_neg_pair", [5, 8]),
+                ("log2_3_convergents", "RECIPROCITY_MOD24_5_17_ODD_GCD_ESCAPE_29_AND_89", "cubic_excluded_ord2", 18),
+                ("log2_3_convergents", "LAURENT_TWOBASE_8X8_T4U2_CONE_FLIP_3_5_VS_5_8", "t4u2_cone_pos_u4_pair", [3, 5]),
+            ]
+            bad_b2 = copy.deepcopy(base_bank)
+            for dom, wid, field, bad_val in subtle_corruptions:
+                for item in bad_b2["domains"][dom]:
+                    if item["witness_id"] == wid:
+                        item[field] = bad_val
+            bad_p2 = Path(tmpdir) / "corrupt_w11_subtle.json"
+            bad_p2.write_text(json.dumps(bad_b2), encoding="utf-8")
+            chk2 = verify_witness_bank_ground_truth(bad_p2)
+            self.assertFalse(chk2["all_witnesses_ground_truth_verified"])
+            for _, wid, _, _ in subtle_corruptions:
+                self.assertIn(wid, chk2["failed_witness_ids"], f"Missed subtle corruption on {wid}")
+
+    def test_wave11_lean4_zero_custom_axioms_docstring_and_pii_audit(self) -> None:
+        import re
+        from collatz_analysis.formal_proofs import (
+            ALLOWED_LEAN4_FOUNDATIONAL_AXIOMS,
+            verify_lean4_kernel_proofs,
+        )
+
+        pkg_dir = Path(__file__).resolve().parent.parent
+        res = verify_lean4_kernel_proofs()
+        self.assertTrue(res["pure_kernel_verified"])
+        self.assertTrue(res["zero_sorry_verified"])
+        self.assertTrue(res["zero_warnings_verified"])
+        self.assertEqual(len(res["lean_files"]), 61)
+        self.assertEqual(res["theorems_audited"], 2253)
+        self.assertEqual(res["axiom_free_theorem_count"], 611)
+        self.assertTrue(any(Path(p).name == "Wave11WholeSpaceCore.lean" for p in res["lean_files"]))
+        self.assertTrue(any(Path(p).name == "Wave11WholeSpace.lean" for p in res["lean_files"]))
+
+        ax_map = res["axioms_by_theorem"]
+        w11_theorems = (
+            "artsGieslSemanticDP1D_interior_invariant_and_dp1_strict",
+            "left_anchored_dp2_chain_reduction",
+            "positive_parikh_syzygy_fast_blocks_all_omega_towers",
+            "twosided_mod3_and_mod6_omit_r3_and_all11_certs",
+            "r8CycleParikh_telescopes",
+            "universal_left_model_mersenne_b1_t2_lock",
+            "deltaL_flip2_period2_no_fixed_point_cert",
+            "higher_left_carriers_k4_k8_and_mersenne_r8_lock",
+            "sylow_prime_dvd_order_of_pow_ne_one",
+            "full_two_sylow_dvd_order_of_half_minus_one",
+            "complete_mod24_and_sylow_reciprocity_obstructions",
+            "m_block_shared_mersenne_sylow_and_one_block_companion_cascades",
+            "intDet_natAbs_le_fact_mul_colProd",
+            "partialStretchMat_step_det",
+            "laurent_single_base_all_T_exact_det",
+            "laurent_universal_single_base_upgraded_confluent_and_laplace_bound",
+            "twoBaseT3U2_poly_identity",
+            "t3u2_odd_u_bracket_nonzero",
+            "laurent_6x6_t3u2_factorization_and_cone_positivity",
+            "laurent_8x8_twobase_t4u2_congruence_divisibility_and_cone_flip",
+            "iterOCN1_eq_iterOCN0_flip",
+            "asymSlopeQ2_mersenne_bypass_and_zpos_refutation_cert",
+            "runMSBOneCounterOCN_counter_le_bitLength",
+            "runLSBOneCounterOCN_counter_le_bitLength",
+            "mod9ShiftTo8_spec",
+            "poly_bitlength_denominator_preimage_impossibility",
+            "unconditional_all_ocn_raw_counter_and_poly_bitlength_preimage_impossibility",
+            "general_mixed_sign_ocn_preimage_impossibility",
+            "canonical_pda_q2_g3_separates_and_collides_cert",
+            "lsb_mixed_sign_ocn_raw_counter_impossibility_and_bounded_pda_pumping",
+            "eventual_poly_bitlength_denominator_preimage_impossibility",
+            "unconditional_general_pda_stack_height_and_arbitrary_init_ocn_impossibility",
+            "cousinDiamond8StepInt_ofNat_eq",
+            "cousin_diamond8_outside_cones4to9_strict_descent",
+            "not_cone9_six_mul_pow9_sub1",
+            "cousin_diamond8_cones4to9_exact_return",
+            "cousin_diamond8_global_convergence",
+            "cousin_diamond8_r_block_spiral_climb_and_laurent_impossibility",
+            "cousin_diamond8_q6_noninteger_avoids_cone9",
+            "cousin_diamond8_counter_model_separation",
+            "first_hit_q0_iff_shift_ge_three_and_pow3_ones",
+            "markovShift_mod162_bijection_and_five_ones_81_lock",
+            "dyadic_window_supercritical_shift_multiplicity",
+            "dyadic_window_surviving_leaves_mod162_fiber_and_cell_occupancy",
+        )
+        for thm in w11_theorems:
+            self.assertIn(thm, ax_map)
+            self.assertTrue(
+                set(ax_map[thm]).issubset(ALLOWED_LEAN4_FOUNDATIONAL_AXIOMS),
+                f"Unexpected custom axiom in {thm}: {ax_map[thm]}",
+            )
+
+        for axfree_thm in (
+            "interior9_head_ne_L_and_nonempty",
+            "srsReaches_omitR2_trans",
+            "artsGieslSemanticDP1D_interior_invariant_and_dp1_strict",
+            "getPairAtW11_replicate",
+            "deltaL_flip2_period2_no_fixed_point_cert",
+            "iterOCN1_eq_iterOCN0_flip",
+            "asymSlopeQ2_mersenne_bypass_and_zpos_refutation_cert",
+            "canonical_pda_q2_g3_separates_and_collides_cert",
+            "not_cone9_of_mod3_ne_2",
+            "cousin_diamond8_counter_model_separation",
+        ):
+            self.assertEqual(ax_map[axfree_thm], [], f"Expected [] axioms on {axfree_thm}")
+
+        for choice_free_thm in (
+            "universal_left_model_mersenne_b1_t2_lock",
+            "higher_left_carriers_k4_k8_and_mersenne_r8_lock",
+            "sylow_prime_dvd_order_of_pow_ne_one",
+            "full_two_sylow_dvd_order_of_half_minus_one",
+            "intDet_natAbs_le_fact_mul_colProd",
+            "twoBaseT3U2_poly_identity",
+            "poly_bitlength_denominator_preimage_impossibility",
+            "unconditional_all_ocn_raw_counter_and_poly_bitlength_preimage_impossibility",
+            "general_mixed_sign_ocn_preimage_impossibility",
+            "lsb_mixed_sign_ocn_raw_counter_impossibility_and_bounded_pda_pumping",
+            "eventual_poly_bitlength_denominator_preimage_impossibility",
+            "unconditional_general_pda_stack_height_and_arbitrary_init_ocn_impossibility",
+            "not_cone9_six_mul_pow9_sub1",
+            "cousin_diamond8_q6_noninteger_avoids_cone9",
+        ):
+            self.assertNotIn(
+                "Classical.choice",
+                ax_map[choice_free_thm],
+                f"Expected choice-free proof on {choice_free_thm}",
+            )
+
+        # Verify zero shell-escape control-byte corruption & zero duplicate imports in Wave 11 Lean modules
+        for w11_mod in ("Wave11WholeSpaceCore.lean", "Wave11WholeSpace.lean"):
+            mod_path = pkg_dir / "CollatzFormal" / w11_mod
+            raw_bytes = mod_path.read_bytes()
+            bad_ctrl = [b for b in set(raw_bytes) if b < 32 and b not in (10, 13)]
+            self.assertEqual(bad_ctrl, [], f"Control-byte corruption in {w11_mod}: {bad_ctrl}")
+            import_lines = [
+                ln.strip()
+                for ln in mod_path.read_text(encoding="utf-8").splitlines()
+                if ln.strip().startswith("import ")
+            ]
+            self.assertEqual(
+                len(import_lines),
+                len(set(import_lines)),
+                f"Duplicate import lines in {w11_mod}: {import_lines}",
+            )
+
+        w11_src = (
+            (pkg_dir / "CollatzFormal/Wave11WholeSpaceCore.lean").read_text(encoding="utf-8")
+            + "\n"
+            + (pkg_dir / "CollatzFormal/Wave11WholeSpace.lean").read_text(encoding="utf-8")
+        )
+        self.assertNotIn("-> True :=", w11_src)
+        self.assertNotIn("fun _ _ _ => trivial", w11_src)
+        single_doc_pat = re.compile(
+            r"(?:set_option[^\n]+\n\s*)*/--((?:(?!-/).)*?)-/\s*(?:set_option[^\n]+\n\s*)*(private\s+)?theorem\s+([A-Za-z0-9_']+)\b",
+            flags=re.S,
+        )
+        doc_matches = single_doc_pat.findall(w11_src)
+        self.assertEqual(len(doc_matches), 34)
+        for doc, priv_kw, thm_name in doc_matches:
+            if priv_kw.strip():
+                self.assertNotIn("Theorem ", doc, f"Public Theorem docstring attached to private {thm_name}")
+            else:
+                self.assertIn(thm_name, ax_map, f"Unaudited theorem docstring on {thm_name}")
+                m_hdr = re.search(r"Theorem\s+[A-Za-z0-9.']+\s*\(`([A-Za-z0-9_']+)`", doc)
+                if m_hdr is not None:
+                    self.assertEqual(m_hdr.group(1), thm_name, f"Mismatched docstring header on {thm_name}")
+                if "`[]` axioms" in doc:
+                    self.assertEqual(ax_map[thm_name], [], f"False []-axiom docstring on {thm_name}")
+                if "choice-free" in doc:
+                    self.assertNotIn("Classical.choice", ax_map[thm_name], f"False choice-free docstring on {thm_name}")
+
+        axfree_claim_pats = (
+            re.compile(r"`([A-Za-z0-9_']+)`\s*\(`\[\]`\s*axioms", flags=re.I),
+            re.compile(r"`([A-Za-z0-9_']+)`\s*\[\s*`\[\]`\s*axioms\s*\]", flags=re.I),
+            re.compile(r"`([A-Za-z0-9_']+)`\s*,\s*`\[\]`\s*axioms", flags=re.I),
+        )
+        choice_free_claim_pats = (
+            re.compile(r"`([A-Za-z0-9_']+)`\s*\(\s*choice-free\b", flags=re.I),
+            re.compile(r"`([A-Za-z0-9_']+)`\s*\[\s*choice-free\b", flags=re.I),
+            re.compile(r"`([A-Za-z0-9_']+)`\s*,\s*choice-free\b", flags=re.I),
+        )
+        for doc_rel in (
+            "CollatzFormal/Wave11WholeSpaceCore.lean",
+            "CollatzFormal/Wave11WholeSpace.lean",
+            "PROOF_SPACE_LEDGER.md",
+            "MATHEMATICAL_FINDINGS.md",
+            "README.md",
+            "witness_bank.json",
+        ):
+            doc_txt = (pkg_dir / doc_rel).read_text(encoding="utf-8")
+            for pat in axfree_claim_pats:
+                for thm_ref in pat.findall(doc_txt):
+                    self.assertEqual(
+                        ax_map.get(thm_ref),
+                        [],
+                        f"False []-axiom claim in {doc_rel} on {thm_ref}: {ax_map.get(thm_ref)}",
+                    )
+            for pat in choice_free_claim_pats:
+                for thm_ref in pat.findall(doc_txt):
+                    self.assertIn(thm_ref, ax_map, f"Unknown choice-free theorem ref {thm_ref} in {doc_rel}")
+                    self.assertNotIn(
+                        "Classical.choice",
+                        ax_map[thm_ref],
+                        f"False choice-free claim in {doc_rel} on {thm_ref}: {ax_map[thm_ref]}",
+                    )
+        self.assertNotIn("(`[]` Axioms)", w11_src)
+
+        # Repo-wide zero-PII / machine-path hygiene scan across tracked source & docs
+        forbidden_tokens = (
+            "Us" + "ers" + "\\",
+            "Us" + "ers/",
+            "/" + "home" + "/",
+            "C:" + "\\",
+            "C:" + "/",
+        )
+        for path in sorted(pkg_dir.rglob("*")):
+            if ".lake" in path.parts or "__pycache__" in path.parts or path.is_dir():
+                continue
+            if path.suffix in {".py", ".lean", ".md", ".json", ".c"}:
+                txt = path.read_text(encoding="utf-8")
+                for tok in forbidden_tokens:
+                    self.assertNotIn(tok, txt, f"Forbidden path token {tok!r} in {path.name}")
+
+    def test_cli_summary_includes_wave11_loop_and_exit_gate(self) -> None:
+        import contextlib
+        import io
+        from unittest import mock
+        from collatz_analysis.cli import main as cli_main
+
+        buf_sum = io.StringIO()
+        with contextlib.redirect_stdout(buf_sum):
+            rc_sum = cli_main(["--summary", "--dp-depth", "50"])
+        self.assertEqual(rc_sum, 0)
+        out = buf_sum.getvalue()
+        self.assertIn("[Wave 11 Whole-Space Proof Loop]", out)
+        self.assertIn("A=True, B=True", out)
+        self.assertIn("C=True, T_diamond8=True, D=True", out)
+        self.assertLess(
+            out.index("[Wave 10 Whole-Space Proof Loop]"),
+            out.index("[Wave 11 Whole-Space Proof Loop]"),
+        )
+        self.assertLess(
+            out.index("[Wave 11 Whole-Space Proof Loop]"),
+            out.index("[Lean 4 Kernel Verification]"),
+        )
+
+        failed_w11 = {
+            "passed": False,
+            "verdict": "FALSIFIED",
+            "universality_gate_passed": True,
+            "witness_bank_total_entries": 85,
+            "witness_bank_falsified_count": 36,
+            "witness_bank_ground_truth_verified": True,
+            "front_a_dp_twosided_and_mersenne_r8": {
+                "left_anchored_dp_and_omit_r2_termination_verified": True,
+                "twosided_m3_m6_omit_r3_and_all11_cascades_verified": False,
+                "universal_mersenne_b1_t2_lock_and_r8_cycle_verified": True,
+                "higher_carriers_k2_4_8_m6_12_18_and_flip2_verified": True,
+            },
+            "front_b_reciprocity_sylow_and_laurent_t3u2": {
+                "reciprocity_mod24_complete_and_sylow_verified": True,
+                "twoblock_cubic_quintic_octic_floors_verified": False,
+                "companion_quotient_cascades_and_mblock_sylow_verified": True,
+                "confluent_t2_t3_extrapolation_8x8_and_laplace_verified": True,
+                "laurent_8x8_twobase_t4u2_divisibility_and_cone_flip_verified": True,
+                "laurent_6x6_t3u2_closed_form_odd_u_and_cone_pos_verified": True,
+            },
+            "front_c_general_mixed_sign_ocn_and_diamond8": {
+                "general_mixed_sign_ocn_mode_and_dual_pumping_verified": False,
+                "lsb_raw_counter_ocn_and_pda_two_counter_verified": True,
+                "all_ocn_raw_counter_and_mod9_branch_descent_verified": True,
+                "cousin_diamond8_outside_cones4to9_descent_verified": True,
+                "cousin_diamond8_cone9_6tier_cascade_verified": False,
+                "cousin_diamond8_countermodels_verified": True,
+            },
+            "front_d_supercritical_dyadic_and_markov_mod162": {
+                "first_hit_shift_ge3_and_pow3_ones_verified": True,
+                "markov_mod162_bijection_and_81_lock_verified": False,
+                "dyadic_supercritical_shift_multiplicity_verified": True,
+                "surviving_window_leaves_mod162_and_fiber_equidist_verified": True,
+            },
+        }
+        buf_fail = io.StringIO()
+        with mock.patch(
+            "collatz_analysis.cs_cegar_redteam.run_wave11_whole_space_campaign",
+            return_value=failed_w11,
+        ), mock.patch(
+            "collatz_analysis.cli.verify_lean4_kernel_proofs",
+            return_value={"lean_available": False, "static_hygiene_clean": True},
+        ), contextlib.redirect_stdout(buf_fail):
+            rc_fail = cli_main(["--summary", "--dp-depth", "10"])
+        self.assertEqual(rc_fail, 1)
+        self.assertIn("A=False, B=False", buf_fail.getvalue())
+        self.assertIn("T_diamond8=False, D=False", buf_fail.getvalue())
 
 
 if __name__ == "__main__":

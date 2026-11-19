@@ -328,6 +328,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         run_wave8_whole_space_campaign,
         run_wave9_whole_space_campaign,
         run_wave10_whole_space_campaign,
+        run_wave11_whole_space_campaign,
     )
 
     w4 = run_wave4_whole_space_campaign()
@@ -577,6 +578,56 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"T_diamond7={w10_d7_ok}, D={w10_d_ok}"
     )
 
+    w11 = run_wave11_whole_space_campaign()
+    w11a = w11["front_a_dp_twosided_and_mersenne_r8"]
+    w11b = w11["front_b_reciprocity_sylow_and_laurent_t3u2"]
+    w11c = w11["front_c_general_mixed_sign_ocn_and_diamond8"]
+    w11d = w11["front_d_supercritical_dyadic_and_markov_mod162"]
+    w11_a_ok = (
+        bool(w11a["left_anchored_dp_and_omit_r2_termination_verified"])
+        and bool(w11a["twosided_m3_m6_omit_r3_and_all11_cascades_verified"])
+        and bool(w11a["universal_mersenne_b1_t2_lock_and_r8_cycle_verified"])
+        and bool(w11a["higher_carriers_k2_4_8_m6_12_18_and_flip2_verified"])
+    )
+    w11_b_ok = (
+        bool(w11b["reciprocity_mod24_complete_and_sylow_verified"])
+        and bool(w11b["twoblock_cubic_quintic_octic_floors_verified"])
+        and bool(w11b["companion_quotient_cascades_and_mblock_sylow_verified"])
+        and bool(w11b["confluent_t2_t3_extrapolation_8x8_and_laplace_verified"])
+        and bool(w11b["laurent_8x8_twobase_t4u2_divisibility_and_cone_flip_verified"])
+        and bool(w11b["laurent_6x6_t3u2_closed_form_odd_u_and_cone_pos_verified"])
+    )
+    w11_c_ok = (
+        bool(w11c["general_mixed_sign_ocn_mode_and_dual_pumping_verified"])
+        and bool(w11c["lsb_raw_counter_ocn_and_pda_two_counter_verified"])
+        and bool(w11c["all_ocn_raw_counter_and_mod9_branch_descent_verified"])
+    )
+    w11_d8_ok = (
+        bool(w11c["cousin_diamond8_outside_cones4to9_descent_verified"])
+        and bool(w11c["cousin_diamond8_cone9_6tier_cascade_verified"])
+        and bool(w11c["cousin_diamond8_countermodels_verified"])
+    )
+    w11_d_ok = (
+        bool(w11d["first_hit_shift_ge3_and_pow3_ones_verified"])
+        and bool(w11d["markov_mod162_bijection_and_81_lock_verified"])
+        and bool(w11d["dyadic_supercritical_shift_multiplicity_verified"])
+        and bool(w11d["surviving_window_leaves_mod162_and_fiber_equidist_verified"])
+    )
+    print(f"\n[Wave 11 Whole-Space Proof Loop] Left-Anchored DP/Mersenne R8, Mod24-Sylow/8x8&T3U2 Laurent, Mixed OCN/T_diamond8 & Super-Critical Dyadic:")
+    print(
+        f"  - Universality & witness gates ({w11['witness_bank_total_entries']} wits, {w11['witness_bank_falsified_count']} hyps): "
+        f"u-gate={w11['universality_gate_passed']}, ground-truth={w11['witness_bank_ground_truth_verified']}, verdict={w11['verdict']}"
+    )
+    print(
+        f"  - Fronts A & B (Left-Anchored DP/TwoSided 2x3&2x6/Mersenne R8, Mod24+Sylow & 8x8/6x6 T3U2 Laurent): "
+        f"A={w11_a_ok}, B={w11_b_ok}"
+    )
+    print(
+        f"  - Fronts C & D (General mixed-sign OCN barrier, T_diamond8 omega^6 & super-critical dyadic/mod162): "
+        f"C={w11_c_ok}, "
+        f"T_diamond8={w11_d8_ok}, D={w11_d_ok}"
+    )
+
     lean4 = verify_lean4_kernel_proofs()
     print(f"\n[Lean 4 Kernel Verification] CollatzFormal.lean Live Compiler & #print axioms Audit:")
     if lean4["lean_available"]:
@@ -620,6 +671,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         and bool(w8["passed"])
         and bool(w9["passed"])
         and bool(w10["passed"])
+        and bool(w11["passed"])
         and lean4_ok
     )
     return 0 if summary_ok else 1
