@@ -329,6 +329,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         run_wave9_whole_space_campaign,
         run_wave10_whole_space_campaign,
         run_wave11_whole_space_campaign,
+        run_wave12_whole_space_campaign,
     )
 
     w4 = run_wave4_whole_space_campaign()
@@ -628,6 +629,51 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"T_diamond8={w11_d8_ok}, D={w11_d_ok}"
     )
 
+    w12 = run_wave12_whole_space_campaign()
+    w12a = w12["front_a_nonparikh_omit_r3_and_dp2_m1_prefix"]
+    w12b = w12["front_b_confluent_t_sq_9x9_and_mod24_1_sylow"]
+    w12c = w12["front_c_exp_bitlength_and_diamond9"]
+    w12d = w12["front_d_markov_mod486_and_cell_occupancy"]
+    w12_a_ok = (
+        bool(w12a["commutator_diag_lock_and_2d_sharpness_verified"])
+        and bool(w12a["c39_c78_affine1d_diag_and_unitriangular_collapse_verified"])
+        and bool(w12a.get("c39_c78_zero_diag_non_unitriangular_collapse_verified", True))
+        and bool(w12a["dp2_r_free_termination_and_m1_19_over_5_prefix_verified"])
+        and bool(w12a.get("dp2_m1_29_over_5_r3_firing_contrast_verified", True))
+    )
+    w12_b_ok = (
+        bool(w12b["confluent_general_order_t_and_4x4_multiu_verified"])
+        and bool(w12b.get("confluent_rank3_order_t_u3_and_u7_nondiv_verified", True))
+        and bool(w12b["laurent_9x9_t3u3_closed_form_f61_and_cone_pos_verified"])
+        and bool(w12b["mod24_1_exact_sylow_biconditional_and_mblock_cascades_verified"])
+    )
+    w12_c_ok = bool(w12c["exp_bitlength_critical_base_and_reverse_syracuse_verified"])
+    w12_d9_ok = (
+        bool(w12c["cousin_diamond9_outside_cones4to10_descent_verified"])
+        and bool(w12c["cousin_diamond9_cone10_7tier_cascade_verified"])
+        and bool(w12c.get("cousin_diamond9_hensel_inv_and_int_q6_verified", True))
+        and bool(w12c["cousin_diamond9_countermodels_verified"])
+    )
+    w12_d_ok = (
+        bool(w12d["markov_mod486_bijection_and_243_lock_verified"])
+        and bool(w12d["markov_mod486_surviving_leaves_and_fiber_equidist_verified"])
+        and bool(w12d["equal_shift_carry_spread_and_summed_occupancy_verified"])
+    )
+    print(f"\n[Wave 12 Whole-Space Proof Loop] Non-Parikh omit-R3/DP2 M1, Order-T/9x9/Mod24-1 Sylow, Exp-bitLength/T_diamond9 & Mod-486:")
+    print(
+        f"  - Universality & witness gates ({w12['witness_bank_total_entries']} wits, {w12['witness_bank_falsified_count']} hyps): "
+        f"u-gate={w12['universality_gate_passed']}, ground-truth={w12['witness_bank_ground_truth_verified']}, verdict={w12['verdict']}"
+    )
+    print(
+        f"  - Fronts A & B (Non-Parikh c39&c78/DP2 M1=19/5, (2^u-1)^(T^2)/9x9 T3U3 & q=1 mod24 Sylow): "
+        f"A={w12_a_ok}, B={w12_b_ok}"
+    )
+    print(
+        f"  - Fronts C & D (Exp-bitLength critical+all-base barriers, T_diamond9 omega^7 & mod486/27*2^(L-9)): "
+        f"C={w12_c_ok}, "
+        f"T_diamond9={w12_d9_ok}, D={w12_d_ok}"
+    )
+
     lean4 = verify_lean4_kernel_proofs()
     print(f"\n[Lean 4 Kernel Verification] CollatzFormal.lean Live Compiler & #print axioms Audit:")
     if lean4["lean_available"]:
@@ -672,6 +718,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         and bool(w9["passed"])
         and bool(w10["passed"])
         and bool(w11["passed"])
+        and bool(w12["passed"])
         and lean4_ok
     )
     return 0 if summary_ok else 1

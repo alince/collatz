@@ -21,6 +21,7 @@ import CollatzFormal.Wave8WholeSpace
 import CollatzFormal.Wave9WholeSpace
 import CollatzFormal.Wave10WholeSpace
 import CollatzFormal.Wave11WholeSpace
+import CollatzFormal.Wave12WholeSpace
 
 
 

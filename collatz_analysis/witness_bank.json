@@ -460,6 +460,73 @@
         "kills_mechanisms": [
           "asymmetric zero-slope vs positive-slope (sl1 = 0, sl2 >= 1) Q >= 2 raw-counter 1-counter OCN NatPoly2(c(n), bitLength(n)) preimage weights and single-family Mersenne (3*2^k - 1) refutation arguments: on Q = 2 asymSlopeQ2OCN with w(n) = (c_MSB(n) + 1) / bitLength(n)^2, c_MSB(2^(k+1) - 1) = 0 (sl1 = 0) while c_MSB(3*2^k - 1) = c_MSB(6*2^k - 2) = k + 1 (sl2 >= 1), so EVERY k >= 4 Mersenne triple strictly satisfies w(2*m) + w((2*m-1)/3) < w(m) (at k = 4, m = 47: 199/1225 < 1/6), yet Z+ branching at m = 5 (7/16 > 1/3) and mod-9 synchronized backward Collatz branch-descent from 5 (2^k <= wNum(5) * wDen(x_k) with bitLength(x_k) <= 7*k + 3) unconditionally refute ALL Q >= 1 MSB, LSB, and joint raw-counter OCN NatPoly2/NatPoly3 preimage weights"
         ]
+      },
+      {
+        "witness_id": "ZPOS_OMIT_R3_M1_19_OVER_5_PREFIX_823_TO_695",
+        "seed": 823,
+        "compressed_steps_to_1": 86,
+        "dp2_m1_step1_odd": 1235,
+        "dp2_m1_step2_odd": 1853,
+        "dp2_m1_step3_drained_odd": 695,
+        "dp2_m1_preserved_lsb_bits": 7,
+        "dp2_m1_r3_free_steps": 5,
+        "kills_mechanisms": [
+          "bounded-prefix / root-local context-sensitive ranking functions V(u.take W_pref) on leftAnchoredDP2Step and unlabelled / TwoSided(2x3, 2x6) matrix termination extrapolations from omit R8 to omit R3 = all11 \\ {R3}: the M1 = Q_(2)^+ cycle 19/5 -> 31/5 -> 49/5 -> 76/5 -> 38/5 -> 19/5 never fires R3 ([T0, B0] -> [B0, T0]), so n_m = (2^(4m+4) + 19)/5 (at m = 2: 823 -> 1235 -> 1853 -> 695, 100% R3-free, with partner (6*2^12 + 19)/5 = 4919 -> 4151 100% inside c39 and c78!) executes 3 consecutive R3-free leftAnchoredDP2Step transitions preserving 4m - 1 = 7 root LSB bits"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_EXP_BITLENGTH_BASE2_COLLAPSE_8_AND_REVERSE_SYRACUSE",
+        "seed": 5,
+        "next_compressed": 8,
+        "exp_base2_even_preimage": 16,
+        "exp_base2_target_sum": "5/32",
+        "exp_base2_target_rhs": "1/16",
+        "reverse_syracuse_m2_start": 161,
+        "reverse_syracuse_m2_end": 31,
+        "reverse_syracuse_m2_bit_drop": 3,
+        "kills_mechanisms": [
+          "exponential-in-bitLength non-radial Berg-Meinardus preimage weights w(n) = poly(OCN, PDA, digits, bitLength) / (p_B / q_B)^bitLength(n): at m = 8 (2m = 16, n_odd = 5, bit-lengths 4, 5, 3), pure B^(-bitLength(n)) fails B^(-5) + B^(-3) <= B^(-4) for ALL B > 0 (5/32 > 1/16 at B = 2), synchronized 2-step mod-9 backward branch-descent (x_(2k) <= 2^(13k) * x_0) kills ALL unrestricted-numerator weights with p_B^13 < 4 * q_B^13, and reverse Syracuse chains 2*9^m - 1 -> ... -> 2^(2m+1) - 1 (at m = 2: 161 -> 107 -> 71 -> 47 -> 31, dropping 8 -> 5 bits) kill ALL polynomial-numerator exponential-bitLength weights across ALL bases p_B > q_B >= 1"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_COUSIN_DIAMOND9_CONE10_1610366669_JUMP",
+        "seed": 1610366669,
+        "cousin_diamond9_next": 603887501,
+        "cousin_diamond9_steps_to_1": 17,
+        "phi_diamond2_seed": 1964532744626782266862,
+        "phi_diamond2_next": 2039127441849831991289290,
+        "kills_mechanisms": [
+          "6-tier omega^6 Cone-9 -> Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 -> Phi_diamond2 rankings on 9th solvable cousin T_diamond9: Cone 10 (x = 2^29 * 3 - 246067 = 1610366669 -> 603887501) jumps Phi_diamond2 upward 1037.97x directly into Cone 9 -> Cone 8 -> Cone 7 -> Cone 6 -> Cone 5, requiring a genuine 7-tier omega^7 cascade"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_DYADIC_SUBCRIT_CELL_MULTI_LEAF_369_VS_373",
+        "seed": 369,
+        "compressed_steps_to_1": 15,
+        "odd_weight": 4,
+        "core_word": [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+        "q_index": 0,
+        "dyadic_subcrit_window_m": 8,
+        "dyadic_subcrit_partner_seed": 373,
+        "dyadic_subcrit_partner_word": [1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1],
+        "dyadic_subcrit_shared_shift": 3,
+        "dyadic_subcrit_carry_diff": 324,
+        "kills_mechanisms": [
+          "sub-critical (L <= M + w + 1) single-leaf cell-uniqueness claims extrapolating Wave 10's unique shift-pinning (a_1 = a_2) to <= 1 core word per (M, L, w) cell: inside [256, 512) at (M, L, w) = (8, 12, 4) (12 <= 13), first-hit leaves 369 and 373 share pinned shift a = 3 yet split via C(u_1) - C(u_2) = 324 = 4 * 3^4 (illustrating exact carry congruence 3^w * |y_1 - y_2| = |C(u_2) - C(u_1)| and spread |y_1 - y_2| < 2^(L - w))"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_DP2_M1_29_OVER_5_R3_FIRING_PREFIX_825_TO_697",
+        "seed": 825,
+        "compressed_steps_to_1": 86,
+        "dp2_m1_29_step1_odd": 619,
+        "dp2_m1_29_step2_odd": 929,
+        "dp2_m1_29_step3_drained_odd": 697,
+        "dp2_m1_29_preserved_lsb_bits": 7,
+        "dp2_m1_29_r3_firing_odd": 929,
+        "kills_mechanisms": [
+          "claims that gating R3 ([T0, B0] -> [B0, T0]) suffices to capture all M1 = Q_(2)^+ rational-cycle prefix obstructions or conversely that eliminating R3-free 19/5 removes bounded-prefix loops on full leftAnchoredDP2Step: on the partner 5-cycle 29/5 -> 46/5 -> 23/5 -> 37/5 -> 58/5 -> 29/5, n'_0 = (2^12 + 29)/5 = 825 -> 1238 -> 619 -> 929 -> 1394 -> 697 preserves 7 root LSB bits across 3 leftAnchoredDP2Step transitions yet provably stalls without R3 at 929"
+        ]
       }
     ],
     "m1_q2_pos": [
@@ -678,6 +745,17 @@
         "kills_mechanisms": [
           "proofs of T_diamond8 omega^6 Cone-9 -> Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 convergence omitting Z-discreteness at 0 < x < 100571021"
         ]
+      },
+      {
+        "witness_id": "M1_COUSIN_DIAMOND9_1_OVER_7",
+        "x0": "1/7",
+        "numerator": 1,
+        "denominator": 7,
+        "system": "T_diamond9",
+        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "kills_mechanisms": [
+          "proofs of T_diamond9 omega^7 Cone-10 -> Cone-9 -> Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 convergence omitting Z-discreteness at 0 < x < 805060301"
+        ]
       }
     ],
     "m2_z_neg": [
@@ -832,6 +910,16 @@
         "orbit": [5, 18, 9, 32, 10],
         "kills_mechanisms": [
           "T_diamond8 omega^6 Cone-9 -> Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
+        ]
+      },
+      {
+        "witness_id": "M3_COUSIN_DIAMOND9_7X1_CYCLE5",
+        "seed": 5,
+        "multiplier_q": 7,
+        "system": "T_diamond9_q7",
+        "orbit": [5, 18, 9, 32, 10],
+        "kills_mechanisms": [
+          "T_diamond9 omega^7 Cone-10 -> Cone-9 -> Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
         ]
       }
     ],
@@ -1077,6 +1165,50 @@
         "t4u2_cone_pos_u4_pair": [5, 8],
         "kills_mechanisms": [
           "naive extrapolations of Wave 11's 6x6 (T=3, U=2) all-u >= 1 convergent-cone strict positivity (> 0) unchanged to 8x8 two-base rank-2 Vandermonde (T=4, U=2) grids rows=[(r,s): r<2, s<4], cols=[(0..3,0),(0..3,u)]: while 2^(6u)*(2^u - 1)^16 divides det_8(M_0) and (2^K - 3^W) divides det_8(M_0) - det_8(W, K, W*u), inside 3^W < 2^K and 3*K <= 5*W det_8^(T=4,U=2)(3, 5, 1) = -559,794,375 < 0 and at u = 4 det_8 flips sign between (3, 5) (< 0) and (5, 8) (> 0)"
+        ]
+      },
+      {
+        "witness_id": "RECIPROCITY_MOD24_1_SYLOW_ESCAPE_457_AND_P3",
+        "W": 3,
+        "K": 5,
+        "gap_sign": 1,
+        "abs_gap": 5,
+        "mod24_1_23sylow_escape_prime": 457,
+        "mod24_1_23sylow_escape_ord2": 76,
+        "mod24_1_23sylow_escape_ord32": 57,
+        "mod120_1_quintic_prime": 601,
+        "mod120_1_quintic_gcd": 25,
+        "mod24_1_minimal_coprime_prime": 45661129,
+        "mod24_1_p3_cubic_coset": 5737872,
+        "kills_mechanisms": [
+          "low-Sylow {2, 3, 5} (mod 24, 72, 120, 288) sufficiency claims asserting every prime q == 1 (mod 24) has gcd(ord_q(2), ord_q(3/2)) divisible by 2, 3, or 5: q = 457 (1 mod 24, 456 = 8*3*19) escapes both 2-Sylow (ord_{3/2} = 57 odd) and 3-Sylow (ord_2 = 76, 3 nmid 76) with gcd = 19, while p_3 = 45,661,129 (1 mod 24, 45661128 = 8*3*461*4127) escapes 2-Sylow via octic residue 2^5707641 == 1 and 3-Sylow via shared non-trivial cubic coset 2^15220376 == 3^15220376 == 5737872"
+        ]
+      },
+      {
+        "witness_id": "LAURENT_TWOBASE_9X9_T3U3_OUTER_FLIP_1_3_AND_CONVERGENT_POS",
+        "W": 1,
+        "K": 3,
+        "gap_sign": 1,
+        "abs_gap": 5,
+        "laurent_twobase_9x9_t3u3_u1_det": -6089090328,
+        "t3u3_cone_pos_3_5_det": 933604056,
+        "t3u3_cone_pos_5_8_det": 2880700416,
+        "t3u3_no_root_prime": 61,
+        "kills_mechanisms": [
+          "unrestricted positivity extrapolations asserting rank-3 two-base 9x9 (T=3, U=3) Schneider-Laurent determinants rows=[(r,s): r<3, s<3], cols=[(t, c*u): c<3, t<3] stay strictly positive (> 0) across all coprime 3^W < 2^K: while det_9^(T=3,U=3)(W, K, 1) != 0 for ALL W, K >= 1 (no root in P^1(F_61)) and det_9^(T=3,U=3)(W, K, 1) > 0 across the entire Collatz convergent cone 3^W < 2^K and 3*K <= 5*W (via 2^569 < 3^359), outside 3*K <= 5*W det_9(1, 3, 1) = -6,089,090,328 < 0 flips negative"
+        ]
+      },
+      {
+        "witness_id": "LAURENT_TWOBASE_9X9_T3U3_U7_MERSENNE_127_NONDIV_3_5",
+        "W": 3,
+        "K": 5,
+        "gap_sign": 1,
+        "abs_gap": 5,
+        "laurent_twobase_9x9_t3u3_u2_det": 1941642850012705224000,
+        "laurent_twobase_9x9_t3u3_u7_mersenne": 127,
+        "laurent_twobase_9x9_t3u3_u7_mod127": 4,
+        "kills_mechanisms": [
+          "naive extrapolations of single-base zero-gap confluent (2^u - 1) divisibility to undilated rank-3 two-base 9x9 (T=3, U=3) determinants det_9(W, K, u) without W*u dilation: while zero-gap M_{0,t3u3}(W, K, u) satisfies 2^(9u)*(2^u - 1)^18*(2^u + 1)^9 | det_9(M_{0,t3u3}) (even (2^u - 1)^27 | det_9(M_{0,t3u3})) for ALL W, K >= 0 and ALL u >= 1, on undilated two-base M_{t3u3}(3, 5, 7) mixed powers 2^(r*m)*3^(s*m) leave det_9(3, 5, 7) == 4 (mod 127) not divisible by 2^7 - 1 = 127"
         ]
       }
     ]
@@ -1397,6 +1529,42 @@
       "minimal_witness_id": "ZPOS_DYADIC_WINDOW_M6_W3_LENGTH_SPLIT_69_VS_75",
       "secondary_witness_id": "ZPOS_DYADIC_WINDOW_M8_L6_WEIGHT_SPLIT_301_VS_403",
       "failure_diagnosis": "Inside [64, 128) (M = 6) at w = 3, surviving first-hit leaves 69 (L = 8, a = 3) and 75 (L = 4, a = 7) split shifts across unequal lengths, while surviving Mod373248 leaf 111 reaches super-critical length L = 42 > 31 = M + w + 1 (excess E = 11); across ALL L >= 1 (including super-critical L > M + w + 1), 2^(a2 - a1 + M + w) < 2^(M + w + 1) + 2^L bounds shift spread inside any (M, L, w) cell by a2 - a1 <= (L - (M + w + 1)) + 1 (at most ((E + 1) // 2) + 1 odd shifts!), and on dyadicWindowSurvivingQ0Leaves L_max M automatic w >= 6, |u| >= 8 forces 100% 54/162 mod-162 Markov confinement alongside 3^(w - 5) fiber equidistribution and static first-hit equivalence IsFirstHitOnePair u 0 <-> canonicalSuffixShift u 1 >= 3 (Wave11WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W12_H1_SUBCRITICAL_EXP_BITLENGTH_AND_POLY_NUM_ANY_BASE_PREIMAGE_WEIGHTS",
+      "branch": "P1.2",
+      "statement": "There exists an eventual (forall M_0 >= 3) positive rational Berg-Meinardus preimage weight w(n) = wNum(n)/wDen(n) (theta <= 1) either with unrestricted numerator wNum(n) >= 1 and sub-critical exponential-in-binBitLength denominator q_B^bitLength(n) * wDen(n) <= C * p_B^bitLength(n) satisfying p_B^13 < 4 * q_B^13, or with polynomial-in-bitLength numerator wNum(n) <= C_num * bitLength(n)^D_num (covering all OCN, PDA, automaton, Stern, and digit numerators) and exponential-in-bitLength denominator c_1 * p_B^bitLength(n) <= q_B^bitLength(n) * wDen(n) for ANY rational base p_B, q_B >= 1.",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_EXP_BITLENGTH_BASE2_COLLAPSE_8_AND_REVERSE_SYRACUSE",
+      "secondary_witness_id": "ZPOS_ASYMMETRIC_SLOPE_Q2_OCN_MERSENNE_BYPASS",
+      "failure_diagnosis": "At m = 8 (2m = 16, n_odd = 5, bit-lengths 4, 5, 3), pure exponential B^(-bitLength(n)) fails B^(-5) + B^(-3) <= B^(-4) for ALL B > 0 (5/32 > 1/16 at B = 2); across ALL eventual cutoffs M_0 >= 3, 2-step mod-9 backward Collatz branch-descent (where r = 6 only occurs at 8 mod 9 and forces even child 128*x == 7 mod 9 with next shift r = 5 <= 64, bounding x_(2k) < 2^(13k + x_0) while preimage mass grows by 4^k) unconditionally refutes ALL unrestricted-numerator weights with p_B^13 < 4 * q_B^13 (`eventual_exp_bitlength_critical_base_impossibility` [choice-free]), AND reverse Syracuse odd-branch chains x_t = 2^(t+1)*3^(2m-t) - 1 (x_0 = 2*9^m - 1 >= 2^(3m+1) -> x_(2m) = 2^(2m+1) - 1, dropping >= m + 1 bits while forcing w(x_(2m)) <= w(x_0)) unconditionally refute ALL polynomial-numerator exponential-bitLength weights across ALL rational bases p_B, q_B >= 1 (`eventual_poly_num_any_exp_base_bitlength_impossibility`, Wave12WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W12_H2_OMIT_R3_NONPARIKH_TOWERS_AND_BOUNDED_PREFIX_DP2_RANKING",
+      "branch": "P4.3",
+      "statement": "Non-Parikh 1D-affine (m_s >= 1), all-dimension d >= 1 coordinatewise-monotone ((M_s)_{i,i} >= 1), upper-unitriangular Pol_d, or non-unitriangular zero-diagonal (2-gram row-memory M_s = [[1, b_s^T], [0, 0]] and column-memory M_s = [[1, 0], [c_s, 0]]) omega^k matrix towers reduce TwoSided(2x3) c39 or TwoSided(2x6) c78 on omit R3 = all11 \\ {R3}, d >= 2 commutator inequalities M_T2 * M_B1 >= M_B1 * M_T2 achieve strict diagonal drop (M_T2 * M_B1)_{0,0} > (M_B1 * M_T2)_{0,0}, root-local bounded-prefix rankings V(u.take W_pref) (forall W_pref >= 1) orient leftAnchoredDP2Step, or 6-tier omega^6 rankings orient 9th solvable cousin T_diamond9.",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_OMIT_R3_M1_19_OVER_5_PREFIX_823_TO_695",
+      "secondary_witness_id": "ZPOS_COUSIN_DIAMOND9_CONE10_1610366669_JUMP",
+      "failure_diagnosis": "Trace symmetry tr(A*B) == tr(B*A) forces (A*B)_{i,i} == (B*A)_{i,i} across ALL i < d whenever entrywise A*B >= B*A (`natMatMul_commutator_diag_eq` [choice-free]), positive rule-multiplicity syzygies force 1D-affine slopes, diagonal coordinatewise-monotone matrices, and all-d upper-unitriangular Pol_d matrices to collapse on c39 and c78 (`twosided_c39_c78_affine1d_and_coord_monotone_impossibility`), AND 54-edge / 105-edge bilinear dominance flow syzygies prove ALL d >= 1 non-unitriangular zero-diagonal 2-gram row-memory & column-memory omega^k matrix towers collapse on c39 and c78 (`twosided_c39_c78_zero_diag_non_unitriangular_impossibility`); while leftAnchoredDP2Step is unconditionally well-founded on the entire .R-free slice (`leftAnchoredDP2_r_free_terminates` [choice-free]), 19/5 -> ... -> 19/5 never fires R3 (`m1_19_over_5_823_and_4919_omit_r3_cert` [`[]` axioms], `left_anchored_dp2_m1_bounded_prefix_impossibility`) whereas partner 5-cycle 29/5 (`825 -> 619 -> 929 -> 697`) provably stalls without R3 at 929 yet preserves 7 root LSB bits on full leftAnchoredDP2Step (`m1_29_over_5_825_r3_firing_dp2_contrast`); meanwhile T_diamond9 adds Cone-10 /8 jumps (1610366669 -> 603887501, Phi_2 +1037.97x) requiring a 7-tier omega^7 cascade (Wave12WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W12_H3_MOD24_1_LOW_SYLOW_SUFFICIENCY_AND_9X9_OUTER_POSITIVITY",
+      "branch": "P3.3",
+      "statement": "Among primes q == 1 (mod 24), {2, 3, 5}-Sylow reciprocity (mod 24, 72, 120, 288) suffices to force 2, 3, or 5 to divide gcd(ord_q(2), ord_q(3/2)), or rank-3 two-base 9x9 (T=3, U=3) Schneider-Laurent determinants stay strictly positive (> 0) across all coprime 3^W < 2^K or retain undilated (2^u - 1) divisibility.",
+      "status": "FALSIFIED",
+      "minimal_witness_id": "RECIPROCITY_MOD24_1_SYLOW_ESCAPE_457_AND_P3",
+      "secondary_witness_id": "LAURENT_TWOBASE_9X9_T3U3_OUTER_FLIP_1_3_AND_CONVERGENT_POS",
+      "failure_diagnosis": "Exact prime-power l^r Sylow biconditional l^r | gcd(d2, d32) <-> (2^(l^(r-1)*m_l) % q != 1 and 2^(l^(r-1)*m_l) % q != 3^(l^(r-1)*m_l) % q) (`exact_prime_sylow_order_lock_biconditional` [choice-free]) proves 4 | gcd under quartic split (313), 8 | gcd under octic split on q == 1 (mod 16) (193, 433, 673, 769), and 25 | gcd on q = 601 (escaping {2,3}-Sylow via 2^25 == 1), yet q = 457 (1 mod 24) escapes {2, 3, 5}-Sylow (gcd = 19) and p_3 = 45,661,129 (1 mod 24) escapes ALL prime-l Sylow locks via octic 2^5707641 == 1 and shared cubic coset 2^15220376 == 3^15220376 == 5737872; meanwhile rank-3 two-base 9x9 (T=3, U=3) satisfies det_9(W, K, 1) != 0 for ALL W, K >= 1 (mod 61 descent), det_9(W, K, 1) > 0 across 3^W < 2^K and 3*K <= 5*W (via 2^569 < 3^359), and 2^(9u)*(2^u-1)^18*(2^u+1)^9 | det_9(M_{0,t3u3}) on zero-gap grids (`laurent_rank3_order_T_u3_confluent_divisibility`), yet flips negative at (1, 3, 1) (-6,089,090,328 < 0) and fails undilated 2^7 - 1 = 127 divisibility at (3, 5, 7) (det_9(3, 5, 7) % 127 = 4) (Wave12WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W12_H4_SUBCRITICAL_CELL_SINGLE_LEAF_UNIQUENESS",
+      "branch": "P5.3",
+      "statement": "Inside [2^M, 2^(M+1)), sub-critical scale conditioning L <= M + w + 1 (which uniquely pins canonicalSuffixShift u 1) restricts each (M, L, w) cell to at most 1 first-hit q = 0 leaf.",
+      "status": "FALSIFIED",
+      "minimal_witness_id": "ZPOS_DYADIC_SUBCRIT_CELL_MULTI_LEAF_369_VS_373",
+      "secondary_witness_id": "ZPOS_DYADIC_WINDOW_M6_W3_LENGTH_SPLIT_69_VS_75",
+      "failure_diagnosis": "Inside [256, 512) (M = 8) at sub-critical (M, L, w) = (8, 12, 4) (12 <= 13), first-hit leaves 369 and 373 share pinned shift a = 3 yet split via C(u_1) - C(u_2) = 324 = 4 * 3^4; universally across equal-shift (M, L, w, a) fibers, 3^w * |y_1 - y_2| = |C(u_2) - C(u_1)| bounds |y_1 - y_2| < 2^(L - w) (uniquely pinning <= 1 leaf when L <= w + 1, and <= 1 leaf per surviving mod-512 prefix when L <= w + 9), while complete mod-486 (2 * 3^5, 162/486 surviving classes matching the sharp w >= 6 floor!) Markov bijectivity, 3^(w - 6) fiber equidistribution, and 11 + 16 = 27 prefix decomposition bound summed surviving window occupancy by min(2^(M - 1), 27 * 2^(L_max - 9)) across all L_max >= 9 (Wave12WholeSpace.lean, zero custom axioms)."
     }
   ]
 }
