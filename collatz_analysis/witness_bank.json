@@ -527,6 +527,53 @@
         "kills_mechanisms": [
           "claims that gating R3 ([T0, B0] -> [B0, T0]) suffices to capture all M1 = Q_(2)^+ rational-cycle prefix obstructions or conversely that eliminating R3-free 19/5 removes bounded-prefix loops on full leftAnchoredDP2Step: on the partner 5-cycle 29/5 -> 46/5 -> 23/5 -> 37/5 -> 58/5 -> 29/5, n'_0 = (2^12 + 29)/5 = 825 -> 1238 -> 619 -> 929 -> 1394 -> 697 preserves 7 root LSB bits across 3 leftAnchoredDP2Step transitions yet provably stalls without R3 at 929"
         ]
+      },
+      {
+        "witness_id": "ZPOS_DP2_COUPLED_MERSENNE_511_AND_DET_DROP",
+        "seed": 511,
+        "compressed_steps_to_1": 41,
+        "glide_odd_steps": 9,
+        "glide_peak": 19682,
+        "dp2_coupled_chain_steps": 8,
+        "dp2_coupled_end_odd": 13121,
+        "det_nonmonotone_lhs": [2, 2, 2, 2],
+        "det_nonmonotone_rhs": [2, 0, 0, 2],
+        "kills_mechanisms": [
+          "finite-feature .L-to-.R coupled rankings V(F(u)) (F : List MixedSRSSym -> Fin M_feat, covering arbitrary two-boundary (W_pref, W_suf) windows coupled with global base-2 decode mod P or Q-state two-way automata) on leftAnchoredDP2Step and naive determinant monotonicity A >= B => det(A) >= det(B) on full-rank d = 2 non-triangular matrices: 511 = 2^9 - 1 executes 8 consecutive .R-carrying leftAnchoredDP2Step transitions (511 -> 767 -> ... -> 13121; in general 2^(M_feat+1) - 1 executes M_feat transitions, forcing a pigeonhole collision F(u_i) == F(u_j)), while [[2, 2], [2, 2]] >= [[2, 0], [0, 2]] has det = 0 < 4"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_MOD3K_EVEN_SPINE_4_AND_BASE_5_4_COLLAPSE",
+        "seed": 4,
+        "compressed_steps_to_1": 2,
+        "even_spine_2step_64x": [4, 16, 256, 1024, 16384],
+        "base_5_4_collapse_k": 2,
+        "base_5_4_collapse_xk": 17,
+        "kills_mechanisms": [
+          "sub-cube-root-of-2 (p_B^3 < 2 * q_B^3, e.g. B = 5/4 = 1.25 where 5^3 = 125 < 128 = 2 * 4^3) unrestricted-numerator exponential-bitLength Berg-Meinardus preimage weights AND claims that Mod-27 / Mod-81 / Mod-3^K backward branch lookahead can push 3-coprime-preserving critical bases above 2^(1/3): weighted cMod9 branch lookahead (r(8) = 4, cMod9 in {1, 2, 4}) refutes w(n) = 1 / floor((5/4)^bitLength(n)) from x_0 = 5 already at k = 2 (5 -> 13 -> 17: 4 * 1 > 3), while EVERY 3-coprime-preserving shift policy (for all Mod-3^K) traps even preimages inside {4, 7} mod 9 and forces x_(2k) >= 64^k * x_0 (4 -> 16 -> 256 -> 1024 -> 16384)"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_COUSIN_DIAMOND10_CONE11_25769147597_JUMP",
+        "seed": 25769147597,
+        "cousin_diamond10_next": 9663430349,
+        "cousin_diamond10_steps_to_1": 20,
+        "phi_diamond2_seed": 217344610410297616675220762,
+        "phi_diamond2_next": 8355456968167893439403407114,
+        "kills_mechanisms": [
+          "7-tier omega^7 Cone-10 -> Cone-9 -> Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 -> Phi_diamond2 rankings on 10th solvable cousin T_diamond10: Cone 11 (x = 2^33 * 3 - 656179 = 25769147597 -> 9663430349) jumps Phi_diamond2 upward 38.44x directly into Cone 10 -> Cone 9 -> Cone 8 -> Cone 7 -> Cone 6 -> Cone 5, requiring a genuine 8-tier omega^8 cascade"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_DYADIC_M5_EMPTY_WINDOW_VS_M4_27_AND_M6_111_127",
+        "seed": 27,
+        "compressed_steps_to_1": 70,
+        "dyadic_m4_surviving_leaves": [27],
+        "dyadic_m5_empty_window": 5,
+        "dyadic_m6_surviving_leaves": [111, 127],
+        "kills_mechanisms": [
+          "all-scale (forall M >= 4) lower-bound dyadic-window occupancy claims asserting dyadicWindowSurvivingQ0Leaves L_max M is non-empty for every M >= 4: while M = 4 ([16, 32)) contains surviving first-hit q = 0 leaf [27] and M = 6 ([64, 128)) contains [111, 127], dyadic window M = 5 ([32, 64)) contains ZERO IsSurvivingMod373248Class integers and hence 0 surviving leaves across ALL L_max >= 1"
+        ]
       }
     ],
     "m1_q2_pos": [
@@ -756,6 +803,36 @@
         "kills_mechanisms": [
           "proofs of T_diamond9 omega^7 Cone-10 -> Cone-9 -> Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 convergence omitting Z-discreteness at 0 < x < 805060301"
         ]
+      },
+      {
+        "witness_id": "M1_ASYMMETRIC_2BLOCK_BROX_Q0_GT_3_AT_1_2_AND_5_2",
+        "x0": "1931/295",
+        "numerator": 1931,
+        "denominator": 295,
+        "period_k": 10,
+        "weight_w": 6,
+        "m_blocks": 2,
+        "x1": "761/295",
+        "parity_vector": [1, 0, 0, 1, 1, 1, 1, 1, 0, 0],
+        "spiral_params": [1, 2, 5, 2],
+        "denom_gap": 295,
+        "brox_h0": 1113,
+        "brox_h1": 33,
+        "gcd_d_h0_h1": 1,
+        "kills_mechanisms": [
+          "unrotated j = 0 companion-prime Brox quotient squeezes claiming H_0 < 3 * D across all 2 | a_j m-block tuples without rotating to maximal-weight block w_{j*}: on asymmetric [(1, 2), (5, 2)] (W = 6, K = 10, D = 295), H_0 = 1113 > 885 = 3 * D (q_0 = 1113/295 = 3.773 > 3), whereas rotating to j = 1 (w_1 = 5) yields H_1 = 33 < 48 = 3^(6-5) * 2^4 < 885 = 3 * D"
+        ]
+      },
+      {
+        "witness_id": "M1_COUSIN_DIAMOND10_1_OVER_7",
+        "x0": "1/7",
+        "numerator": 1,
+        "denominator": 7,
+        "system": "T_diamond10",
+        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "kills_mechanisms": [
+          "proofs of T_diamond10 omega^8 Cone-11 -> Cone-10 -> Cone-9 -> Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 convergence omitting Z-discreteness at 0 < x < 6441794765"
+        ]
       }
     ],
     "m2_z_neg": [
@@ -920,6 +997,16 @@
         "orbit": [5, 18, 9, 32, 10],
         "kills_mechanisms": [
           "T_diamond9 omega^7 Cone-10 -> Cone-9 -> Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
+        ]
+      },
+      {
+        "witness_id": "M3_COUSIN_DIAMOND10_7X1_CYCLE5",
+        "seed": 5,
+        "multiplier_q": 7,
+        "system": "T_diamond10_q7",
+        "orbit": [5, 18, 9, 32, 10],
+        "kills_mechanisms": [
+          "T_diamond10 omega^8 Cone-11 -> Cone-10 -> Cone-9 -> Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
         ]
       }
     ],
@@ -1209,6 +1296,21 @@
         "laurent_twobase_9x9_t3u3_u7_mod127": 4,
         "kills_mechanisms": [
           "naive extrapolations of single-base zero-gap confluent (2^u - 1) divisibility to undilated rank-3 two-base 9x9 (T=3, U=3) determinants det_9(W, K, u) without W*u dilation: while zero-gap M_{0,t3u3}(W, K, u) satisfies 2^(9u)*(2^u - 1)^18*(2^u + 1)^9 | det_9(M_{0,t3u3}) (even (2^u - 1)^27 | det_9(M_{0,t3u3})) for ALL W, K >= 0 and ALL u >= 1, on undilated two-base M_{t3u3}(3, 5, 7) mixed powers 2^(r*m)*3^(s*m) leave det_9(3, 5, 7) == 4 (mod 127) not divisible by 2^7 - 1 = 127"
+        ]
+      },
+      {
+        "witness_id": "LAURENT_9X9_T3U3_ROW_M0_NONDIV_7_AT_3_5",
+        "W": 3,
+        "K": 5,
+        "gap_sign": 1,
+        "abs_gap": 5,
+        "laurent_9x9_m0_u1_quotient": 1627343939523819077632,
+        "laurent_9x9_row_wu_mersenne": 7,
+        "laurent_9x9_m0_u1_mod7": 6,
+        "laurent_6x6_t2u3_m0_u1_div_49": true,
+        "laurent_6x6_t3u2_u2_coprime_zeros": [[3, 8], [27, 8]],
+        "kills_mechanisms": [
+          "extrapolating U > T finite-difference row-side (2^(W*u) - 1) divisibility (which holds as (2^(W*u) - 1)^2 | det_6(M_0) on rectangular 6x6 (T=2, U=3)) to square U = T >= 2 zero-gap grids such as 9x9 (T=3, U=3): at (W, K, u) = (3, 5, 1), full second-order column confluence extracts 2^18 * 3^9 | det_9(M_0) with exact quotient 1627343939523819077632, yet det_9(M_0(3, 5, 1)) == 6 (mod 7) fails divisibility by 2^(3*1) - 1 = 7 because degrees t in {0, 1, 2} span all 3 row powers r in {0, 1, 2}; meanwhile on 6x6 (T=3, U=2), u = 2 has TWO coprime zero rays (3, 8) and (27, 8) yet NO (W, K) vanishes at >= 2 shifts u"
         ]
       }
     ]
@@ -1565,6 +1667,42 @@
       "minimal_witness_id": "ZPOS_DYADIC_SUBCRIT_CELL_MULTI_LEAF_369_VS_373",
       "secondary_witness_id": "ZPOS_DYADIC_WINDOW_M6_W3_LENGTH_SPLIT_69_VS_75",
       "failure_diagnosis": "Inside [256, 512) (M = 8) at sub-critical (M, L, w) = (8, 12, 4) (12 <= 13), first-hit leaves 369 and 373 share pinned shift a = 3 yet split via C(u_1) - C(u_2) = 324 = 4 * 3^4; universally across equal-shift (M, L, w, a) fibers, 3^w * |y_1 - y_2| = |C(u_2) - C(u_1)| bounds |y_1 - y_2| < 2^(L - w) (uniquely pinning <= 1 leaf when L <= w + 1, and <= 1 leaf per surviving mod-512 prefix when L <= w + 9), while complete mod-486 (2 * 3^5, 162/486 surviving classes matching the sharp w >= 6 floor!) Markov bijectivity, 3^(w - 6) fiber equidistribution, and 11 + 16 = 27 prefix decomposition bound summed surviving window occupancy by min(2^(M - 1), 27 * 2^(L_max - 9)) across all L_max >= 9 (Wave12WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W13_H1_NONTRI_D2_C39_C78_AND_FINITE_FEATURE_L_TO_R_DP2",
+      "branch": "P4.3",
+      "statement": "Entrywise matrix orientation A >= B over Nat^(2x2) preserves det(A) >= det(B), lower-triangular (forall d >= 2), positive-diagonal upper-triangular (d = 2), or unit-diagonal full-rank non-triangular (M_s = [[1, b_s], [c_s, 1]], det = 1 - b_s * c_s != 0) omega^k matrix towers reduce TwoSided(2x3) c39 or TwoSided(2x6) c78, finite-feature .L-to-.R coupled rankings V(F(u)) (F : List MixedSRSSym -> Fin M_feat, covering two-boundary (W_pref, W_suf) + global mod-P decode) orient leftAnchoredDP2Step, or 7-tier omega^7 rankings orient 10th solvable cousin T_diamond10.",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_DP2_COUPLED_MERSENNE_511_AND_DET_DROP",
+      "secondary_witness_id": "ZPOS_COUSIN_DIAMOND10_CONE11_25769147597_JUMP",
+      "failure_diagnosis": "Entrywise [[2, 2], [2, 2]] >= [[2, 0], [0, 2]] has det = 0 < 4, positive-subdiagonal R8 commutators A 1 0 >= 1, B 1 0 >= 1, A * B >= B * A force either A 0 1 = B 0 1 = 0 or exact matrix commutation A * B = B * A (`natMat2_pos_subdiag_commutator_lock` [choice-free]), AND all d >= 2 lower-triangular, d = 2 positive-diagonal upper-triangular, and d = 2 unit-diagonal non-triangular full-rank [[1, b_s], [c_s, 1]] omega^k towers collapse on c39 and c78 (`twosided_c39_c78_lowertri_posdiag_and_unitdiag_nontri_impossibility`); on leftAnchoredDP2Step, .R-carrying words satisfy the exact .L-to-.R Syracuse homomorphism 2^a * dp2GlobalOddVal(u2) = 3 * dp2GlobalOddVal(u1) + 1 proving unconditional 1-cycle and 2-cycle freedom across ALL words (`leftAnchoredDP2_r_carrying_syracuse_and_no_1_2_cycles` [choice-free]), yet Mersenne chains 2^(M_feat+1) - 1 refute ALL finite-feature .L-to-.R rankings V(F(u)) (`leftAnchoredDP2_finite_feature_impossibility` [choice-free]); meanwhile T_diamond10 adds Cone-11 /8 jumps (25769147597 -> 9663430349, Phi_2 +38.44x) requiring an 8-tier omega^8 cascade (Wave13WholeSpaceCore.lean, Wave13WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W13_H2_SQUARE_ROW_VANDERMONDE_AND_UNROTATED_BROX_SQUEEZE",
+      "branch": "P3.3",
+      "statement": "Row-side (r, s) finite-difference (2^(W*u) - 1) Vandermonde divisibility holds on square U = T >= 2 zero-gap grids such as 9x9 (T=3, U=3) beyond column confluence, or unrotated j = 0 companion-prime divisibility 3 | q_0 forces H_0 < 3 * D across all 2 | a_j m-block tuples without rotating to maximal-weight block w_{j*}.",
+      "status": "FALSIFIED",
+      "minimal_witness_id": "LAURENT_9X9_T3U3_ROW_M0_NONDIV_7_AT_3_5",
+      "secondary_witness_id": "M1_ASYMMETRIC_2BLOCK_BROX_Q0_GT_3_AT_1_2_AND_5_2",
+      "failure_diagnosis": "While second-order three-block column confluence upgrades (3T)x(3T) zero-gap divisibility to 2^((3*T*(T-1)/2 + T^2)*u) * (2^u - 1)^(3*T^2) * (2^u + 1)^(T^2) | det_{3T}(M_0) with confluent-reduced majorant |det M_0| <= F_conf * L! * prod B_red (`laurent_rank3_second_order_confluent_and_reduced_bound`) and rectangular U > T 6x6 (T=2, U=3) satisfies row-side (2^(W*u) - 1)^2 | det_6(M_0) (`laurent_rect_6x6_t2u3_row_vandermonde_divisibility`), square 9x9 (T=3, U=3) at (3, 5, 1) has det_9(M_0) % 7 == 6 (7 = 2^3 - 1 does not divide!), and 6x6 (T=3, U=2) vanishes iff u = 2 and (8*W = 3*K or 8*W = 27*K) proving multi-u zero-multiplicity <= 1 (`laurent_6x6_t3u2_complete_zero_locus_and_multiu_le_one`); on m-block cycles, asymmetric [(1, 2), (5, 2)] (D = 295) has H_0 = 1113 > 3 * D yet rotating to j* = 1 (w_1 = 5) gives H_1 = 33 < 3^(W - w_{j*}) * 2^(K - W) = 48 < 3 * D via the universal telescoping bound broxSpiralCarry + 3^(W - w_0) <= 3^(W - w_0) * 2^(K - W) (`m_block_brox_carry_bound_and_cross_block_squeeze` [choice-free], Wave13WholeSpaceCore.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W13_H3_CUBE_ROOT_2_CRITICAL_BASE_AND_MOD3K_EVEN_SPINE_CEILING",
+      "branch": "P1.2",
+      "statement": "Either there exists an eventual (forall M_0 >= 3) positive rational Berg-Meinardus preimage weight with unrestricted numerator wNum >= 1 and sub-cube-root-of-2 exponential-in-binBitLength denominator (p_B^3 < 2 * q_B^3, e.g. B = 5/4) or single-exponential numerator wNum <= C_num * p_N^L(n) against quadratic-exponential denominator wDen >= c_den * (p_D / q_D)^(L(n)^2) (p_D > q_D), OR multi-step Mod-27 / Mod-81 / Mod-3^K synchronized 3-coprime-preserving backward Collatz branch trees can push the unrestricted-numerator critical base strictly above 2^(1/3).",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_MOD3K_EVEN_SPINE_4_AND_BASE_5_4_COLLAPSE",
+      "secondary_witness_id": "ZPOS_EXP_BITLENGTH_BASE2_COLLAPSE_8_AND_REVERSE_SYRACUSE",
+      "failure_diagnosis": "Weighted residue-potential branch lookahead (r(x mod 9) = {1:1, 2:2, 4:1, 5:2, 7:3, 8:4}, cMod9 in {1, 2, 4} satisfying cMod9(y)*y <= 8*cMod9(x)*x) upgrades critical-base impossibility from 2^(2/13) all the way to p_B^3 < 2 * q_B^3 (`eventual_exp_bitlength_cube_root_two_impossibility` [choice-free], killing (5,4), (6,5), (7,6), (8,7), (9,8)), and reverse Syracuse chains x_0 = 2*9^m - 1 -> x_(2m) = 2^(2m+1) - 1 (L_0^2 - L_(2m)^2 >= 5*m^2 + 8*m + 3) refute ALL single-exponential numerators against quadratic-exponential denominators (`eventual_exp_num_quad_exp_den_bitlength_impossibility`); conversely, EVERY 3-coprime-preserving backward shift policy (across ALL Mod-27, Mod-81, and arbitrary x-oracle trees!) forces even preimages y_0 = 2^(r+1)*x into {4, 7} mod 9 with x_(2k) >= 64^k * x_0 (`mod3k_even_spine_64k_minimax_floor` [choice-free], Wave13WholeSpace.lean, zero custom axioms), proving 2^(1/3) is the exact sharp minimax ceiling of 3-coprime-preserving branch trees."
+    },
+    {
+      "hypothesis_id": "W13_H4_ALL_SCALE_DYADIC_NONEMPTINESS_AT_M5_GAP",
+      "branch": "P5.3",
+      "statement": "Every dyadic window [2^M, 2^(M+1)) above the minimal surviving window M = 4 ([16, 32), containing 27) contains at least 1 surviving Mod373248 first-hit q = 0 leaf (forall M >= 4).",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_DYADIC_M5_EMPTY_WINDOW_VS_M4_27_AND_M6_111_127",
+      "secondary_witness_id": "ZPOS_DYADIC_SUBCRIT_CELL_MULTI_LEAF_369_VS_373",
+      "failure_diagnosis": "While M = 4 ([16, 32)) contains surviving leaf [27] and M = 6 ([64, 128)) contains [111, 127], dyadic window M = 5 ([32, 64)) contains ZERO IsSurvivingMod373248Class integers and hence dyadicWindowSurvivingQ0Leaves L_max 5 = [] across ALL L_max : Nat (`dyadic_m5_empty_window_and_m4_m6_certs` [choice-free]); above the M = 5 gap, complete mod-1458 (2 * 3^6, 486/1458 surviving classes matching automatic w(u) >= 7 across 100% of length >= 10 surviving mod-512 core extensions!) Markov bijectivity and 3^(w - 7) fiber equidistribution (`markovShift_mod1458_bijection_and_len10_weight7_lock`) pair with our explicit two-zero-run constructive family u_win(M, j) (a = 3, w = 11, y % 512 = 511, y % 81 = 1) proving unconditional strictly growing lower-bound occupancy (dyadicWindowSurvivingQ0Leaves L_max M).length >= R across ALL R >= 1, ALL M >= R * 3188646, and ALL L_max >= M + 15 (`dyadic_window_constructive_lower_bound_unbounded_occupancy`, Wave13WholeSpace.lean, zero custom axioms)."
     }
   ]
 }

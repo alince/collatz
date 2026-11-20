@@ -330,6 +330,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         run_wave10_whole_space_campaign,
         run_wave11_whole_space_campaign,
         run_wave12_whole_space_campaign,
+        run_wave13_whole_space_campaign,
     )
 
     w4 = run_wave4_whole_space_campaign()
@@ -674,6 +675,48 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"T_diamond9={w12_d9_ok}, D={w12_d_ok}"
     )
 
+    w13 = run_wave13_whole_space_campaign()
+    w13a = w13["front_a_fullrank_d2_and_coupled_dp2"]
+    w13b = w13["front_b_second_order_confluent_6x6_zeros_and_brox_squeeze"]
+    w13c = w13["front_c_cube_root2_mod3k_spine_and_diamond10"]
+    w13d = w13["front_d_markov_mod1458_and_lower_bound_occupancy"]
+    w13_a_ok = (
+        bool(w13a["pos_subdiag_commutator_lock_and_det_drop_verified"])
+        and bool(w13a["c39_c78_lowertri_posdiag_and_unitdiag_nontri_collapse_verified"])
+        and bool(w13a["dp2_r_carrying_syracuse_no_1_2_cycles_and_finite_feature_verified"])
+    )
+    w13_b_ok = (
+        bool(w13b["second_order_confluent_and_rect_vs_square_row_verified"])
+        and bool(w13b["laurent_6x6_t3u2_complete_zero_locus_and_multiu_verified"])
+        and bool(w13b["mblock_brox_carry_bound_and_cross_block_squeeze_verified"])
+    )
+    w13_c_ok = bool(w13c["cube_root2_critical_base_and_mod3k_spine_verified"])
+    w13_d10_ok = (
+        bool(w13c["cousin_diamond10_outside_cones4to11_descent_verified"])
+        and bool(w13c["cousin_diamond10_cone11_8tier_cascade_verified"])
+        and bool(w13c.get("cousin_diamond10_hensel_inv_and_int_q6_verified", True))
+        and bool(w13c["cousin_diamond10_countermodels_verified"])
+    )
+    w13_d_ok = (
+        bool(w13d["markov_mod1458_bijection_and_729_lock_verified"])
+        and bool(w13d["len10_automatic_weight7_and_mod1458_fiber_verified"])
+        and bool(w13d["dyadic_m5_gap_and_constructive_lower_bound_verified"])
+    )
+    print(f"\n[Wave 13 Whole-Space Proof Loop] Full-Rank d=2/Coupled DP2, 2nd-Order Confluent/6x6 Zeros/Brox, 2^(1/3)/T_diamond10 & Mod-1458/Lower-Bound:")
+    print(
+        f"  - Universality & witness gates ({w13['witness_bank_total_entries']} wits, {w13['witness_bank_falsified_count']} hyps): "
+        f"u-gate={w13['universality_gate_passed']}, ground-truth={w13['witness_bank_ground_truth_verified']}, verdict={w13['verdict']}"
+    )
+    print(
+        f"  - Fronts A & B (Full-rank d=2 c39&c78/L-to-R DP2, (2^u-1)^(3T^2)/6x6 T3U2 zeros & Brox q_j squeeze): "
+        f"A={w13_a_ok}, B={w13_b_ok}"
+    )
+    print(
+        f"  - Fronts C & D (Cube-root-of-2 + Mod-3^K 64^k minimax, T_diamond10 omega^8 & mod1458/lower-bound): "
+        f"C={w13_c_ok}, "
+        f"T_diamond10={w13_d10_ok}, D={w13_d_ok}"
+    )
+
     lean4 = verify_lean4_kernel_proofs()
     print(f"\n[Lean 4 Kernel Verification] CollatzFormal.lean Live Compiler & #print axioms Audit:")
     if lean4["lean_available"]:
@@ -719,6 +762,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         and bool(w10["passed"])
         and bool(w11["passed"])
         and bool(w12["passed"])
+        and bool(w13["passed"])
         and lean4_ok
     )
     return 0 if summary_ok else 1
