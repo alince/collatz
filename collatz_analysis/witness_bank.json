@@ -574,6 +574,56 @@
         "kills_mechanisms": [
           "all-scale (forall M >= 4) lower-bound dyadic-window occupancy claims asserting dyadicWindowSurvivingQ0Leaves L_max M is non-empty for every M >= 4: while M = 4 ([16, 32)) contains surviving first-hit q = 0 leaf [27] and M = 6 ([64, 128)) contains [111, 127], dyadic window M = 5 ([32, 64)) contains ZERO IsSurvivingMod373248Class integers and hence 0 surviving leaves across ALL L_max >= 1"
         ]
+      },
+      {
+        "witness_id": "ZPOS_C39_4919_TO_4151_AND_WEAK_D2_MAT",
+        "seed": 4919,
+        "compressed_steps_to_1": 68,
+        "c39_m1_drained_odd": 4151,
+        "c39_srs_steps": 42,
+        "c39_weak_d2_strict_mat_rules": 20,
+        "kills_mechanisms": [
+          "claims that M1 = 19/5 trajectory 4919 -> 7379 -> 11069 -> 16604 -> 8302 -> 4151 leaves TwoSided(2x3) c39 or TwoSided(2x6) c78, or that weak d = 2 Hofbauer-Waldmann matrix orientation (M_s 0 0 >= 1, M(l) >= M(r)) on c39 forces M_s = I_2 on all interior symbols when mixed zero bottom-right diagonal entries M_s 1 1 = 0 are permitted: 4919 -> 4151 executes in 42 SRS steps 100% inside c39 and c78, and mixed zero-diagonal non-triangular M_weak_c39 ((M_28)_{1,1} = 5 >= 2, (M_28)_{1,0} = 1 >= 1, (M_37)_{0,1} = 1 >= 1) achieves M(l) >= M(r) on all 39 rules with strict matrix drop on 20 rules yet 0 strict v_0 drops across all v >= 0"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_POPCOUNT_EXPLOSION_171_TO_257_AND_EQ_EXP",
+        "seed": 171,
+        "compressed_steps_to_1": 79,
+        "next_compressed": 257,
+        "popcount_even_sibling": 514,
+        "popcount_seed": 5,
+        "popcount_target": 2,
+        "popcount_even": 2,
+        "eq_exp_32_74_collapse_k": 1,
+        "eq_exp_32_74_collapse_xk": 13,
+        "kills_mechanisms": [
+          "equal-order exponential numerator/denominator preimage weights w(n) = floor((p_N/q_N)^L(n)) / floor((p_D/q_D)^L(n)) (e.g. (p_N/q_N, p_D/q_D) = (3/2, 7/4) with effective base 7/6 < 2^(1/3), collapsing at k = 1, x_1 = 13) and joint (binBitLength, binaryPopcount) separable or popcount-rewarding exponential preimage weights: m_s = 4^s + 1 (at s = 4: 257 -> even 514, odd 171) jumps popcount from 2 to s + 1 = 5 with bitLength dropping by 1, while Mersenne m_r = 3*2^r - 1 locks identical popcount r + 1 across (m_r, 2*m_r, 2^(r+1) - 1)"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_COUSIN_DIAMOND11_CONE12_51537857741_JUMP",
+        "seed": 51537857741,
+        "cousin_diamond11_next": 19326696653,
+        "cousin_diamond11_steps_to_1": 22,
+        "phi_diamond2_seed": 1738712608261568045138705690,
+        "phi_diamond2_next": 66841953657024746100701766922,
+        "kills_mechanisms": [
+          "8-tier omega^8 Cone-11 -> Cone-10 -> Cone-9 -> Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 -> Phi_diamond2 rankings on 11th solvable cousin T_diamond11: Cone 12 (x = 2^34 * 3 - 1749811 = 51537857741 -> 19326696653) jumps Phi_diamond2 upward 38.44x directly into Cone 11 -> Cone 10 -> ... -> Cone 5, requiring a genuine 9-tier omega^9 cascade"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_DYADIC_LEN10_WEIGHT7_LOW_PREFIX_ESCAPE",
+        "seed": 8389569697265922310419097925201964118140155424483881568313082174254861915275664592848718987142663691099,
+        "compressed_steps_to_1": 353,
+        "core_word": [1, 1, 0, 1, 1, 1, 0, 1, 0, 1],
+        "q_index": 0,
+        "survives_mod373248": true,
+        "low_prefix_weight9": 6,
+        "escape_parity_weight": 7,
+        "kills_mechanisms": [
+          "unconditional claims that ALL length >= 10 (or length >= 15) surviving Mod373248 first-hit q = 0 core words satisfy parityWeight(u) >= 8 without conditioning on the 22/27 high-weight mod-512 prefixes: 5 of the 27 surviving length-9 mod-512 prefixes have w(pref_9) = 6 (such as [1,1,0,1,1,1,0,1,0]), allowing surviving Mod373248 first-hit q = 0 extensions at L = 10 (and arbitrary L >= 10 via 0-insertion!) with parityWeight(u) = 7 < 8"
+        ]
       }
     ],
     "m1_q2_pos": [
@@ -833,6 +883,33 @@
         "kills_mechanisms": [
           "proofs of T_diamond10 omega^8 Cone-11 -> Cone-10 -> Cone-9 -> Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 convergence omitting Z-discreteness at 0 < x < 6441794765"
         ]
+      },
+      {
+        "witness_id": "M1_BALANCED_3BLOCK_SINGLE_PIVOT_ESCAPE",
+        "x0": "2160278285059257722186587/264157676153700583101605",
+        "numerator": 2160278285059257722186587,
+        "denominator": 264157676153700583101605,
+        "period_k": 81,
+        "weight_w": 51,
+        "m_blocks": 3,
+        "balanced_3block_params": [[17, 2], [17, 2], [17, 26]],
+        "balanced_3block_h0": 18496978463843981211,
+        "balanced_3block_h2": 1122608323627039518084471,
+        "balanced_3block_single_pivot_ub": 17906987480702220290215287,
+        "kills_mechanisms": [
+          "single-pivot maximal-weight w_{j*} Brox telescoping bounds (Wave 13 W13.2d) claiming 3^(W - w_{j*}) * (2^(K - W) - 1) < d_mult * D eliminates balanced m = 3 tuples [(w, a_0), (w, a_1), (w, a_2)] with 2 | a_j (d_mult = 3): at w = 17, shifts = (2, 2, 26) (W = 51, K = 81, D = 264157676153700583101605), ALL 3 rotations share W - w_j = 34 so single-pivot bound 3^34 * (2^30 - 1) > 3 * D fails by 22.6x across all rotations (and H_2 > 3 * D), whereas 2-step cross-block telescoping at j = 0 cancels (3/2)^17 on the 2^26 shift to prove H_0 < 3 * D by 42843x"
+        ]
+      },
+      {
+        "witness_id": "M1_COUSIN_DIAMOND11_1_OVER_7",
+        "x0": "1/7",
+        "numerator": 1,
+        "denominator": 7,
+        "system": "T_diamond11",
+        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "kills_mechanisms": [
+          "proofs of T_diamond11 omega^9 Cone-12 -> Cone-11 -> ... -> Cone-5 convergence omitting Z-discreteness at 0 < x < 51537857741"
+        ]
       }
     ],
     "m2_z_neg": [
@@ -1007,6 +1084,16 @@
         "orbit": [5, 18, 9, 32, 10],
         "kills_mechanisms": [
           "T_diamond10 omega^8 Cone-11 -> Cone-10 -> Cone-9 -> Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
+        ]
+      },
+      {
+        "witness_id": "M3_COUSIN_DIAMOND11_7X1_CYCLE5",
+        "seed": 5,
+        "multiplier_q": 7,
+        "system": "T_diamond11_q7",
+        "orbit": [5, 18, 9, 32, 10],
+        "kills_mechanisms": [
+          "T_diamond11 omega^9 Cone-12 -> Cone-11 -> ... -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
         ]
       }
     ],
@@ -1311,6 +1398,24 @@
         "laurent_6x6_t3u2_u2_coprime_zeros": [[3, 8], [27, 8]],
         "kills_mechanisms": [
           "extrapolating U > T finite-difference row-side (2^(W*u) - 1) divisibility (which holds as (2^(W*u) - 1)^2 | det_6(M_0) on rectangular 6x6 (T=2, U=3)) to square U = T >= 2 zero-gap grids such as 9x9 (T=3, U=3): at (W, K, u) = (3, 5, 1), full second-order column confluence extracts 2^18 * 3^9 | det_9(M_0) with exact quotient 1627343939523819077632, yet det_9(M_0(3, 5, 1)) == 6 (mod 7) fails divisibility by 2^(3*1) - 1 = 7 because degrees t in {0, 1, 2} span all 3 row powers r in {0, 1, 2}; meanwhile on 6x6 (T=3, U=2), u = 2 has TWO coprime zero rays (3, 8) and (27, 8) yet NO (W, K) vanishes at >= 2 shifts u"
+        ]
+      },
+      {
+        "witness_id": "LAURENT_RECT_6X6_ROW_COL_OVERLAP_4_7_AND_9X9_12_19_U2_FLIP",
+        "W": 4,
+        "K": 7,
+        "gap_sign": 1,
+        "abs_gap": 47,
+        "rect_6x6_m0_det": -571581437275275264000,
+        "rect_6x6_col_fac": 10368,
+        "rect_6x6_row_fac": 225,
+        "rect_6x6_quot_mod_row": 200,
+        "rect_6x6_lcm_divides": true,
+        "laurent_9x9_12_19_u1_det": 89955036648,
+        "laurent_9x9_12_19_u2_det": -25973182180043886600000,
+        "kills_mechanisms": [
+          "multiplying rectangular U > T row-side (2^(W*u) - 1)^2 Vandermonde factors directly by column confluent factors without lcm/coprime reduction: at (W, K, u) = (4, 7, 1) on 6x6 (T=2, U=3), both col_fac = 2^7 * 3^4 = 10368 and row_fac = (2^4 - 1)^2 = 225 divide det_6(M_0), yet gcd(3^4, 15^2) = 9 causes (det_6(M_0) // 10368) % 225 == 200 != 0 (whereas lcm(10368, 225) = 259200 divides identically, and odd W at u = 1 gives gcd(3, 2^W - 1) = 1 so the full product 10368 * (2^W - 1)^2 divides!)",
+          "extrapolating rank-3 9x9 (T=3, U=3) all-u >= 1 strict positivity past the razor-sharp 3^W < 2^K boundary to upper convergent (W, K) = (12, 19) (3^12 = 531441 > 524288 = 2^19): while det_9(12, 19, 1) = +89,955,036,648 > 0 remains positive at u = 1, det_9(12, 19, 2) = -25,973,182,180,043,886,600,000 < 0 flips negative at u = 2"
         ]
       }
     ]
@@ -1703,6 +1808,42 @@
       "minimal_witness_id": "ZPOS_DYADIC_M5_EMPTY_WINDOW_VS_M4_27_AND_M6_111_127",
       "secondary_witness_id": "ZPOS_DYADIC_SUBCRIT_CELL_MULTI_LEAF_369_VS_373",
       "failure_diagnosis": "While M = 4 ([16, 32)) contains surviving leaf [27] and M = 6 ([64, 128)) contains [111, 127], dyadic window M = 5 ([32, 64)) contains ZERO IsSurvivingMod373248Class integers and hence dyadicWindowSurvivingQ0Leaves L_max 5 = [] across ALL L_max : Nat (`dyadic_m5_empty_window_and_m4_m6_certs` [choice-free]); above the M = 5 gap, complete mod-1458 (2 * 3^6, 486/1458 surviving classes matching automatic w(u) >= 7 across 100% of length >= 10 surviving mod-512 core extensions!) Markov bijectivity and 3^(w - 7) fiber equidistribution (`markovShift_mod1458_bijection_and_len10_weight7_lock`) pair with our explicit two-zero-run constructive family u_win(M, j) (a = 3, w = 11, y % 512 = 511, y % 81 = 1) proving unconditional strictly growing lower-bound occupancy (dyadicWindowSurvivingQ0Leaves L_max M).length >= R across ALL R >= 1, ALL M >= R * 3188646, and ALL L_max >= M + 15 (`dyadic_window_constructive_lower_bound_unbounded_occupancy`, Wave13WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W14_H1_WEAK_D2_C39_IDENTITY_COLLAPSE_AND_OMEGA8_DIAMOND11_BARRIER",
+      "branch": "P4.3",
+      "statement": "Weak d = 2 Hofbauer-Waldmann matrix orientation (M_s 0 0 >= 1, M(l) >= M(r)) on TwoSided(2x3) c39 forces M_s = I_2 or triangularity across all interior symbols even when mixed zero bottom-right diagonal entries are permitted, positive-diagonal column-eigenweight / .R-non-triangular omega^k matrix towers (forall d >= 1, including full-rank d = 2 [[2,1],[1,2]] and full-rank d = 3 [[3,1,0],[1,2,1],[0,1,3]]) reduce c39 or c78, M1 = 19/5 trajectory 4919 -> 4151 leaves c39 or c78, or 8-tier omega^8 rankings orient 11th solvable cousin T_diamond11.",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_C39_4919_TO_4151_AND_WEAK_D2_MAT",
+      "secondary_witness_id": "ZPOS_COUSIN_DIAMOND11_CONE12_51537857741_JUMP",
+      "failure_diagnosis": "4919 -> 4151 executes in 42 SRS steps 100% inside both c39 and c78 (`m1_4919_to_4151_c39_c78_and_weak_d2_farkas_cert` [choice-free], `m1_4919_to_4151_reach_and_weak_d2_farkas_lock`), and mixed zero-diagonal non-triangular weakMat2DC39 ((M_28)_{1,1} = 5 >= 2, (M_28)_{1,0} = 1 >= 1, (M_37)_{0,1} = 1 >= 1) satisfies M(l) >= M(r) on all 39 rules of c39 (strictly on 20 rules) yet admits 0 strict v_0 drops across all v >= 0 by an integral Farkas certificate; universally across ALL d >= 1 (including full-rank d = 2 and full-rank d = 3!), positive-diagonal Perron-Frobenius column-eigenweight towers, interior-identity boundary-arbitrary towers, and .R-non-triangular lower-triangular towers collapse on c39 and c78 (`twosided_c39_c78_all_dim_perron_and_r_nontri_impossibility`), 4-rule pure-interior trace cycles lock exact diagonal equality across ALL d >= 1 (`twosided_c39_c78_all_dim_four_rule_trace_syzygy` [choice-free]), AND r-step iterated leftAnchoredDP2Step chains satisfy 2^(A_r) * N(u_r) = 3^r * N(u_0) + C_r proving 3^r < 2^(A_r) <= (10/3)^r, unconditional 1..5-cycle freedom, r >= 13 & a_last >= 9 & N(u_0) >= 17 * 2^r - 1 1-block Steiner lock, and M1 carry separation (`leftAnchoredDP2_iterated_affine_carry_and_cycle_laws` [choice-free]); meanwhile T_diamond11 adds Cone-12 /8 jumps (51537857741 -> 19326696653, Phi_2 +38.44x) requiring a 9-tier omega^9 cascade (Wave14WholeSpaceCore.lean, Wave14WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W14_H2_UNREDUCED_ROW_COL_PRODUCT_AND_SINGLE_PIVOT_BALANCED_BROX",
+      "branch": "P3.3",
+      "statement": "On rectangular U > T zero-gap grids such as 6x6 (T=2, U=3), column confluent factors and row-side (2^(W*u) - 1)^2 Vandermonde factors multiply directly without lcm/coprime reduction across all W, K, u >= 1, rank-3 9x9 (T=3, U=3) all-u >= 1 strict positivity extends past 3^W < 2^K to upper convergent (12, 19), or single-pivot maximal-weight w_{j*} Brox telescoping bounds eliminate balanced m = 3 equal-weight tuples.",
+      "status": "FALSIFIED",
+      "minimal_witness_id": "LAURENT_RECT_6X6_ROW_COL_OVERLAP_4_7_AND_9X9_12_19_U2_FLIP",
+      "secondary_witness_id": "M1_BALANCED_3BLOCK_SINGLE_PIVOT_ESCAPE",
+      "failure_diagnosis": "Four-block (4T)x(4T) third-order cyclotomic confluence proves 2^((3*T*(T-1) + 4*T^2)*u) * (2^u - 1)^(6*T^2) * (2^u + 1)^(2*T^2) * (4^u + 2^u + 1)^(T^2) | det_{4T}(M_0) (`laurent_rank4_third_order_cyclotomic_confluent_divisibility`), and on rectangular 6x6 (T=2, U=3) Nat.lcm(confluentFactorRank3 2 u, (2^(W*u) - 1)^2) | det_6(M_0) (giving the full product 10368 * (2^W - 1)^2 whenever W is odd at u = 1 with strictly sharper joint reduced majorant bound!), whereas at even W = 4, K = 7, u = 1 gcd(3^4, 15^2) = 9 causes (det_6(M_0) // 10368) % 225 = 200 != 0 (`laurent_rect_6x6_joint_row_col_lcm_and_reduced_bound`); on rank-3 9x9 (T=3, U=3), 4 * det_9(W, K, u) = 2^(3u) * 3^(3u) * P_core(W, K, 2^u, 3^u) > 0 (hence != 0, zero multiplicity = 0!) holds across ALL u >= 1 inside 3^W < 2^K and 3*K <= 5*W and det_9(W, K, u) != 0 holds globally for u in {1, 2, 3, 4}, yet upper convergent (12, 19) flips from > 0 at u = 1 to < 0 at u = 2 (`laurent_9x9_t3u3_all_u_cone_positivity_and_multiu_nonvanishing`); on balanced m = 3 [(17, 2), (17, 2), (17, 26)], single-pivot w_{j*} fails by 22.6x across all 3 rotations, whereas t-step cross-block telescoping + 2-adic 5 * d_mult quotient lower-bound boost (a_j >= 4 and 15 | q_j -> q_j >= 75, a_j >= 4 and 255 | q_j -> q_j >= 1275) eliminates it by > 42843x (`m_block_two_pivot_telescoping_and_2adic_quotient_boost` [choice-free], Wave14WholeSpaceCore.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W14_H3_EQUAL_ORDER_EXP_RATIO_AND_POPCOUNT_COUPLED_PREIMAGE_WEIGHTS",
+      "branch": "P1.2",
+      "statement": "There exists an eventual (forall M_0 >= 3) positive rational Berg-Meinardus preimage weight w(n) = wNum(n)/wDen(n) (theta <= 1) built either from equal-order exponential numerator/denominator ratios in binBitLength (including w(n) = floor((p_N/q_N)^L(n)) / floor((p_D/q_D)^L(n)) for ANY positive rational bases p_N/q_N, p_D/q_D) or from joint (binBitLength(n), binaryPopcount(n)) separable/popcount-rewarding/sub-cube-root-of-2 exponential weights.",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_POPCOUNT_EXPLOSION_171_TO_257_AND_EQ_EXP",
+      "secondary_witness_id": "ZPOS_MOD3K_EVEN_SPINE_4_AND_BASE_5_4_COLLAPSE",
+      "failure_diagnosis": "Across ALL eventual cutoffs M_0 >= 3, overlapping pincer elimination pairs cubeRootTwoBranchIter (killing (p_D * q_N)^3 < 2 * (q_D * p_N)^3, i.e. B_eff < 2^(1/3)) with reverse Syracuse chains 2*9^m - 1 -> 2^(2m+1) - 1 (killing p_D * q_N > q_D * p_N, i.e. B_eff > 1), covering (0, 2^(1/3)) union (1, infty) = (0, infty) with ZERO surviving rational base pairs (`eventual_equal_order_exp_ratio_all_bases_impossibility`); meanwhile Mersenne triples m_r = 3*2^r - 1 lock identical binaryPopcount = r + 1 across (m_r, 2*m_r, 2^(r+1) - 1) (`B_L + B_L^(-1) >= 2 > 1`), single-step popcount explosion m_s = 4^s + 1 <- (2*4^s + 1)/3 jumps (L, P) from (2s + 1, 2) to (2s, s + 1) refuting all arbitrary-slack popcount-rewarding exponential weights (`p_P > q_P >= 1`), and binaryPopcount(n) <= binBitLength(n) refutes all unrestricted-numerator joint denominators with (p_L * p_P)^3 < 2 * (q_L * q_P)^3 (`eventual_joint_bitlength_popcount_exp_impossibility` [choice-free], Wave14WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W14_H4_UNCONDITIONAL_LEN10_WEIGHT8_WITHOUT_PREFIX_CONDITIONING",
+      "branch": "P5.3",
+      "statement": "Wave 13's unconditional automatic parityWeight(u) >= 7 floor across 100% of length >= 10 surviving Mod373248 first-hit q = 0 core words lifts unconditionally to parityWeight(u) >= 8 at length >= 10 (or length >= L_0) without conditioning on the 22/27 high-weight mod-512 prefixes.",
+      "status": "FALSIFIED",
+      "minimal_witness_id": "ZPOS_DYADIC_LEN10_WEIGHT7_LOW_PREFIX_ESCAPE",
+      "secondary_witness_id": "ZPOS_DYADIC_M5_EMPTY_WINDOW_VS_M4_27_AND_M6_111_127",
+      "failure_diagnosis": "Of the 27 surviving length-9 mod-512 prefixes, exactly 22 satisfy w(pref_9) >= 7 (forcing automatic w(u) >= 8 on 100% of length >= 10 proper core extensions!) while 5 satisfy w(pref_9) = 6, admitting surviving Mod373248 first-hit q = 0 leaves with w(u) = 7 at L = 10 (u = [1,1,0,1,1,1,0,1,0,1]) and arbitrarily large L >= 10; on w >= 8, complete mod-4374 (2 * 3^7, 1458/4374 surviving classes, pref ++ replicate 8 true % 4374 = 2187) Markov bijectivity and 3^(w - 8) fiber equidistribution hold (`markovShift_mod4374_bijection_and_prefix22_weight8_dichotomy`), and our explicit three-zero-run family uThreeZero(M, j_1, j_2) (a = 3, w = 12, y % 512 = 511, y % 81 = 1) proves unconditional QUADRATIC surviving-leaf occupancy (dyadicWindowSurvivingQ0Leaves L_max M).length >= R^2 (>= R*(R+1)/2) across ALL R >= 1, ALL M >= R * 19131876, and ALL L_max >= M + 17 (`dyadic_window_three_zero_run_quadratic_occupancy`, Wave14WholeSpace.lean, zero custom axioms)."
     }
   ]
 }

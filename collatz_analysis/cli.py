@@ -331,6 +331,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         run_wave11_whole_space_campaign,
         run_wave12_whole_space_campaign,
         run_wave13_whole_space_campaign,
+        run_wave14_whole_space_campaign,
     )
 
     w4 = run_wave4_whole_space_campaign()
@@ -717,6 +718,47 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"T_diamond10={w13_d10_ok}, D={w13_d_ok}"
     )
 
+    w14 = run_wave14_whole_space_campaign()
+    w14a = w14["front_a_d2_perron_farkas_and_iterated_dp2"]
+    w14b = w14["front_b_rank4_joint_lcm_9x9_all_u_and_two_pivot_brox"]
+    w14c = w14["front_c_equal_order_popcount_and_diamond11"]
+    w14d = w14["front_d_markov_mod4374_and_quadratic_occupancy"]
+    w14_a_ok = (
+        bool(w14a["m1_4919_c39_c78_and_weak_d2_farkas_verified"])
+        and bool(w14a["all_dim_perron_r_nontri_and_trace_syzygy_verified"])
+        and bool(w14a["dp2_iterated_carry_no_1_5_cycles_and_steiner_verified"])
+    )
+    w14_b_ok = (
+        bool(w14b["rank4_cyclotomic_and_rect_joint_lcm_verified"])
+        and bool(w14b["laurent_9x9_t3u3_all_u_cone_and_global_u14_verified"])
+        and bool(w14b["two_pivot_brox_telescoping_and_2adic_boost_verified"])
+    )
+    w14_c_ok = bool(w14c["equal_order_pincer_and_popcount_barriers_verified"])
+    w14_d11_ok = (
+        bool(w14c["cousin_diamond11_outside_cones4to12_descent_verified"])
+        and bool(w14c["cousin_diamond11_cone12_9tier_cascade_verified"])
+        and bool(w14c["cousin_diamond11_hensel_inv_and_int_q6_verified"])
+        and bool(w14c["cousin_diamond11_countermodels_verified"])
+    )
+    w14_d_ok = (
+        bool(w14d["markov_mod4374_and_22_plus_5_prefix_dichotomy_verified"])
+        and bool(w14d["three_zero_run_quadratic_dyadic_occupancy_verified"])
+    )
+    print(f"\n[Wave 14 Whole-Space Proof Loop] Perron/Farkas d>=2 & r-Step DP2, Rank-4/Joint-lcm/9x9 All-u/2-Pivot Brox, Eq-Exp+Popcount/T_diamond11 & Mod-4374/Quad:")
+    print(
+        f"  - Universality & witness gates ({w14['witness_bank_total_entries']} wits, {w14['witness_bank_falsified_count']} hyps): "
+        f"u-gate={w14['universality_gate_passed']}, ground-truth={w14['witness_bank_ground_truth_verified']}, verdict={w14['verdict']}"
+    )
+    print(
+        f"  - Fronts A & B (Perron+Farkas c39&c78/r-step DP2, Rank-4/Rect lcm/9x9 T3U3 all-u & 2-pivot Brox): "
+        f"A={w14_a_ok}, B={w14_b_ok}"
+    )
+    print(
+        f"  - Fronts C & D (Eq-order pincer + joint popcount exp, T_diamond11 omega^9 & mod4374/R^2 occupancy): "
+        f"C={w14_c_ok}, "
+        f"T_diamond11={w14_d11_ok}, D={w14_d_ok}"
+    )
+
     lean4 = verify_lean4_kernel_proofs()
     print(f"\n[Lean 4 Kernel Verification] CollatzFormal.lean Live Compiler & #print axioms Audit:")
     if lean4["lean_available"]:
@@ -763,6 +805,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         and bool(w11["passed"])
         and bool(w12["passed"])
         and bool(w13["passed"])
+        and bool(w14["passed"])
         and lean4_ok
     )
     return 0 if summary_ok else 1

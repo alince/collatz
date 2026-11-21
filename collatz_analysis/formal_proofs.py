@@ -345,6 +345,8 @@ _LAKE_SEQUENTIAL_TARGETS: Tuple[str, ...] = (
     "+CollatzFormal.Wave12WholeSpace",
     "+CollatzFormal.Wave13WholeSpaceCore",
     "+CollatzFormal.Wave13WholeSpace",
+    "+CollatzFormal.Wave14WholeSpaceCore",
+    "+CollatzFormal.Wave14WholeSpace",
     "+CollatzFormal",
 )
 
@@ -829,6 +831,7 @@ def generate_full_proof_suite_report() -> Dict[str, object]:
         run_wave11_whole_space_campaign,
         run_wave12_whole_space_campaign,
         run_wave13_whole_space_campaign,
+        run_wave14_whole_space_campaign,
     )
 
     thm23_25_boost = verify_boost_three_line_counter_model_matrix()
@@ -843,6 +846,7 @@ def generate_full_proof_suite_report() -> Dict[str, object]:
     wave11_cert = run_wave11_whole_space_campaign()
     wave12_cert = run_wave12_whole_space_campaign()
     wave13_cert = run_wave13_whole_space_campaign()
+    wave14_cert = run_wave14_whole_space_campaign()
     lean4_cert = verify_lean4_kernel_proofs()
 
     return {
@@ -916,5 +920,6 @@ def generate_full_proof_suite_report() -> Dict[str, object]:
         "wave11_whole_space_campaign": wave11_cert,
         "wave12_whole_space_campaign": wave12_cert,
         "wave13_whole_space_campaign": wave13_cert,
+        "wave14_whole_space_campaign": wave14_cert,
         "lean4_kernel_verification": lean4_cert,
     }
