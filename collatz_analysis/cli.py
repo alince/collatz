@@ -332,6 +332,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         run_wave12_whole_space_campaign,
         run_wave13_whole_space_campaign,
         run_wave14_whole_space_campaign,
+        run_wave15_whole_space_campaign,
     )
 
     w4 = run_wave4_whole_space_campaign()
@@ -759,6 +760,47 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"T_diamond11={w14_d11_ok}, D={w14_d_ok}"
     )
 
+    w15 = run_wave15_whole_space_campaign()
+    w15a = w15["front_a_nonuniform_d2_and_dp2_10cycle_twoblock"]
+    w15b = w15["front_b_arbitrary_u_confluence_9x9_conefree_and_three_pivot_brox"]
+    w15c = w15["front_c_popcount_penalizing_alt_trans_and_diamond12"]
+    w15d = w15["front_d_markov_mod13122_and_arbitrary_degree_occupancy"]
+    w15_a_ok = (
+        bool(w15a["c39_c78_interior_topleft_lock_and_bt_collapse_verified"])
+        and bool(w15a["param_mixed_zerodiag_t_coupled_farkas_verified"])
+        and bool(w15a["dp2_no_1_10_cycles_and_twoblock_locks_verified"])
+    )
+    w15_b_ok = (
+        bool(w15b["arbitrary_u_all_blocks_confluence_and_majorant_verified"])
+        and bool(w15b["laurent_9x9_t3u3_conefree_and_u18_verified"])
+        and bool(w15b["three_pivot_brox_and_mod_pow2_2adic_boost_verified"])
+    )
+    w15_c_ok = bool(w15c["popcount_penalizing_and_alt_transition_barriers_verified"])
+    w15_d12_ok = (
+        bool(w15c["cousin_diamond12_outside_cones4to13_descent_verified"])
+        and bool(w15c["cousin_diamond12_cone13_10tier_cascade_verified"])
+        and bool(w15c["cousin_diamond12_hensel_inv_and_int_q6_verified"])
+        and bool(w15c["cousin_diamond12_countermodels_verified"])
+    )
+    w15_d_ok = (
+        bool(w15d["markov_mod13122_and_prefix8_weight9_dichotomy_verified"])
+        and bool(w15d["arbitrary_degree_polynomial_dyadic_occupancy_verified"])
+    )
+    print(f"\n[Wave 15 Whole-Space Proof Loop] Non-Unif d>=2 & 10-Cyc/2-Blk DP2, Arb-U Confl/9x9 Cone-Free/3-Pivot Brox, Pop-Pen+Alt/T_diamond12 & Mod-13122/R^d:")
+    print(
+        f"  - Universality & witness gates ({w15['witness_bank_total_entries']} wits, {w15['witness_bank_falsified_count']} hyps): "
+        f"u-gate={w15['universality_gate_passed']}, ground-truth={w15['witness_bank_ground_truth_verified']}, verdict={w15['verdict']}"
+    )
+    print(
+        f"  - Fronts A & B (Non-unif BT d>=1 + param Farkas/10-cyc+2-blk DP2, Arb-U confl/9x9 cone-free & 3-pivot Brox): "
+        f"A={w15_a_ok}, B={w15_b_ok}"
+    )
+    print(
+        f"  - Fronts C & D (Popcount-penalizing + alt-trans exp, T_diamond12 omega^10 & mod13122/R^d occupancy): "
+        f"C={w15_c_ok}, "
+        f"T_diamond12={w15_d12_ok}, D={w15_d_ok}"
+    )
+
     lean4 = verify_lean4_kernel_proofs()
     print(f"\n[Lean 4 Kernel Verification] CollatzFormal.lean Live Compiler & #print axioms Audit:")
     if lean4["lean_available"]:
@@ -806,6 +848,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         and bool(w12["passed"])
         and bool(w13["passed"])
         and bool(w14["passed"])
+        and bool(w15["passed"])
         and lean4_ok
     )
     return 0 if summary_ok else 1
