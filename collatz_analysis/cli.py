@@ -333,6 +333,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         run_wave13_whole_space_campaign,
         run_wave14_whole_space_campaign,
         run_wave15_whole_space_campaign,
+        run_wave16_whole_space_campaign,
     )
 
     w4 = run_wave4_whole_space_campaign()
@@ -801,6 +802,47 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"T_diamond12={w15_d12_ok}, D={w15_d_ok}"
     )
 
+    w16 = run_wave16_whole_space_campaign()
+    w16a = w16["front_a_coupled_r_bnd_t_toprow_and_dp2_15cycle_threeblock"]
+    w16b = w16["front_b_rect_lcm_all_u_gt_t_9x9_rays_and_p_pivot_brox"]
+    w16c = w16["front_c_three_var_lpt_exp_and_diamond13"]
+    w16d = w16["front_d_markov_mod39366_and_compressed_exponential_occupancy"]
+    w16_a_ok = (
+        bool(w16a["c39_c78_tr_cascade_collapse_verified"])
+        and bool(w16a["coupled_r_bnd_and_t_toprow_cones_farkas_verified"])
+        and bool(w16a["dp2_no_1_15_cycles_and_threeblock_locks_verified"])
+    )
+    w16_b_ok = (
+        bool(w16b["rect_all_u_gt_t_row_vandermonde_and_joint_lcm_verified"])
+        and bool(w16b["laurent_9x9_t3u3_higher_resonant_rays_verified"])
+        and bool(w16b["recursive_p_pivot_brox_squeeze_verified"])
+    )
+    w16_c_ok = bool(w16c["three_var_lpt_all_octant_barriers_verified"])
+    w16_d13_ok = (
+        bool(w16c["cousin_diamond13_outside_cones4to14_descent_verified"])
+        and bool(w16c["cousin_diamond13_cone14_11tier_cascade_verified"])
+        and bool(w16c["cousin_diamond13_hensel_inv_and_int_q6_verified"])
+        and bool(w16c["cousin_diamond13_countermodels_verified"])
+    )
+    w16_d_ok = (
+        bool(w16d["markov_mod39366_and_prefix1_weight10_quadripartition_verified"])
+        and bool(w16d["compressed_exponential_dyadic_occupancy_verified"])
+    )
+    print(f"\n[Wave 16 Whole-Space Proof Loop] Coupled R+T d=2 & 15-Cyc/3-Blk DP2, Rect U>T lcm/9x9 Rays/p-Pivot Brox, 3-Var LPT/T_diamond13 & Mod-39366/2^B:")
+    print(
+        f"  - Universality & witness gates ({w16['witness_bank_total_entries']} wits, {w16['witness_bank_falsified_count']} hyps): "
+        f"u-gate={w16['universality_gate_passed']}, ground-truth={w16['witness_bank_ground_truth_verified']}, verdict={w16['verdict']}"
+    )
+    print(
+        f"  - Fronts A & B (TR d>=1 + coupled R/T Farkas/15-cyc+3-blk DP2, Rect U>T lcm/9x9 rays & p-pivot Brox): "
+        f"A={w16_a_ok}, B={w16_b_ok}"
+    )
+    print(
+        f"  - Fronts C & D (3-var (L,P,T) (0,inf)^3 exp, T_diamond13 omega^11 & mod39366/2^((M-6377332)/8) occupancy): "
+        f"C={w16_c_ok}, "
+        f"T_diamond13={w16_d13_ok}, D={w16_d_ok}"
+    )
+
     lean4 = verify_lean4_kernel_proofs()
     print(f"\n[Lean 4 Kernel Verification] CollatzFormal.lean Live Compiler & #print axioms Audit:")
     if lean4["lean_available"]:
@@ -849,6 +891,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         and bool(w13["passed"])
         and bool(w14["passed"])
         and bool(w15["passed"])
+        and bool(w16["passed"])
         and lean4_ok
     )
     return 0 if summary_ok else 1

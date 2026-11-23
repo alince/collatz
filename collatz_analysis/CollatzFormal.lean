@@ -26,6 +26,6 @@ import CollatzFormal.Wave13WholeSpace
 import CollatzFormal.Wave14WholeSpace
 import CollatzFormal.Wave15WholeSpaceCore
 import CollatzFormal.Wave15WholeSpace
-
-
+import CollatzFormal.Wave16WholeSpaceCore
+import CollatzFormal.Wave16WholeSpace
 
