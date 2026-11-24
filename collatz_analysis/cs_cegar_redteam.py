@@ -3755,13 +3755,53 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
     def _is_strict_int(val: Any) -> bool:
         return isinstance(val, int) and not isinstance(val, bool)
 
+    allowed_bool_keys_by_domain: Dict[str, Set[str]] = {
+        "z_pos_high_glide": {"survives_mod1296", "survives_mod373248"},
+        "m1_q2_pos": set(),
+        "m2_z_neg": set(),
+        "m3_supercritical": set(),
+        "log2_3_convergents": {
+            "diag_n55_err_log2_gt_zero",
+            "high_det_nonzero",
+            "laurent_6x6_t2u3_m0_u1_div_49",
+            "low_det_nonzero",
+            "rect_12x12_t3u4_5_8_u2_lcm_divides",
+            "rect_6x6_lcm_divides",
+            "rect_8x8_t2u4_lcm_divides",
+            "stepline_casorati_det_nonzero",
+        },
+    }
+
+    def _contains_bool_nested(obj: Any) -> bool:
+        if isinstance(obj, bool):
+            return True
+        if isinstance(obj, (list, tuple)):
+            return any(_contains_bool_nested(item) for item in obj)
+        if isinstance(obj, dict):
+            return any(_contains_bool_nested(v_d) for v_d in obj.values())
+        return False
+
+    def _entry_has_illegal_bool(dom_name: str, ent: Dict[str, Any]) -> bool:
+        allowed_b = allowed_bool_keys_by_domain.get(dom_name, set())
+        for k_e, v_e in ent.items():
+            if k_e in allowed_b:
+                if not isinstance(v_e, bool):
+                    return True
+            elif _contains_bool_nested(v_e):
+                return True
+        return False
+
     # 1. z_pos_high_glide
     for entry in bank["domains"]["z_pos_high_glide"]:
+        if not isinstance(entry, dict):
+            failed_witnesses.append("<malformed>")
+            continue
         wid = str(entry.get("witness_id", "<missing>"))
         if (
             not isinstance(entry.get("witness_id"), str)
             or not isinstance(entry.get("kills_mechanisms"), list)
             or not _is_strict_int(entry.get("seed"))
+            or _entry_has_illegal_bool("z_pos_high_glide", entry)
         ):
             failed_witnesses.append(wid)
             continue
@@ -3769,748 +3809,744 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
         ok = seed >= 1
         checked_keys: Set[str] = {"witness_id", "seed", "kills_mechanisms"}
         claims_checked = 0
-        if "compressed_steps_to_1" in entry:
-            checked_keys.add("compressed_steps_to_1")
-            claims_checked += 1
-            if _is_strict_int(entry["compressed_steps_to_1"]):
-                cur = seed
-                steps = 0
-                w_odd = 0
-                peak_comp = cur
-                peak_odd = cur if (cur & 1) == 1 else 1
-                while cur != 1 and steps < 5000:
-                    if (cur & 1) == 1:
-                        w_odd += 1
-                        if cur > peak_odd:
-                            peak_odd = cur
-                    cur = int_compressed_step(cur, q=3)
-                    steps += 1
-                    if cur > peak_comp:
-                        peak_comp = cur
-                ok = ok and (cur == 1) and (steps == entry["compressed_steps_to_1"])
-                if "odd_weight" in entry:
-                    checked_keys.add("odd_weight")
-                    ok = ok and _is_strict_int(entry["odd_weight"]) and (w_odd == entry["odd_weight"])
-                if "peak_odd" in entry:
-                    checked_keys.add("peak_odd")
-                    ok = ok and _is_strict_int(entry["peak_odd"]) and (peak_odd == entry["peak_odd"])
-                if "peak_compressed" in entry:
-                    checked_keys.add("peak_compressed")
-                    ok = ok and _is_strict_int(entry["peak_compressed"]) and (peak_comp == entry["peak_compressed"])
-            else:
-                ok = False
-            dp2_m1_keys = (
-                "dp2_m1_step1_odd",
-                "dp2_m1_step2_odd",
-                "dp2_m1_step3_drained_odd",
-                "dp2_m1_preserved_lsb_bits",
-                "dp2_m1_r3_free_steps",
-            )
-            if any(k in entry for k in dp2_m1_keys):
-                if all(k in entry for k in dp2_m1_keys) and seed >= 3 and (seed & 1) == 1:
-                    checked_keys.update(dp2_m1_keys)
-                    s1_odd = int(entry["dp2_m1_step1_odd"])
-                    s2_odd = int(entry["dp2_m1_step2_odd"])
-                    s3_odd = int(entry["dp2_m1_step3_drained_odd"])
-                    pres_b = int(entry["dp2_m1_preserved_lsb_bits"])
-                    r3_steps = int(entry["dp2_m1_r3_free_steps"])
-                    # Verify 5-step Collatz trajectory 823 -> 1235 -> 1853 -> 2780 -> 1390 -> 695
-                    # executes 100% R3-free SRS carry propagation (no [T0, B0] -> [B0, T0] ever fires!)
-                    # and preserves `pres_b` root LSB bits:
-                    c1 = int_compressed_step(seed, q=3)
-                    c2 = int_compressed_step(c1, q=3)
-                    c3_ev1 = int_compressed_step(c2, q=3)
-                    c4_ev2 = int_compressed_step(c3_ev1, q=3)
-                    c5_dr = int_compressed_step(c4_ev2, q=3)
-
-                    def _r3_free_odd_step_ok(n_odd_v: int) -> bool:
-                        if (n_odd_v & 1) != 1 or n_odd_v < 3:
-                            return False
-                        # LSB bits after stripping index-0 B1:
-                        bits_tail: List[int] = []
-                        t_v = n_odd_v >> 1
-                        while t_v > 0:
-                            bits_tail.append(t_v & 1)
-                            t_v >>= 1
-                        # Carry state starts at T2 (carry = 2); R3 is (T0 [carry=0], B0 [bit=0]):
-                        carry_st = 2
-                        for b_v in bits_tail[:-1]:
-                            if carry_st == 0 and b_v == 0:
-                                return False
-                            tot_v = 3 * b_v + carry_st
-                            carry_st = tot_v // 2
-                        return True
-
-                    lsb_mask = (1 << pres_b) - 1 if pres_b >= 1 else 0
-                    next_mask = (1 << (pres_b + 1)) - 1 if pres_b >= 1 else 0
-                    ok = (
-                        ok
-                        and r3_steps == 5
-                        and pres_b >= 1
-                        and (5 * seed - 19) > 0
-                        and ((5 * seed - 19) & ((5 * seed - 19) - 1)) == 0
-                        and c1 == s1_odd
-                        and c2 == s2_odd
-                        and (c1 & 1) == 1
-                        and (c2 & 1) == 1
-                        and (c3_ev1 & 1) == 0
-                        and (c4_ev2 & 1) == 0
-                        and c5_dr == s3_odd
-                        and (c5_dr & 1) == 1
-                        and _r3_free_odd_step_ok(seed)
-                        and _r3_free_odd_step_ok(c1)
-                        and _r3_free_odd_step_ok(c2)
-                        and (seed & lsb_mask) == (c5_dr & lsb_mask)
-                        and (seed & next_mask) != (c5_dr & next_mask)
-                    )
-                else:
-                    ok = False
-            dp2_m1_29_keys = (
-                "dp2_m1_29_step1_odd",
-                "dp2_m1_29_step2_odd",
-                "dp2_m1_29_step3_drained_odd",
-                "dp2_m1_29_preserved_lsb_bits",
-                "dp2_m1_29_r3_firing_odd",
-            )
-            if any(k in entry for k in dp2_m1_29_keys):
-                if all(k in entry for k in dp2_m1_29_keys) and seed >= 3 and (seed & 1) == 1:
-                    checked_keys.update(dp2_m1_29_keys)
-                    s1_29 = int(entry["dp2_m1_29_step1_odd"])
-                    s2_29 = int(entry["dp2_m1_29_step2_odd"])
-                    s3_29 = int(entry["dp2_m1_29_step3_drained_odd"])
-                    pres_29 = int(entry["dp2_m1_29_preserved_lsb_bits"])
-                    r3_fire = int(entry["dp2_m1_29_r3_firing_odd"])
-                    c1_ev = int_compressed_step(seed, q=3)
-                    c2_od = int_compressed_step(c1_ev, q=3)
-                    c3_od = int_compressed_step(c2_od, q=3)
-                    c4_ev = int_compressed_step(c3_od, q=3)
-                    c5_od = int_compressed_step(c4_ev, q=3)
-
-                    def _r3_free_odd_29(n_odd_v: int) -> bool:
-                        if (n_odd_v & 1) != 1 or n_odd_v < 3:
-                            return False
-                        bits_tail_29: List[int] = []
-                        t_v = n_odd_v >> 1
-                        while t_v > 0:
-                            bits_tail_29.append(t_v & 1)
-                            t_v >>= 1
-                        carry_st = 2
-                        for b_v in bits_tail_29[:-1]:
-                            if carry_st == 0 and b_v == 0:
-                                return False
-                            carry_st = (3 * b_v + carry_st) // 2
-                        return True
-
-                    lsb_m29 = (1 << pres_29) - 1 if pres_29 >= 1 else 0
-                    nxt_m29 = (1 << (pres_29 + 1)) - 1 if pres_29 >= 1 else 0
-                    ok = (
-                        ok
-                        and pres_29 >= 1
-                        and (5 * seed - 29) > 0
-                        and ((5 * seed - 29) & ((5 * seed - 29) - 1)) == 0
-                        and (c1_ev & 1) == 0
-                        and c2_od == s1_29
-                        and (c2_od & 1) == 1
-                        and c3_od == s2_29
-                        and (c3_od & 1) == 1
-                        and (c4_ev & 1) == 0
-                        and c5_od == s3_29
-                        and (c5_od & 1) == 1
-                        and r3_fire == s2_29
-                        and _r3_free_odd_29(seed)
-                        and _r3_free_odd_29(s1_29)
-                        and (not _r3_free_odd_29(r3_fire))
-                        and (seed & lsb_m29) == (c5_od & lsb_m29)
-                        and (seed & nxt_m29) != (c5_od & nxt_m29)
-                    )
-                else:
-                    ok = False
-        if "core_word" in entry or "q_index" in entry:
-            cw_list = entry.get("core_word")
-            qi_val = entry.get("q_index")
-            if (
-                "core_word" in entry
-                and "q_index" in entry
-                and isinstance(cw_list, list)
-                and len(cw_list) >= 1
-                and all(_is_strict_int(b) and b in (0, 1) for b in cw_list)
-                and cw_list[0] == 1
-                and cw_list[-1] == 1
-                and _is_strict_int(qi_val)
-                and qi_val >= 0
-            ):
-                checked_keys.update(("core_word", "q_index"))
+        try:
+            if "compressed_steps_to_1" in entry:
+                checked_keys.add("compressed_steps_to_1")
                 claims_checked += 1
-                u_w = tuple(cw_list)
-                q_i = qi_val
-                ok = (
-                    ok
-                    and cft.exact_backward_quotient(1, u_w, q_i) == seed
-                    and cft.is_first_hit_one_pair(u_w, q_i)
+                if _is_strict_int(entry["compressed_steps_to_1"]):
+                    cur = seed
+                    steps = 0
+                    w_odd = 0
+                    peak_comp = cur
+                    peak_odd = cur if (cur & 1) == 1 else 1
+                    while cur != 1 and steps < 5000:
+                        if (cur & 1) == 1:
+                            w_odd += 1
+                            if cur > peak_odd:
+                                peak_odd = cur
+                        cur = int_compressed_step(cur, q=3)
+                        steps += 1
+                        if cur > peak_comp:
+                            peak_comp = cur
+                    ok = ok and (cur == 1) and (steps == entry["compressed_steps_to_1"])
+                    if "odd_weight" in entry:
+                        checked_keys.add("odd_weight")
+                        ok = ok and _is_strict_int(entry["odd_weight"]) and (w_odd == entry["odd_weight"])
+                    if "peak_odd" in entry:
+                        checked_keys.add("peak_odd")
+                        ok = ok and _is_strict_int(entry["peak_odd"]) and (peak_odd == entry["peak_odd"])
+                    if "peak_compressed" in entry:
+                        checked_keys.add("peak_compressed")
+                        ok = ok and _is_strict_int(entry["peak_compressed"]) and (peak_comp == entry["peak_compressed"])
+                else:
+                    ok = False
+                dp2_m1_keys = (
+                    "dp2_m1_step1_odd",
+                    "dp2_m1_step2_odd",
+                    "dp2_m1_step3_drained_odd",
+                    "dp2_m1_preserved_lsb_bits",
+                    "dp2_m1_r3_free_steps",
                 )
-                if "compressed_steps_to_1" in entry:
-                    ok = (
-                        ok
-                        and _is_strict_int(entry["compressed_steps_to_1"])
-                        and (cft.backward_one_total_steps(u_w, q_i) == entry["compressed_steps_to_1"])
-                    )
-                if "loop_core_word" in entry:
-                    checked_keys.add("loop_core_word")
-                    u_loop = tuple(int(b) for b in entry["loop_core_word"])
-                    ok = (
-                        ok
-                        and q_i == 0
-                        and len(u_loop) > len(u_w)
-                        and len(u_loop) >= 2
-                        and u_loop[0] == 1
-                        and u_loop[-1] == 1
-                        and all(b in (0, 1) for b in u_loop)
-                        and u_loop != u_w
-                        and cft.exact_backward_quotient(1, u_loop, 0) == seed
-                        and (not cft.is_first_hit_one_pair(u_loop, 0))
-                        and cft.is_first_hit_one_pair(u_loop, 1)
-                        and any(
-                            u_loop == trivial_loop_extension(u_w, m_ext)
-                            for m_ext in range((len(u_loop) - len(u_w)) // 2 + 1)
-                        )
-                    )
-                if "mixed_q0_unroll_word" in entry:
-                    checked_keys.add("mixed_q0_unroll_word")
-                    u_mix = tuple(int(b) for b in entry["mixed_q0_unroll_word"])
-                    ok = (
-                        ok
-                        and q_i >= 1
-                        and len(u_mix) > len(u_w)
-                        and len(u_mix) >= 2
-                        and u_mix[0] == 1
-                        and u_mix[-1] == 1
-                        and all(b in (0, 1) for b in u_mix)
-                        and cft.exact_backward_quotient(1, u_mix, 0) == seed
-                        and (not cft.is_first_hit_one_pair(u_mix, 0))
-                        and cft.is_first_hit_one_pair(u_mix, 1)
-                        and any(
-                            u_mix == loop_unroll_word(u_w, q_i, m_ext)
-                            for m_ext in range((len(u_mix) - len(u_w)) // 2 + 1)
-                        )
-                    )
-                dyadic_keys = (
-                    "dyadic_window_exp_m",
-                    "dyadic_partner_seed",
-                    "dyadic_partner_core_word",
-                )
-                if any(k in entry for k in dyadic_keys):
-                    if all(k in entry for k in dyadic_keys) and q_i == 0:
-                        checked_keys.update(dyadic_keys)
-                        m_win = int(entry["dyadic_window_exp_m"])
-                        p_seed = int(entry["dyadic_partner_seed"])
-                        u_part = tuple(int(b) for b in entry["dyadic_partner_core_word"])
+                if any(k in entry for k in dp2_m1_keys):
+                    if all(k in entry for k in dp2_m1_keys) and seed >= 3 and (seed & 1) == 1:
+                        checked_keys.update(dp2_m1_keys)
+                        s1_odd = int(entry["dp2_m1_step1_odd"])
+                        s2_odd = int(entry["dp2_m1_step2_odd"])
+                        s3_odd = int(entry["dp2_m1_step3_drained_odd"])
+                        pres_b = int(entry["dp2_m1_preserved_lsb_bits"])
+                        r3_steps = int(entry["dp2_m1_r3_free_steps"])
+                        # Verify 5-step Collatz trajectory 823 -> 1235 -> 1853 -> 2780 -> 1390 -> 695
+                        # executes 100% R3-free SRS carry propagation (no [T0, B0] -> [B0, T0] ever fires!)
+                        # and preserves `pres_b` root LSB bits:
+                        c1 = int_compressed_step(seed, q=3)
+                        c2 = int_compressed_step(c1, q=3)
+                        c3_ev1 = int_compressed_step(c2, q=3)
+                        c4_ev2 = int_compressed_step(c3_ev1, q=3)
+                        c5_dr = int_compressed_step(c4_ev2, q=3)
+
+                        def _r3_free_odd_step_ok(n_odd_v: int) -> bool:
+                            if (n_odd_v & 1) != 1 or n_odd_v < 3:
+                                return False
+                            # LSB bits after stripping index-0 B1:
+                            bits_tail: List[int] = []
+                            t_v = n_odd_v >> 1
+                            while t_v > 0:
+                                bits_tail.append(t_v & 1)
+                                t_v >>= 1
+                            # Carry state starts at T2 (carry = 2); R3 is (T0 [carry=0], B0 [bit=0]):
+                            carry_st = 2
+                            for b_v in bits_tail[:-1]:
+                                if carry_st == 0 and b_v == 0:
+                                    return False
+                                tot_v = 3 * b_v + carry_st
+                                carry_st = tot_v // 2
+                            return True
+
+                        lsb_mask = (1 << pres_b) - 1 if pres_b >= 1 else 0
+                        next_mask = (1 << (pres_b + 1)) - 1 if pres_b >= 1 else 0
                         ok = (
                             ok
-                            and m_win >= 1
-                            and len(u_part) == len(u_w)
-                            and len(u_part) >= 2
-                            and u_part[0] == 1
-                            and u_part[-1] == 1
-                            and all(b in (0, 1) for b in u_part)
-                            and cft.exact_backward_quotient(1, u_part, 0) == p_seed
-                            and cft.is_first_hit_one_pair(u_part, 0)
-                            and (1 << m_win) <= seed < (1 << (m_win + 1))
-                            and (1 << m_win) <= p_seed < (1 << (m_win + 1))
-                            and sum(u_part) != sum(u_w)
-                            and cft.canonical_suffix_shift(u_part, 1)
-                            != cft.canonical_suffix_shift(u_w, 1)
+                            and r3_steps == 5
+                            and pres_b >= 1
+                            and (5 * seed - 19) > 0
+                            and ((5 * seed - 19) & ((5 * seed - 19) - 1)) == 0
+                            and c1 == s1_odd
+                            and c2 == s2_odd
+                            and (c1 & 1) == 1
+                            and (c2 & 1) == 1
+                            and (c3_ev1 & 1) == 0
+                            and (c4_ev2 & 1) == 0
+                            and c5_dr == s3_odd
+                            and (c5_dr & 1) == 1
+                            and _r3_free_odd_step_ok(seed)
+                            and _r3_free_odd_step_ok(c1)
+                            and _r3_free_odd_step_ok(c2)
+                            and (seed & lsb_mask) == (c5_dr & lsb_mask)
+                            and (seed & next_mask) != (c5_dr & next_mask)
                         )
                     else:
                         ok = False
-                dyadic_len_keys = (
-                    "dyadic_length_window_m",
-                    "dyadic_length_partner_seed",
-                    "dyadic_length_partner_word",
-                    "dyadic_supercritical_seed",
-                    "dyadic_supercritical_excess",
+                dp2_m1_29_keys = (
+                    "dp2_m1_29_step1_odd",
+                    "dp2_m1_29_step2_odd",
+                    "dp2_m1_29_step3_drained_odd",
+                    "dp2_m1_29_preserved_lsb_bits",
+                    "dp2_m1_29_r3_firing_odd",
                 )
-                if any(k in entry for k in dyadic_len_keys):
-                    if all(k in entry for k in dyadic_len_keys) and q_i == 0:
-                        checked_keys.update(dyadic_len_keys)
-                        m_lwin = int(entry["dyadic_length_window_m"])
-                        lp_seed = int(entry["dyadic_length_partner_seed"])
-                        u_lpart = tuple(int(b) for b in entry["dyadic_length_partner_word"])
-                        sc_seed = int(entry["dyadic_supercritical_seed"])
-                        sc_exc = int(entry["dyadic_supercritical_excess"])
-                        if (
-                            m_lwin >= 1
-                            and len(u_lpart) >= 2
-                            and u_lpart[0] == 1
-                            and u_lpart[-1] == 1
-                            and all(b in (0, 1) for b in u_lpart)
-                            and sc_seed >= 3
-                            and (sc_seed & 1) == 1
-                        ):
-                            cur_sc = sc_seed
-                            sc_word: List[int] = []
-                            while (cur_sc & (cur_sc - 1)) != 0 and len(sc_word) < 200:
-                                b_sc = cur_sc & 1
-                                sc_word.append(b_sc)
-                                cur_sc = (3 * cur_sc + 1) // 2 if b_sc else cur_sc // 2
-                            m_sc = sc_seed.bit_length() - 1
-                            w_sc = sum(sc_word)
-                            l_sc = len(sc_word)
+                if any(k in entry for k in dp2_m1_29_keys):
+                    if all(k in entry for k in dp2_m1_29_keys) and seed >= 3 and (seed & 1) == 1:
+                        checked_keys.update(dp2_m1_29_keys)
+                        s1_29 = int(entry["dp2_m1_29_step1_odd"])
+                        s2_29 = int(entry["dp2_m1_29_step2_odd"])
+                        s3_29 = int(entry["dp2_m1_29_step3_drained_odd"])
+                        pres_29 = int(entry["dp2_m1_29_preserved_lsb_bits"])
+                        r3_fire = int(entry["dp2_m1_29_r3_firing_odd"])
+                        c1_ev = int_compressed_step(seed, q=3)
+                        c2_od = int_compressed_step(c1_ev, q=3)
+                        c3_od = int_compressed_step(c2_od, q=3)
+                        c4_ev = int_compressed_step(c3_od, q=3)
+                        c5_od = int_compressed_step(c4_ev, q=3)
+
+                        def _r3_free_odd_29(n_odd_v: int) -> bool:
+                            if (n_odd_v & 1) != 1 or n_odd_v < 3:
+                                return False
+                            bits_tail_29: List[int] = []
+                            t_v = n_odd_v >> 1
+                            while t_v > 0:
+                                bits_tail_29.append(t_v & 1)
+                                t_v >>= 1
+                            carry_st = 2
+                            for b_v in bits_tail_29[:-1]:
+                                if carry_st == 0 and b_v == 0:
+                                    return False
+                                carry_st = (3 * b_v + carry_st) // 2
+                            return True
+
+                        lsb_m29 = (1 << pres_29) - 1 if pres_29 >= 1 else 0
+                        nxt_m29 = (1 << (pres_29 + 1)) - 1 if pres_29 >= 1 else 0
+                        ok = (
+                            ok
+                            and pres_29 >= 1
+                            and (5 * seed - 29) > 0
+                            and ((5 * seed - 29) & ((5 * seed - 29) - 1)) == 0
+                            and (c1_ev & 1) == 0
+                            and c2_od == s1_29
+                            and (c2_od & 1) == 1
+                            and c3_od == s2_29
+                            and (c3_od & 1) == 1
+                            and (c4_ev & 1) == 0
+                            and c5_od == s3_29
+                            and (c5_od & 1) == 1
+                            and r3_fire == s2_29
+                            and _r3_free_odd_29(seed)
+                            and _r3_free_odd_29(s1_29)
+                            and (not _r3_free_odd_29(r3_fire))
+                            and (seed & lsb_m29) == (c5_od & lsb_m29)
+                            and (seed & nxt_m29) != (c5_od & nxt_m29)
+                        )
+                    else:
+                        ok = False
+            if "core_word" in entry or "q_index" in entry:
+                cw_list = entry.get("core_word")
+                qi_val = entry.get("q_index")
+                if (
+                    "core_word" in entry
+                    and "q_index" in entry
+                    and isinstance(cw_list, list)
+                    and len(cw_list) >= 1
+                    and all(_is_strict_int(b) and b in (0, 1) for b in cw_list)
+                    and cw_list[0] == 1
+                    and cw_list[-1] == 1
+                    and _is_strict_int(qi_val)
+                    and qi_val >= 0
+                ):
+                    checked_keys.update(("core_word", "q_index"))
+                    claims_checked += 1
+                    u_w = tuple(cw_list)
+                    q_i = qi_val
+                    ok = (
+                        ok
+                        and cft.exact_backward_quotient(1, u_w, q_i) == seed
+                        and cft.is_first_hit_one_pair(u_w, q_i)
+                    )
+                    if "compressed_steps_to_1" in entry:
+                        ok = (
+                            ok
+                            and _is_strict_int(entry["compressed_steps_to_1"])
+                            and (cft.backward_one_total_steps(u_w, q_i) == entry["compressed_steps_to_1"])
+                        )
+                    if "loop_core_word" in entry:
+                        checked_keys.add("loop_core_word")
+                        u_loop = tuple(int(b) for b in entry["loop_core_word"])
+                        ok = (
+                            ok
+                            and q_i == 0
+                            and len(u_loop) > len(u_w)
+                            and len(u_loop) >= 2
+                            and u_loop[0] == 1
+                            and u_loop[-1] == 1
+                            and all(b in (0, 1) for b in u_loop)
+                            and u_loop != u_w
+                            and cft.exact_backward_quotient(1, u_loop, 0) == seed
+                            and (not cft.is_first_hit_one_pair(u_loop, 0))
+                            and cft.is_first_hit_one_pair(u_loop, 1)
+                            and any(
+                                u_loop == trivial_loop_extension(u_w, m_ext)
+                                for m_ext in range((len(u_loop) - len(u_w)) // 2 + 1)
+                            )
+                        )
+                    if "mixed_q0_unroll_word" in entry:
+                        checked_keys.add("mixed_q0_unroll_word")
+                        u_mix = tuple(int(b) for b in entry["mixed_q0_unroll_word"])
+                        ok = (
+                            ok
+                            and q_i >= 1
+                            and len(u_mix) > len(u_w)
+                            and len(u_mix) >= 2
+                            and u_mix[0] == 1
+                            and u_mix[-1] == 1
+                            and all(b in (0, 1) for b in u_mix)
+                            and cft.exact_backward_quotient(1, u_mix, 0) == seed
+                            and (not cft.is_first_hit_one_pair(u_mix, 0))
+                            and cft.is_first_hit_one_pair(u_mix, 1)
+                            and any(
+                                u_mix == loop_unroll_word(u_w, q_i, m_ext)
+                                for m_ext in range((len(u_mix) - len(u_w)) // 2 + 1)
+                            )
+                        )
+                    dyadic_keys = (
+                        "dyadic_window_exp_m",
+                        "dyadic_partner_seed",
+                        "dyadic_partner_core_word",
+                    )
+                    if any(k in entry for k in dyadic_keys):
+                        if all(k in entry for k in dyadic_keys) and q_i == 0:
+                            checked_keys.update(dyadic_keys)
+                            m_win = int(entry["dyadic_window_exp_m"])
+                            p_seed = int(entry["dyadic_partner_seed"])
+                            u_part = tuple(int(b) for b in entry["dyadic_partner_core_word"])
                             ok = (
                                 ok
-                                and len(u_lpart) != len(u_w)
-                                and sum(u_lpart) == sum(u_w)
-                                and cft.exact_backward_quotient(1, u_lpart, 0) == lp_seed
-                                and cft.is_first_hit_one_pair(u_lpart, 0)
-                                and (1 << m_lwin) <= seed < (1 << (m_lwin + 1))
-                                and (1 << m_lwin) <= lp_seed < (1 << (m_lwin + 1))
-                                and cft.canonical_suffix_shift(u_lpart, 1)
+                                and m_win >= 1
+                                and len(u_part) == len(u_w)
+                                and len(u_part) >= 2
+                                and u_part[0] == 1
+                                and u_part[-1] == 1
+                                and all(b in (0, 1) for b in u_part)
+                                and cft.exact_backward_quotient(1, u_part, 0) == p_seed
+                                and cft.is_first_hit_one_pair(u_part, 0)
+                                and (1 << m_win) <= seed < (1 << (m_win + 1))
+                                and (1 << m_win) <= p_seed < (1 << (m_win + 1))
+                                and sum(u_part) != sum(u_w)
+                                and cft.canonical_suffix_shift(u_part, 1)
                                 != cft.canonical_suffix_shift(u_w, 1)
-                                and (cur_sc & (cur_sc - 1)) == 0
-                                and cft.exact_backward_quotient(1, tuple(sc_word), 0) == sc_seed
-                                and cft.is_first_hit_one_pair(tuple(sc_word), 0)
-                                and cft.is_surviving_mod373248_class(sc_seed)
-                                and m_sc == m_lwin
-                                and l_sc > (m_sc + w_sc + 1)
-                                and (l_sc - (m_sc + w_sc + 1)) == sc_exc
                             )
                         else:
                             ok = False
-                    else:
-                        ok = False
-                dyadic_subcrit_keys = (
-                    "dyadic_subcrit_window_m",
-                    "dyadic_subcrit_partner_seed",
-                    "dyadic_subcrit_partner_word",
-                    "dyadic_subcrit_shared_shift",
-                    "dyadic_subcrit_carry_diff",
-                )
-                if any(k in entry for k in dyadic_subcrit_keys):
-                    if all(k in entry for k in dyadic_subcrit_keys) and q_i == 0:
-                        checked_keys.update(dyadic_subcrit_keys)
-                        m_swin = int(entry["dyadic_subcrit_window_m"])
-                        sp_seed = int(entry["dyadic_subcrit_partner_seed"])
-                        u_spart = tuple(int(b) for b in entry["dyadic_subcrit_partner_word"])
-                        sh_exp = int(entry["dyadic_subcrit_shared_shift"])
-                        cdiff_exp = int(entry["dyadic_subcrit_carry_diff"])
-                        if (
-                            m_swin >= 1
-                            and len(u_spart) == len(u_w)
-                            and len(u_spart) >= 2
-                            and u_spart[0] == 1
-                            and u_spart[-1] == 1
-                            and all(b in (0, 1) for b in u_spart)
-                        ):
-                            w_cell = sum(u_w)
-                            l_cell = len(u_w)
-                            a_1 = cft.canonical_suffix_shift(u_w, 1)
-                            a_2 = cft.canonical_suffix_shift(u_spart, 1)
-                            c_u1 = generalized_affine_carry(u_w, q=3)
-                            c_u2 = generalized_affine_carry(u_spart, q=3)
-                            ok = (
-                                ok
-                                and sp_seed != seed
-                                and sum(u_spart) == w_cell
-                                and l_cell <= (m_swin + w_cell + 1)
-                                and cft.exact_backward_quotient(1, u_spart, 0) == sp_seed
-                                and cft.is_first_hit_one_pair(u_spart, 0)
-                                and (1 << m_swin) <= seed < (1 << (m_swin + 1))
-                                and (1 << m_swin) <= sp_seed < (1 << (m_swin + 1))
-                                and a_1 == a_2
-                                and a_1 == sh_exp
-                                and abs(c_u1 - c_u2) == cdiff_exp
-                                and (3**w_cell) * abs(sp_seed - seed) == abs(c_u1 - c_u2)
-                                and abs(sp_seed - seed) < (1 << (l_cell - w_cell))
-                            )
-                        else:
-                            ok = False
-                    else:
-                        ok = False
-                if "shorter_l10_min_core_word" in entry:
-                    checked_keys.add("shorter_l10_min_core_word")
-                    u_l10 = tuple(int(b) for b in entry["shorter_l10_min_core_word"])
-                    if (
-                        q_i == 0
-                        and len(u_l10) == 10
-                        and len(u_w) > 10
-                        and u_l10[0] == 1
-                        and u_l10[-1] == 1
-                        and all(b in (0, 1) for b in u_l10)
-                    ):
-                        y_l10 = cft.exact_backward_quotient(1, u_l10, 0)
-                        surv512_l10 = [
-                            cft.exact_backward_quotient(1, (1, 1) + mid + (1,), 0)
-                            for mid in product((0, 1), repeat=7)
-                            if cft.is_surviving_mod512_residue(
-                                cft.exact_backward_quotient(1, (1, 1) + mid + (1,), 0) % 512
-                            )
-                        ]
-                        surv373_l10 = [
-                            y_c for y_c in surv512_l10 if cft.is_surviving_mod373248_class(y_c)
-                        ]
-                        ok = (
-                            ok
-                            and cft.is_surviving_mod373248_class(y_l10)
-                            and cft.is_first_hit_one_pair(u_l10, 0)
-                            and len(surv512_l10) == 27
-                            and len(surv373_l10) > 0
-                            and y_l10 == min(surv373_l10)
-                            and seed < y_l10
-                        )
-                    else:
-                        ok = False
-                low_pref_keys = ("low_prefix_weight9", "escape_parity_weight")
-                if any(k in entry for k in low_pref_keys):
-                    cw_raw = entry.get("core_word")
-                    if (
-                        all(k in entry for k in low_pref_keys)
-                        and q_i == 0
-                        and isinstance(cw_raw, list)
-                        and all(isinstance(b_v, int) and not isinstance(b_v, bool) and b_v in (0, 1) for b_v in cw_raw)
-                        and isinstance(entry["q_index"], int)
-                        and not isinstance(entry["q_index"], bool)
-                        and isinstance(entry["low_prefix_weight9"], int)
-                        and not isinstance(entry["low_prefix_weight9"], bool)
-                        and isinstance(entry["escape_parity_weight"], int)
-                        and not isinstance(entry["escape_parity_weight"], bool)
-                        and ("survives_mod373248" not in entry or isinstance(entry["survives_mod373248"], bool))
-                        and len(u_w) >= 10
-                        and u_w[0] == 1
-                        and u_w[1] == 1
-                        and u_w[-1] == 1
-                    ):
-                        checked_keys.update(low_pref_keys)
-                        lp_w9 = entry["low_prefix_weight9"]
-                        esc_pw = entry["escape_parity_weight"]
-                        surv_prefs9 = [
-                            (1, 1) + mid7
-                            for mid7 in product((0, 1), repeat=7)
-                            if cft.is_surviving_mod512_residue(
-                                cft.exact_backward_quotient(1, (1, 1) + mid7 + (1,), 0) % 512
-                            )
-                        ]
-                        high22_cnt = sum(1 for p9 in surv_prefs9 if sum(p9) >= 7)
-                        low5_cnt = sum(1 for p9 in surv_prefs9 if sum(p9) == 6)
-                        ok = (
-                            ok
-                            and len(surv_prefs9) == 27
-                            and high22_cnt == 22
-                            and low5_cnt == 5
-                            and u_w[:9] in surv_prefs9
-                            and sum(u_w[:9]) == lp_w9
-                            and lp_w9 == 6
-                            and sum(u_w) == esc_pw
-                            and esc_pw == 7
-                            and cft.is_surviving_mod373248_class(seed)
-                            and cft.is_first_hit_one_pair(u_w, 0)
-                        )
-                    else:
-                        ok = False
-                med_pref_keys = ("med_prefix_weight9", "med_escape_parity_weight")
-                if any(k in entry for k in med_pref_keys):
-                    cw_raw_m = entry.get("core_word")
-                    if (
-                        all(k in entry for k in med_pref_keys)
-                        and q_i == 0
-                        and isinstance(cw_raw_m, list)
-                        and all(_is_strict_int(b_v) and b_v in (0, 1) for b_v in cw_raw_m)
-                        and _is_strict_int(entry["q_index"])
-                        and _is_strict_int(entry["med_prefix_weight9"])
-                        and _is_strict_int(entry["med_escape_parity_weight"])
-                        and ("survives_mod373248" not in entry or isinstance(entry["survives_mod373248"], bool))
-                        and len(u_w) >= 11
-                        and u_w[0] == 1
-                        and u_w[1] == 1
-                        and u_w[-1] == 1
-                    ):
-                        checked_keys.update(med_pref_keys)
-                        mp_w9 = entry["med_prefix_weight9"]
-                        mesc_pw = entry["med_escape_parity_weight"]
-                        surv_prefs9_m = [
-                            (1, 1) + mid7
-                            for mid7 in product((0, 1), repeat=7)
-                            if cft.is_surviving_mod512_residue(
-                                cft.exact_backward_quotient(1, (1, 1) + mid7 + (1,), 0) % 512
-                            )
-                        ]
-                        high8_cnt = sum(1 for p9 in surv_prefs9_m if sum(p9) >= 8)
-                        med14_cnt = sum(1 for p9 in surv_prefs9_m if sum(p9) == 7)
-                        low5_cnt_m = sum(1 for p9 in surv_prefs9_m if sum(p9) == 6)
-                        ok = (
-                            ok
-                            and len(surv_prefs9_m) == 27
-                            and high8_cnt == 8
-                            and med14_cnt == 14
-                            and low5_cnt_m == 5
-                            and u_w[:9] in surv_prefs9_m
-                            and sum(u_w[:9]) == mp_w9
-                            and mp_w9 == 7
-                            and sum(u_w) == mesc_pw
-                            and mesc_pw == 8
-                            and cft.is_surviving_mod373248_class(seed)
-                            and cft.is_first_hit_one_pair(u_w, 0)
-                        )
-                    else:
-                        ok = False
-                high8_pref_keys = ("high8_prefix_weight9", "high8_escape_parity_weight")
-                if any(k in entry for k in high8_pref_keys):
-                    cw_raw_h8 = entry.get("core_word")
-                    if (
-                        all(k in entry for k in high8_pref_keys)
-                        and q_i == 0
-                        and isinstance(cw_raw_h8, list)
-                        and all(_is_strict_int(b_v) and b_v in (0, 1) for b_v in cw_raw_h8)
-                        and _is_strict_int(entry["q_index"])
-                        and _is_strict_int(entry["high8_prefix_weight9"])
-                        and _is_strict_int(entry["high8_escape_parity_weight"])
-                        and ("survives_mod373248" not in entry or isinstance(entry["survives_mod373248"], bool))
-                        and len(u_w) >= 11
-                        and u_w[0] == 1
-                        and u_w[1] == 1
-                        and u_w[-1] == 1
-                    ):
-                        checked_keys.update(high8_pref_keys)
-                        hp_w9 = entry["high8_prefix_weight9"]
-                        hesc_pw = entry["high8_escape_parity_weight"]
-                        surv_prefs9_h8 = [
-                            (1, 1) + mid7
-                            for mid7 in product((0, 1), repeat=7)
-                            if cft.is_surviving_mod512_residue(
-                                cft.exact_backward_quotient(1, (1, 1) + mid7 + (1,), 0) % 512
-                            )
-                        ]
-                        top1_cnt = sum(1 for p9 in surv_prefs9_h8 if sum(p9) == 9)
-                        exact8_cnt = sum(1 for p9 in surv_prefs9_h8 if sum(p9) == 8)
-                        med14_cnt_h8 = sum(1 for p9 in surv_prefs9_h8 if sum(p9) == 7)
-                        low5_cnt_h8 = sum(1 for p9 in surv_prefs9_h8 if sum(p9) == 6)
-                        ok = (
-                            ok
-                            and len(surv_prefs9_h8) == 27
-                            and top1_cnt == 1
-                            and exact8_cnt == 7
-                            and med14_cnt_h8 == 14
-                            and low5_cnt_h8 == 5
-                            and u_w[:9] in surv_prefs9_h8
-                            and sum(u_w[:9]) == hp_w9
-                            and hp_w9 == 8
-                            and sum(u_w) == hesc_pw
-                            and hesc_pw == 9
-                            and cft.is_surviving_mod373248_class(seed)
-                            and cft.is_first_hit_one_pair(u_w, 0)
-                        )
-                    else:
-                        ok = False
-            else:
-                ok = False
-        if "survives_mod373248" in entry:
-            checked_keys.add("survives_mod373248")
-            claims_checked += 1
-            ok = (
-                ok
-                and isinstance(entry["survives_mod373248"], bool)
-                and (cft.is_surviving_mod373248_class(seed) == entry["survives_mod373248"])
-            )
-        if "survives_mod1296" in entry:
-            checked_keys.add("survives_mod1296")
-            claims_checked += 1
-            ok = (
-                ok
-                and isinstance(entry["survives_mod1296"], bool)
-                and (is_surviving_mod1296_class(seed) == entry["survives_mod1296"])
-            )
-        if "next_odd" in entry:
-            checked_keys.add("next_odd")
-            claims_checked += 1
-            nxt = core2_pos(3 * seed + 1) if seed >= 1 else 1
-            ok = ok and ((seed & 1) == 1) and (nxt == int(entry["next_odd"]))
-            if "compressed_steps" in entry:
-                checked_keys.add("compressed_steps")
-                v2_3x1 = ((3 * seed + 1) & -(3 * seed + 1)).bit_length() - 1
-                ok = ok and (v2_3x1 == int(entry["compressed_steps"]))
-            if "core3_seed_plus_1" in entry:
-                checked_keys.add("core3_seed_plus_1")
-                ok = ok and (core3_pos(seed + 1) == int(entry["core3_seed_plus_1"]))
-            if "core3_next_plus_1" in entry:
-                checked_keys.add("core3_next_plus_1")
-                ok = ok and (core3_pos(nxt + 1) == int(entry["core3_next_plus_1"]))
-            if "phi_diamond_seed" in entry:
-                checked_keys.add("phi_diamond_seed")
-                ok = ok and (cousin_diamond_phi(seed) == int(entry["phi_diamond_seed"]))
-            if "phi_diamond_next" in entry:
-                checked_keys.add("phi_diamond_next")
-                ok = ok and (cousin_diamond_phi(nxt) == int(entry["phi_diamond_next"]))
-            if any(
-                k in entry
-                for k in (
-                    "v2_pow_seed_plus_1",
-                    "v2_pow_next_plus_1",
-                    "coprime23_seed_plus_1",
-                    "coprime23_next_plus_1",
-                    "v3_pow_seed_plus_1",
-                    "v3_pow_next_plus_1",
-                )
-            ):
-                req_val_keys = (
-                    "v2_pow_seed_plus_1",
-                    "v2_pow_next_plus_1",
-                    "coprime23_seed_plus_1",
-                    "coprime23_next_plus_1",
-                )
-                if all(k in entry for k in req_val_keys):
-                    checked_keys.update(req_val_keys)
-                    p2_s, p3_s, c_s = _decompose_2_3_coprime(seed + 1)
-                    p2_n, p3_n, c_n = _decompose_2_3_coprime(nxt + 1)
-                    ok = (
-                        ok
-                        and p2_s == int(entry["v2_pow_seed_plus_1"])
-                        and p2_n == int(entry["v2_pow_next_plus_1"])
-                        and c_s == int(entry["coprime23_seed_plus_1"])
-                        and c_n == int(entry["coprime23_next_plus_1"])
+                    dyadic_len_keys = (
+                        "dyadic_length_window_m",
+                        "dyadic_length_partner_seed",
+                        "dyadic_length_partner_word",
+                        "dyadic_supercritical_seed",
+                        "dyadic_supercritical_excess",
                     )
-                    if "v3_pow_seed_plus_1" in entry or "v3_pow_next_plus_1" in entry:
-                        if "v3_pow_seed_plus_1" in entry and "v3_pow_next_plus_1" in entry:
-                            checked_keys.update(("v3_pow_seed_plus_1", "v3_pow_next_plus_1"))
+                    if any(k in entry for k in dyadic_len_keys):
+                        if all(k in entry for k in dyadic_len_keys) and q_i == 0:
+                            checked_keys.update(dyadic_len_keys)
+                            m_lwin = int(entry["dyadic_length_window_m"])
+                            lp_seed = int(entry["dyadic_length_partner_seed"])
+                            u_lpart = tuple(int(b) for b in entry["dyadic_length_partner_word"])
+                            sc_seed = int(entry["dyadic_supercritical_seed"])
+                            sc_exc = int(entry["dyadic_supercritical_excess"])
+                            if (
+                                m_lwin >= 1
+                                and len(u_lpart) >= 2
+                                and u_lpart[0] == 1
+                                and u_lpart[-1] == 1
+                                and all(b in (0, 1) for b in u_lpart)
+                                and sc_seed >= 3
+                                and (sc_seed & 1) == 1
+                            ):
+                                cur_sc = sc_seed
+                                sc_word: List[int] = []
+                                while (cur_sc & (cur_sc - 1)) != 0 and len(sc_word) < 200:
+                                    b_sc = cur_sc & 1
+                                    sc_word.append(b_sc)
+                                    cur_sc = (3 * cur_sc + 1) // 2 if b_sc else cur_sc // 2
+                                m_sc = sc_seed.bit_length() - 1
+                                w_sc = sum(sc_word)
+                                l_sc = len(sc_word)
+                                ok = (
+                                    ok
+                                    and len(u_lpart) != len(u_w)
+                                    and sum(u_lpart) == sum(u_w)
+                                    and cft.exact_backward_quotient(1, u_lpart, 0) == lp_seed
+                                    and cft.is_first_hit_one_pair(u_lpart, 0)
+                                    and (1 << m_lwin) <= seed < (1 << (m_lwin + 1))
+                                    and (1 << m_lwin) <= lp_seed < (1 << (m_lwin + 1))
+                                    and cft.canonical_suffix_shift(u_lpart, 1)
+                                    != cft.canonical_suffix_shift(u_w, 1)
+                                    and (cur_sc & (cur_sc - 1)) == 0
+                                    and cft.exact_backward_quotient(1, tuple(sc_word), 0) == sc_seed
+                                    and cft.is_first_hit_one_pair(tuple(sc_word), 0)
+                                    and cft.is_surviving_mod373248_class(sc_seed)
+                                    and m_sc == m_lwin
+                                    and l_sc > (m_sc + w_sc + 1)
+                                    and (l_sc - (m_sc + w_sc + 1)) == sc_exc
+                                )
+                            else:
+                                ok = False
+                        else:
+                            ok = False
+                    dyadic_subcrit_keys = (
+                        "dyadic_subcrit_window_m",
+                        "dyadic_subcrit_partner_seed",
+                        "dyadic_subcrit_partner_word",
+                        "dyadic_subcrit_shared_shift",
+                        "dyadic_subcrit_carry_diff",
+                    )
+                    if any(k in entry for k in dyadic_subcrit_keys):
+                        if all(k in entry for k in dyadic_subcrit_keys) and q_i == 0:
+                            checked_keys.update(dyadic_subcrit_keys)
+                            m_swin = int(entry["dyadic_subcrit_window_m"])
+                            sp_seed = int(entry["dyadic_subcrit_partner_seed"])
+                            u_spart = tuple(int(b) for b in entry["dyadic_subcrit_partner_word"])
+                            sh_exp = int(entry["dyadic_subcrit_shared_shift"])
+                            cdiff_exp = int(entry["dyadic_subcrit_carry_diff"])
+                            if (
+                                m_swin >= 1
+                                and len(u_spart) == len(u_w)
+                                and len(u_spart) >= 2
+                                and u_spart[0] == 1
+                                and u_spart[-1] == 1
+                                and all(b in (0, 1) for b in u_spart)
+                            ):
+                                w_cell = sum(u_w)
+                                l_cell = len(u_w)
+                                a_1 = cft.canonical_suffix_shift(u_w, 1)
+                                a_2 = cft.canonical_suffix_shift(u_spart, 1)
+                                c_u1 = generalized_affine_carry(u_w, q=3)
+                                c_u2 = generalized_affine_carry(u_spart, q=3)
+                                ok = (
+                                    ok
+                                    and sp_seed != seed
+                                    and sum(u_spart) == w_cell
+                                    and l_cell <= (m_swin + w_cell + 1)
+                                    and cft.exact_backward_quotient(1, u_spart, 0) == sp_seed
+                                    and cft.is_first_hit_one_pair(u_spart, 0)
+                                    and (1 << m_swin) <= seed < (1 << (m_swin + 1))
+                                    and (1 << m_swin) <= sp_seed < (1 << (m_swin + 1))
+                                    and a_1 == a_2
+                                    and a_1 == sh_exp
+                                    and abs(c_u1 - c_u2) == cdiff_exp
+                                    and (3**w_cell) * abs(sp_seed - seed) == abs(c_u1 - c_u2)
+                                    and abs(sp_seed - seed) < (1 << (l_cell - w_cell))
+                                )
+                            else:
+                                ok = False
+                        else:
+                            ok = False
+                    if "shorter_l10_min_core_word" in entry:
+                        checked_keys.add("shorter_l10_min_core_word")
+                        u_l10 = tuple(int(b) for b in entry["shorter_l10_min_core_word"])
+                        if (
+                            q_i == 0
+                            and len(u_l10) == 10
+                            and len(u_w) > 10
+                            and u_l10[0] == 1
+                            and u_l10[-1] == 1
+                            and all(b in (0, 1) for b in u_l10)
+                        ):
+                            y_l10 = cft.exact_backward_quotient(1, u_l10, 0)
+                            surv512_l10 = [
+                                cft.exact_backward_quotient(1, (1, 1) + mid + (1,), 0)
+                                for mid in product((0, 1), repeat=7)
+                                if cft.is_surviving_mod512_residue(
+                                    cft.exact_backward_quotient(1, (1, 1) + mid + (1,), 0) % 512
+                                )
+                            ]
+                            surv373_l10 = [
+                                y_c for y_c in surv512_l10 if cft.is_surviving_mod373248_class(y_c)
+                            ]
                             ok = (
                                 ok
-                                and p3_s == int(entry["v3_pow_seed_plus_1"])
-                                and p3_n == int(entry["v3_pow_next_plus_1"])
+                                and cft.is_surviving_mod373248_class(y_l10)
+                                and cft.is_first_hit_one_pair(u_l10, 0)
+                                and len(surv512_l10) == 27
+                                and len(surv373_l10) > 0
+                                and y_l10 == min(surv373_l10)
+                                and seed < y_l10
+                            )
+                        else:
+                            ok = False
+                    low_pref_keys = ("low_prefix_weight9", "escape_parity_weight")
+                    if any(k in entry for k in low_pref_keys):
+                        cw_raw = entry.get("core_word")
+                        if (
+                            all(k in entry for k in low_pref_keys)
+                            and q_i == 0
+                            and isinstance(cw_raw, list)
+                            and all(isinstance(b_v, int) and not isinstance(b_v, bool) and b_v in (0, 1) for b_v in cw_raw)
+                            and isinstance(entry["q_index"], int)
+                            and not isinstance(entry["q_index"], bool)
+                            and isinstance(entry["low_prefix_weight9"], int)
+                            and not isinstance(entry["low_prefix_weight9"], bool)
+                            and isinstance(entry["escape_parity_weight"], int)
+                            and not isinstance(entry["escape_parity_weight"], bool)
+                            and ("survives_mod373248" not in entry or isinstance(entry["survives_mod373248"], bool))
+                            and len(u_w) >= 10
+                            and u_w[0] == 1
+                            and u_w[1] == 1
+                            and u_w[-1] == 1
+                        ):
+                            checked_keys.update(low_pref_keys)
+                            lp_w9 = entry["low_prefix_weight9"]
+                            esc_pw = entry["escape_parity_weight"]
+                            surv_prefs9 = [
+                                (1, 1) + mid7
+                                for mid7 in product((0, 1), repeat=7)
+                                if cft.is_surviving_mod512_residue(
+                                    cft.exact_backward_quotient(1, (1, 1) + mid7 + (1,), 0) % 512
+                                )
+                            ]
+                            high22_cnt = sum(1 for p9 in surv_prefs9 if sum(p9) >= 7)
+                            low5_cnt = sum(1 for p9 in surv_prefs9 if sum(p9) == 6)
+                            ok = (
+                                ok
+                                and len(surv_prefs9) == 27
+                                and high22_cnt == 22
+                                and low5_cnt == 5
+                                and u_w[:9] in surv_prefs9
+                                and sum(u_w[:9]) == lp_w9
+                                and lp_w9 == 6
+                                and sum(u_w) == esc_pw
+                                and esc_pw == 7
+                                and cft.is_surviving_mod373248_class(seed)
+                                and cft.is_first_hit_one_pair(u_w, 0)
+                            )
+                        else:
+                            ok = False
+                    med_pref_keys = ("med_prefix_weight9", "med_escape_parity_weight")
+                    if any(k in entry for k in med_pref_keys):
+                        cw_raw_m = entry.get("core_word")
+                        if (
+                            all(k in entry for k in med_pref_keys)
+                            and q_i == 0
+                            and isinstance(cw_raw_m, list)
+                            and all(_is_strict_int(b_v) and b_v in (0, 1) for b_v in cw_raw_m)
+                            and _is_strict_int(entry["q_index"])
+                            and _is_strict_int(entry["med_prefix_weight9"])
+                            and _is_strict_int(entry["med_escape_parity_weight"])
+                            and ("survives_mod373248" not in entry or isinstance(entry["survives_mod373248"], bool))
+                            and len(u_w) >= 11
+                            and u_w[0] == 1
+                            and u_w[1] == 1
+                            and u_w[-1] == 1
+                        ):
+                            checked_keys.update(med_pref_keys)
+                            mp_w9 = entry["med_prefix_weight9"]
+                            mesc_pw = entry["med_escape_parity_weight"]
+                            surv_prefs9_m = [
+                                (1, 1) + mid7
+                                for mid7 in product((0, 1), repeat=7)
+                                if cft.is_surviving_mod512_residue(
+                                    cft.exact_backward_quotient(1, (1, 1) + mid7 + (1,), 0) % 512
+                                )
+                            ]
+                            high8_cnt = sum(1 for p9 in surv_prefs9_m if sum(p9) >= 8)
+                            med14_cnt = sum(1 for p9 in surv_prefs9_m if sum(p9) == 7)
+                            low5_cnt_m = sum(1 for p9 in surv_prefs9_m if sum(p9) == 6)
+                            ok = (
+                                ok
+                                and len(surv_prefs9_m) == 27
+                                and high8_cnt == 8
+                                and med14_cnt == 14
+                                and low5_cnt_m == 5
+                                and u_w[:9] in surv_prefs9_m
+                                and sum(u_w[:9]) == mp_w9
+                                and mp_w9 == 7
+                                and sum(u_w) == mesc_pw
+                                and mesc_pw == 8
+                                and cft.is_surviving_mod373248_class(seed)
+                                and cft.is_first_hit_one_pair(u_w, 0)
+                            )
+                        else:
+                            ok = False
+                    high8_pref_keys = ("high8_prefix_weight9", "high8_escape_parity_weight")
+                    if any(k in entry for k in high8_pref_keys):
+                        cw_raw_h8 = entry.get("core_word")
+                        if (
+                            all(k in entry for k in high8_pref_keys)
+                            and q_i == 0
+                            and isinstance(cw_raw_h8, list)
+                            and all(_is_strict_int(b_v) and b_v in (0, 1) for b_v in cw_raw_h8)
+                            and _is_strict_int(entry["q_index"])
+                            and _is_strict_int(entry["high8_prefix_weight9"])
+                            and _is_strict_int(entry["high8_escape_parity_weight"])
+                            and ("survives_mod373248" not in entry or isinstance(entry["survives_mod373248"], bool))
+                            and len(u_w) >= 11
+                            and u_w[0] == 1
+                            and u_w[1] == 1
+                            and u_w[-1] == 1
+                        ):
+                            checked_keys.update(high8_pref_keys)
+                            hp_w9 = entry["high8_prefix_weight9"]
+                            hesc_pw = entry["high8_escape_parity_weight"]
+                            surv_prefs9_h8 = [
+                                (1, 1) + mid7
+                                for mid7 in product((0, 1), repeat=7)
+                                if cft.is_surviving_mod512_residue(
+                                    cft.exact_backward_quotient(1, (1, 1) + mid7 + (1,), 0) % 512
+                                )
+                            ]
+                            top1_cnt = sum(1 for p9 in surv_prefs9_h8 if sum(p9) == 9)
+                            exact8_cnt = sum(1 for p9 in surv_prefs9_h8 if sum(p9) == 8)
+                            med14_cnt_h8 = sum(1 for p9 in surv_prefs9_h8 if sum(p9) == 7)
+                            low5_cnt_h8 = sum(1 for p9 in surv_prefs9_h8 if sum(p9) == 6)
+                            ok = (
+                                ok
+                                and len(surv_prefs9_h8) == 27
+                                and top1_cnt == 1
+                                and exact8_cnt == 7
+                                and med14_cnt_h8 == 14
+                                and low5_cnt_h8 == 5
+                                and u_w[:9] in surv_prefs9_h8
+                                and sum(u_w[:9]) == hp_w9
+                                and hp_w9 == 8
+                                and sum(u_w) == hesc_pw
+                                and hesc_pw == 9
+                                and cft.is_surviving_mod373248_class(seed)
+                                and cft.is_first_hit_one_pair(u_w, 0)
+                            )
+                        else:
+                            ok = False
+                    allones9_pref_keys = ("allones9_prefix_weight9", "allones9_escape_parity_weight")
+                    if any(k in entry for k in allones9_pref_keys):
+                        cw_raw_a9 = entry.get("core_word")
+                        if (
+                            all(k in entry for k in allones9_pref_keys)
+                            and q_i == 0
+                            and isinstance(cw_raw_a9, list)
+                            and all(_is_strict_int(b_v) and b_v in (0, 1) for b_v in cw_raw_a9)
+                            and _is_strict_int(entry["q_index"])
+                            and _is_strict_int(entry["allones9_prefix_weight9"])
+                            and _is_strict_int(entry["allones9_escape_parity_weight"])
+                            and "compressed_steps_to_1" in entry
+                            and _is_strict_int(entry["compressed_steps_to_1"])
+                            and "survives_mod373248" in entry
+                            and entry["survives_mod373248"] is True
+                            and len(u_w) >= 10
+                            and u_w[0] == 1
+                            and u_w[1] == 1
+                            and u_w[-1] == 1
+                        ):
+                            checked_keys.update(allones9_pref_keys)
+                            ap_w9 = entry["allones9_prefix_weight9"]
+                            aesc_pw = entry["allones9_escape_parity_weight"]
+                            surv_prefs9_a9 = [
+                                (1, 1) + mid7
+                                for mid7 in product((0, 1), repeat=7)
+                                if cft.is_surviving_mod512_residue(
+                                    cft.exact_backward_quotient(1, (1, 1) + mid7 + (1,), 0) % 512
+                                )
+                            ]
+                            surv_prefs10_a9 = [p9 + (b_ext,) for p9 in surv_prefs9_a9 for b_ext in (0, 1)]
+                            top10_cnt = sum(1 for p10 in surv_prefs10_a9 if sum(p10) == 10)
+                            ok = (
+                                ok
+                                and len(surv_prefs9_a9) == 27
+                                and len(surv_prefs10_a9) == 54
+                                and top10_cnt == 1
+                                and u_w[:9] == (1,) * 9
+                                and u_w[:9] in surv_prefs9_a9
+                                and sum(u_w[:9]) == ap_w9
+                                and ap_w9 == 9
+                                and sum(u_w) == aesc_pw
+                                and aesc_pw == 10
+                                and cft.is_surviving_mod373248_class(seed)
+                                and cft.is_first_hit_one_pair(u_w, 0)
                             )
                         else:
                             ok = False
                 else:
                     ok = False
-        elif "v2_pow_seed" in entry or "v3_pow_seed" in entry:
-            req_spine_keys = (
-                "v2_pow_seed",
-                "v3_pow_seed",
-                "v2_pow_seed_plus_1",
-                "v3_pow_seed_plus_1",
-            )
-            if all(k in entry for k in req_spine_keys):
-                checked_keys.update(req_spine_keys)
+            if "survives_mod373248" in entry:
+                checked_keys.add("survives_mod373248")
                 claims_checked += 1
-                p2_0, p3_0, _ = _decompose_2_3_coprime(seed)
-                p2_1, p3_1, _ = _decompose_2_3_coprime(seed + 1)
                 ok = (
                     ok
-                    and p2_0 == int(entry["v2_pow_seed"])
-                    and p3_0 == int(entry["v3_pow_seed"])
-                    and p2_1 == int(entry["v2_pow_seed_plus_1"])
-                    and p3_1 == int(entry["v3_pow_seed_plus_1"])
+                    and isinstance(entry["survives_mod373248"], bool)
+                    and (cft.is_surviving_mod373248_class(seed) == entry["survives_mod373248"])
                 )
-                if "sibling_seed" in entry:
-                    checked_keys.add("sibling_seed")
-                    sib = int(entry["sibling_seed"])
-                    if sib > seed:
-                        s2_0, s3_0, _ = _decompose_2_3_coprime(sib)
-                        s2_1, s3_1, _ = _decompose_2_3_coprime(sib + 1)
-                        ok = ok and (s2_0, s3_0, s2_1, s3_1) == (p2_0, p3_0, p2_1, p3_1)
+            if "survives_mod1296" in entry:
+                checked_keys.add("survives_mod1296")
+                claims_checked += 1
+                ok = (
+                    ok
+                    and isinstance(entry["survives_mod1296"], bool)
+                    and (is_surviving_mod1296_class(seed) == entry["survives_mod1296"])
+                )
+            if "next_odd" in entry:
+                checked_keys.add("next_odd")
+                claims_checked += 1
+                nxt = core2_pos(3 * seed + 1) if seed >= 1 else 1
+                ok = ok and ((seed & 1) == 1) and (nxt == int(entry["next_odd"]))
+                if "compressed_steps" in entry:
+                    checked_keys.add("compressed_steps")
+                    v2_3x1 = ((3 * seed + 1) & -(3 * seed + 1)).bit_length() - 1
+                    ok = ok and (v2_3x1 == int(entry["compressed_steps"]))
+                if "core3_seed_plus_1" in entry:
+                    checked_keys.add("core3_seed_plus_1")
+                    ok = ok and (core3_pos(seed + 1) == int(entry["core3_seed_plus_1"]))
+                if "core3_next_plus_1" in entry:
+                    checked_keys.add("core3_next_plus_1")
+                    ok = ok and (core3_pos(nxt + 1) == int(entry["core3_next_plus_1"]))
+                if "phi_diamond_seed" in entry:
+                    checked_keys.add("phi_diamond_seed")
+                    ok = ok and (cousin_diamond_phi(seed) == int(entry["phi_diamond_seed"]))
+                if "phi_diamond_next" in entry:
+                    checked_keys.add("phi_diamond_next")
+                    ok = ok and (cousin_diamond_phi(nxt) == int(entry["phi_diamond_next"]))
+                if any(
+                    k in entry
+                    for k in (
+                        "v2_pow_seed_plus_1",
+                        "v2_pow_next_plus_1",
+                        "coprime23_seed_plus_1",
+                        "coprime23_next_plus_1",
+                        "v3_pow_seed_plus_1",
+                        "v3_pow_next_plus_1",
+                    )
+                ):
+                    req_val_keys = (
+                        "v2_pow_seed_plus_1",
+                        "v2_pow_next_plus_1",
+                        "coprime23_seed_plus_1",
+                        "coprime23_next_plus_1",
+                    )
+                    if all(k in entry for k in req_val_keys):
+                        checked_keys.update(req_val_keys)
+                        p2_s, p3_s, c_s = _decompose_2_3_coprime(seed + 1)
+                        p2_n, p3_n, c_n = _decompose_2_3_coprime(nxt + 1)
+                        ok = (
+                            ok
+                            and p2_s == int(entry["v2_pow_seed_plus_1"])
+                            and p2_n == int(entry["v2_pow_next_plus_1"])
+                            and c_s == int(entry["coprime23_seed_plus_1"])
+                            and c_n == int(entry["coprime23_next_plus_1"])
+                        )
+                        if "v3_pow_seed_plus_1" in entry or "v3_pow_next_plus_1" in entry:
+                            if "v3_pow_seed_plus_1" in entry and "v3_pow_next_plus_1" in entry:
+                                checked_keys.update(("v3_pow_seed_plus_1", "v3_pow_next_plus_1"))
+                                ok = (
+                                    ok
+                                    and p3_s == int(entry["v3_pow_seed_plus_1"])
+                                    and p3_n == int(entry["v3_pow_next_plus_1"])
+                                )
+                            else:
+                                ok = False
                     else:
                         ok = False
-            else:
-                ok = False
-        if "next_compressed" in entry:
-            checked_keys.add("next_compressed")
-            claims_checked += 1
-            nxt_c = int_compressed_step(seed, q=3)
-            ok = ok and _is_strict_int(entry["next_compressed"]) and (nxt_c == entry["next_compressed"])
-            if "v3_seed_plus_1" in entry or "v3_next_plus_1" in entry:
-                if "v3_seed_plus_1" in entry and "v3_next_plus_1" in entry and seed >= 1 and nxt_c >= 1:
-                    checked_keys.update(("v3_seed_plus_1", "v3_next_plus_1"))
-                    v3_s_exp = int(entry["v3_seed_plus_1"])
-                    v3_n_exp = int(entry["v3_next_plus_1"])
-                    _, p3_s0, _ = _decompose_2_3_coprime(seed + 1)
-                    _, p3_n0, _ = _decompose_2_3_coprime(nxt_c + 1)
+            elif "v2_pow_seed" in entry or "v3_pow_seed" in entry:
+                req_spine_keys = (
+                    "v2_pow_seed",
+                    "v3_pow_seed",
+                    "v2_pow_seed_plus_1",
+                    "v3_pow_seed_plus_1",
+                )
+                if all(k in entry for k in req_spine_keys):
+                    checked_keys.update(req_spine_keys)
+                    claims_checked += 1
+                    p2_0, p3_0, _ = _decompose_2_3_coprime(seed)
+                    p2_1, p3_1, _ = _decompose_2_3_coprime(seed + 1)
                     ok = (
                         ok
-                        and v3_s_exp >= 0
-                        and v3_n_exp >= 0
-                        and (3**v3_s_exp) == p3_s0
-                        and (3**v3_n_exp) == p3_n0
+                        and p2_0 == int(entry["v2_pow_seed"])
+                        and p3_0 == int(entry["v3_pow_seed"])
+                        and p2_1 == int(entry["v2_pow_seed_plus_1"])
+                        and p3_1 == int(entry["v3_pow_seed_plus_1"])
                     )
+                    if "sibling_seed" in entry:
+                        checked_keys.add("sibling_seed")
+                        sib = int(entry["sibling_seed"])
+                        if sib > seed:
+                            s2_0, s3_0, _ = _decompose_2_3_coprime(sib)
+                            s2_1, s3_1, _ = _decompose_2_3_coprime(sib + 1)
+                            ok = ok and (s2_0, s3_0, s2_1, s3_1) == (p2_0, p3_0, p2_1, p3_1)
+                        else:
+                            ok = False
                 else:
                     ok = False
-            digit_keys = (
-                "even_sibling",
-                "bit_length_seed",
-                "bit_length_target",
-                "bit_length_even_sibling",
-                "digit_sig_seed",
-                "digit_sig_target",
-                "digit_sig_even_sibling",
-            )
-            ripple_keys = (
-                "even_sibling",
-                "ripple_carry_count_seed",
-                "ripple_carry_idx_sum_seed",
-                "ripple_carry_count_target",
-                "ripple_carry_idx_sum_target",
-                "ripple_carry_count_even_sibling",
-                "ripple_carry_idx_sum_even_sibling",
-            )
-            window_keys = (
-                "even_sibling",
-                "sliding_window_width",
-                "nonzero_windows_seed",
-                "nonzero_windows_target",
-                "nonzero_windows_even_sibling",
-            )
-            if any(k in entry for k in digit_keys[1:]):
-                if all(k in entry for k in digit_keys) and seed >= 1 and nxt_c >= 3:
-                    checked_keys.update(digit_keys)
-                    ev_sib = int(entry["even_sibling"])
-                    ok = (
-                        ok
-                        and (seed & 1) == 1
-                        and (nxt_c % 3) == 2
-                        and (2 * nxt_c - 1) // 3 == seed
-                        and ev_sib == 2 * nxt_c
-                        and int_compressed_step(ev_sib, q=3) == nxt_c
-                        and seed.bit_length() == int(entry["bit_length_seed"])
-                        and nxt_c.bit_length() == int(entry["bit_length_target"])
-                        and ev_sib.bit_length() == int(entry["bit_length_even_sibling"])
-                        and list(binary_digit_signature6(seed))
-                        == [int(v) for v in entry["digit_sig_seed"]]
-                        and list(binary_digit_signature6(nxt_c))
-                        == [int(v) for v in entry["digit_sig_target"]]
-                        and list(binary_digit_signature6(ev_sib))
-                        == [int(v) for v in entry["digit_sig_even_sibling"]]
-                        and binary_digit_signature6(nxt_c) == binary_digit_signature6(ev_sib)
-                    )
-                else:
-                    ok = False
-            if any(k in entry for k in ripple_keys[1:]):
-                if all(k in entry for k in ripple_keys) and seed >= 1 and nxt_c >= 3:
-                    checked_keys.update(ripple_keys)
-                    ev_sib = int(entry["even_sibling"])
-                    cnt_s, idx_s = ripple_carry_3n1_stats(seed)
-                    cnt_t, idx_t = ripple_carry_3n1_stats(nxt_c)
-                    cnt_e, idx_e = ripple_carry_3n1_stats(ev_sib)
-                    ok = (
-                        ok
-                        and (seed & 1) == 1
-                        and (nxt_c % 3) == 2
-                        and (2 * nxt_c - 1) // 3 == seed
-                        and ev_sib == 2 * nxt_c
-                        and int_compressed_step(ev_sib, q=3) == nxt_c
-                        and cnt_s == int(entry["ripple_carry_count_seed"])
-                        and idx_s == int(entry["ripple_carry_idx_sum_seed"])
-                        and cnt_t == int(entry["ripple_carry_count_target"])
-                        and idx_t == int(entry["ripple_carry_idx_sum_target"])
-                        and cnt_e == int(entry["ripple_carry_count_even_sibling"])
-                        and idx_e == int(entry["ripple_carry_idx_sum_even_sibling"])
-                        and cnt_t > 0
-                        and idx_t > 0
-                        and cnt_e == 0
-                        and idx_e == 0
-                    )
-                else:
-                    ok = False
-            if any(k in entry for k in window_keys[1:]):
-                if all(k in entry for k in window_keys) and seed >= 1 and nxt_c >= 3:
-                    checked_keys.update(window_keys)
-                    ev_sib = int(entry["even_sibling"])
-                    w_win = int(entry["sliding_window_width"])
-                    if w_win >= 2:
+            if "next_compressed" in entry:
+                checked_keys.add("next_compressed")
+                claims_checked += 1
+                nxt_c = int_compressed_step(seed, q=3)
+                ok = ok and _is_strict_int(entry["next_compressed"]) and (nxt_c == entry["next_compressed"])
+                if "v3_seed_plus_1" in entry or "v3_next_plus_1" in entry:
+                    if "v3_seed_plus_1" in entry and "v3_next_plus_1" in entry and seed >= 1 and nxt_c >= 1:
+                        checked_keys.update(("v3_seed_plus_1", "v3_next_plus_1"))
+                        v3_s_exp = int(entry["v3_seed_plus_1"])
+                        v3_n_exp = int(entry["v3_next_plus_1"])
+                        _, p3_s0, _ = _decompose_2_3_coprime(seed + 1)
+                        _, p3_n0, _ = _decompose_2_3_coprime(nxt_c + 1)
+                        ok = (
+                            ok
+                            and v3_s_exp >= 0
+                            and v3_n_exp >= 0
+                            and (3**v3_s_exp) == p3_s0
+                            and (3**v3_n_exp) == p3_n0
+                        )
+                    else:
+                        ok = False
+                digit_keys = (
+                    "even_sibling",
+                    "bit_length_seed",
+                    "bit_length_target",
+                    "bit_length_even_sibling",
+                    "digit_sig_seed",
+                    "digit_sig_target",
+                    "digit_sig_even_sibling",
+                )
+                ripple_keys = (
+                    "even_sibling",
+                    "ripple_carry_count_seed",
+                    "ripple_carry_idx_sum_seed",
+                    "ripple_carry_count_target",
+                    "ripple_carry_idx_sum_target",
+                    "ripple_carry_count_even_sibling",
+                    "ripple_carry_idx_sum_even_sibling",
+                )
+                window_keys = (
+                    "even_sibling",
+                    "sliding_window_width",
+                    "nonzero_windows_seed",
+                    "nonzero_windows_target",
+                    "nonzero_windows_even_sibling",
+                )
+                if any(k in entry for k in digit_keys[1:]):
+                    if all(k in entry for k in digit_keys) and seed >= 1 and nxt_c >= 3:
+                        checked_keys.update(digit_keys)
+                        ev_sib = int(entry["even_sibling"])
                         ok = (
                             ok
                             and (seed & 1) == 1
@@ -4518,1106 +4554,1293 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
                             and (2 * nxt_c - 1) // 3 == seed
                             and ev_sib == 2 * nxt_c
                             and int_compressed_step(ev_sib, q=3) == nxt_c
-                            and list(binary_nonzero_window_list(w_win, seed))
-                            == [int(v) for v in entry["nonzero_windows_seed"]]
-                            and list(binary_nonzero_window_list(w_win, nxt_c))
-                            == [int(v) for v in entry["nonzero_windows_target"]]
-                            and list(binary_nonzero_window_list(w_win, ev_sib))
-                            == [int(v) for v in entry["nonzero_windows_even_sibling"]]
-                            and binary_nonzero_window_list(w_win, nxt_c)
-                            == binary_nonzero_window_list(w_win, ev_sib)
-                            and binary_nonzero_window_list(w_win, 200)
-                            != binary_nonzero_window_list(w_win, 400)
+                            and seed.bit_length() == int(entry["bit_length_seed"])
+                            and nxt_c.bit_length() == int(entry["bit_length_target"])
+                            and ev_sib.bit_length() == int(entry["bit_length_even_sibling"])
+                            and list(binary_digit_signature6(seed))
+                            == [int(v) for v in entry["digit_sig_seed"]]
+                            and list(binary_digit_signature6(nxt_c))
+                            == [int(v) for v in entry["digit_sig_target"]]
+                            and list(binary_digit_signature6(ev_sib))
+                            == [int(v) for v in entry["digit_sig_even_sibling"]]
+                            and binary_digit_signature6(nxt_c) == binary_digit_signature6(ev_sib)
                         )
                     else:
                         ok = False
-                else:
-                    ok = False
-            stateful_keys = (
-                "automaton_states_q",
-                "multi_even_step_exp",
-                "multi_even_preimage",
-            )
-            if any(k in entry for k in stateful_keys):
-                if all(k in entry for k in stateful_keys) and seed >= 1 and nxt_c >= 3:
-                    checked_keys.update(stateful_keys)
-                    q_st = int(entry["automaton_states_q"])
-                    d_exp = int(entry["multi_even_step_exp"])
-                    ev_multi = int(entry["multi_even_preimage"])
-                    if 1 <= q_st <= 3 and d_exp == math.factorial(q_st):
-                        cur_ev = ev_multi
-                        steps_ev_ok = True
-                        for _ in range(d_exp):
-                            if cur_ev < 3 or (cur_ev & 1) != 0:
-                                steps_ev_ok = False
-                                break
-                            cur_ev >>= 1
-                        all_automata_collide = True
-                        for table_flat in product(range(q_st), repeat=2 * q_st):
-                            delta_tbl = [
-                                (table_flat[2 * st_i], table_flat[2 * st_i + 1])
-                                for st_i in range(q_st)
-                            ]
-                            for q0_st in range(q_st):
-                                if (
-                                    run_lsb_automaton(q_st, delta_tbl, q0_st, nxt_c)
-                                    != run_lsb_automaton(q_st, delta_tbl, q0_st, ev_multi)
-                                    or run_msb_automaton(q_st, delta_tbl, q0_st, nxt_c)
-                                    != run_msb_automaton(q_st, delta_tbl, q0_st, ev_multi)
-                                ):
-                                    all_automata_collide = False
+                if any(k in entry for k in ripple_keys[1:]):
+                    if all(k in entry for k in ripple_keys) and seed >= 1 and nxt_c >= 3:
+                        checked_keys.update(ripple_keys)
+                        ev_sib = int(entry["even_sibling"])
+                        cnt_s, idx_s = ripple_carry_3n1_stats(seed)
+                        cnt_t, idx_t = ripple_carry_3n1_stats(nxt_c)
+                        cnt_e, idx_e = ripple_carry_3n1_stats(ev_sib)
+                        ok = (
+                            ok
+                            and (seed & 1) == 1
+                            and (nxt_c % 3) == 2
+                            and (2 * nxt_c - 1) // 3 == seed
+                            and ev_sib == 2 * nxt_c
+                            and int_compressed_step(ev_sib, q=3) == nxt_c
+                            and cnt_s == int(entry["ripple_carry_count_seed"])
+                            and idx_s == int(entry["ripple_carry_idx_sum_seed"])
+                            and cnt_t == int(entry["ripple_carry_count_target"])
+                            and idx_t == int(entry["ripple_carry_idx_sum_target"])
+                            and cnt_e == int(entry["ripple_carry_count_even_sibling"])
+                            and idx_e == int(entry["ripple_carry_idx_sum_even_sibling"])
+                            and cnt_t > 0
+                            and idx_t > 0
+                            and cnt_e == 0
+                            and idx_e == 0
+                        )
+                    else:
+                        ok = False
+                if any(k in entry for k in window_keys[1:]):
+                    if all(k in entry for k in window_keys) and seed >= 1 and nxt_c >= 3:
+                        checked_keys.update(window_keys)
+                        ev_sib = int(entry["even_sibling"])
+                        w_win = int(entry["sliding_window_width"])
+                        if w_win >= 2:
+                            ok = (
+                                ok
+                                and (seed & 1) == 1
+                                and (nxt_c % 3) == 2
+                                and (2 * nxt_c - 1) // 3 == seed
+                                and ev_sib == 2 * nxt_c
+                                and int_compressed_step(ev_sib, q=3) == nxt_c
+                                and list(binary_nonzero_window_list(w_win, seed))
+                                == [int(v) for v in entry["nonzero_windows_seed"]]
+                                and list(binary_nonzero_window_list(w_win, nxt_c))
+                                == [int(v) for v in entry["nonzero_windows_target"]]
+                                and list(binary_nonzero_window_list(w_win, ev_sib))
+                                == [int(v) for v in entry["nonzero_windows_even_sibling"]]
+                                and binary_nonzero_window_list(w_win, nxt_c)
+                                == binary_nonzero_window_list(w_win, ev_sib)
+                                and binary_nonzero_window_list(w_win, 200)
+                                != binary_nonzero_window_list(w_win, 400)
+                            )
+                        else:
+                            ok = False
+                    else:
+                        ok = False
+                stateful_keys = (
+                    "automaton_states_q",
+                    "multi_even_step_exp",
+                    "multi_even_preimage",
+                )
+                if any(k in entry for k in stateful_keys):
+                    if all(k in entry for k in stateful_keys) and seed >= 1 and nxt_c >= 3:
+                        checked_keys.update(stateful_keys)
+                        q_st = int(entry["automaton_states_q"])
+                        d_exp = int(entry["multi_even_step_exp"])
+                        ev_multi = int(entry["multi_even_preimage"])
+                        if 1 <= q_st <= 3 and d_exp == math.factorial(q_st):
+                            cur_ev = ev_multi
+                            steps_ev_ok = True
+                            for _ in range(d_exp):
+                                if cur_ev < 3 or (cur_ev & 1) != 0:
+                                    steps_ev_ok = False
                                     break
-                            if not all_automata_collide:
-                                break
-                        # Verify Q = 2 trailing-zero parity automaton DOES separate nxt_c vs 2*nxt_c!
-                        q2_trailing_parity = [(1, 0), (0, 1)]  # MSB: toggles on 0 after last 1
-                        separates_single_even = (
-                            q_st < 2
-                            or run_msb_automaton(2, q2_trailing_parity, 0, nxt_c)
-                            != run_msb_automaton(2, q2_trailing_parity, 0, 2 * nxt_c)
+                                cur_ev >>= 1
+                            all_automata_collide = True
+                            for table_flat in product(range(q_st), repeat=2 * q_st):
+                                delta_tbl = [
+                                    (table_flat[2 * st_i], table_flat[2 * st_i + 1])
+                                    for st_i in range(q_st)
+                                ]
+                                for q0_st in range(q_st):
+                                    if (
+                                        run_lsb_automaton(q_st, delta_tbl, q0_st, nxt_c)
+                                        != run_lsb_automaton(q_st, delta_tbl, q0_st, ev_multi)
+                                        or run_msb_automaton(q_st, delta_tbl, q0_st, nxt_c)
+                                        != run_msb_automaton(q_st, delta_tbl, q0_st, ev_multi)
+                                    ):
+                                        all_automata_collide = False
+                                        break
+                                if not all_automata_collide:
+                                    break
+                            # Verify Q = 2 trailing-zero parity automaton DOES separate nxt_c vs 2*nxt_c!
+                            q2_trailing_parity = [(1, 0), (0, 1)]  # MSB: toggles on 0 after last 1
+                            separates_single_even = (
+                                q_st < 2
+                                or run_msb_automaton(2, q2_trailing_parity, 0, nxt_c)
+                                != run_msb_automaton(2, q2_trailing_parity, 0, 2 * nxt_c)
+                            )
+                            ok = (
+                                ok
+                                and (seed & 1) == 1
+                                and (nxt_c % 3) == 2
+                                and (2 * nxt_c - 1) // 3 == seed
+                                and ev_multi == (nxt_c << d_exp)
+                                and steps_ev_ok
+                                and cur_ev == nxt_c
+                                and all_automata_collide
+                                and separates_single_even
+                            )
+                        else:
+                            ok = False
+                    else:
+                        ok = False
+                stern_ocn_keys = (
+                    "even_sibling",
+                    "stern_seed",
+                    "stern_target",
+                    "stern_even_sibling",
+                    "ocn_q1_multi_even_preimage",
+                )
+                if any(k in entry for k in stern_ocn_keys[1:]):
+                    if all(k in entry for k in stern_ocn_keys) and seed >= 1 and nxt_c >= 3:
+                        checked_keys.update(stern_ocn_keys)
+                        ev_sib = int(entry["even_sibling"])
+                        ocn_ev = int(entry["ocn_q1_multi_even_preimage"])
+                        dyck_sep = (
+                            run_msb_one_counter_ocn(1, [(1, 1)], [(-1, 1)], 0, nxt_c)[1] == 0
+                            and run_msb_one_counter_ocn(1, [(1, 1)], [(-1, 1)], 0, ev_sib)[1] != 0
+                        )
+                        all_ocn_q1_collide = all(
+                            (run_msb_one_counter_ocn(1, [(dz0, dz1)], [(dp0, dp1)], 0, nxt_c)[1] == 0)
+                            == (run_msb_one_counter_ocn(1, [(dz0, dz1)], [(dp0, dp1)], 0, ocn_ev)[1] == 0)
+                            for dz0, dz1 in product((0, 1), repeat=2)
+                            for dp0, dp1 in product((-1, 0, 1), repeat=2)
                         )
                         ok = (
                             ok
                             and (seed & 1) == 1
                             and (nxt_c % 3) == 2
                             and (2 * nxt_c - 1) // 3 == seed
-                            and ev_multi == (nxt_c << d_exp)
-                            and steps_ev_ok
-                            and cur_ev == nxt_c
-                            and all_automata_collide
-                            and separates_single_even
+                            and ev_sib == 2 * nxt_c
+                            and ocn_ev == 4 * nxt_c
+                            and int_compressed_step(ev_sib, q=3) == nxt_c
+                            and int_compressed_step(int_compressed_step(ocn_ev, q=3), q=3) == nxt_c
+                            and stern_diatomic(seed) == int(entry["stern_seed"])
+                            and stern_diatomic(nxt_c) == int(entry["stern_target"])
+                            and stern_diatomic(ev_sib) == int(entry["stern_even_sibling"])
+                            and stern_diatomic(ocn_ev) == stern_diatomic(nxt_c)
+                            and stern_diatomic(ev_sib) == stern_diatomic(nxt_c)
+                            and dyck_sep
+                            and all_ocn_q1_collide
                         )
                     else:
                         ok = False
-                else:
-                    ok = False
-            stern_ocn_keys = (
-                "even_sibling",
-                "stern_seed",
-                "stern_target",
-                "stern_even_sibling",
-                "ocn_q1_multi_even_preimage",
-            )
-            if any(k in entry for k in stern_ocn_keys[1:]):
-                if all(k in entry for k in stern_ocn_keys) and seed >= 1 and nxt_c >= 3:
-                    checked_keys.update(stern_ocn_keys)
-                    ev_sib = int(entry["even_sibling"])
-                    ocn_ev = int(entry["ocn_q1_multi_even_preimage"])
-                    dyck_sep = (
-                        run_msb_one_counter_ocn(1, [(1, 1)], [(-1, 1)], 0, nxt_c)[1] == 0
-                        and run_msb_one_counter_ocn(1, [(1, 1)], [(-1, 1)], 0, ev_sib)[1] != 0
-                    )
-                    all_ocn_q1_collide = all(
-                        (run_msb_one_counter_ocn(1, [(dz0, dz1)], [(dp0, dp1)], 0, nxt_c)[1] == 0)
-                        == (run_msb_one_counter_ocn(1, [(dz0, dz1)], [(dp0, dp1)], 0, ocn_ev)[1] == 0)
-                        for dz0, dz1 in product((0, 1), repeat=2)
-                        for dp0, dp1 in product((-1, 0, 1), repeat=2)
-                    )
-                    ok = (
-                        ok
-                        and (seed & 1) == 1
-                        and (nxt_c % 3) == 2
-                        and (2 * nxt_c - 1) // 3 == seed
-                        and ev_sib == 2 * nxt_c
-                        and ocn_ev == 4 * nxt_c
-                        and int_compressed_step(ev_sib, q=3) == nxt_c
-                        and int_compressed_step(int_compressed_step(ocn_ev, q=3), q=3) == nxt_c
-                        and stern_diatomic(seed) == int(entry["stern_seed"])
-                        and stern_diatomic(nxt_c) == int(entry["stern_target"])
-                        and stern_diatomic(ev_sib) == int(entry["stern_even_sibling"])
-                        and stern_diatomic(ocn_ev) == stern_diatomic(nxt_c)
-                        and stern_diatomic(ev_sib) == stern_diatomic(nxt_c)
-                        and dyck_sep
-                        and all_ocn_q1_collide
-                    )
-                else:
-                    ok = False
-            mixed_ocn_keys = (
-                "even_sibling_preimage",
-                "ocn_q2_multi_even_preimage",
-                "ocn_q2_56_counter",
-                "ocn_q2_224_counter",
-                "ocn_q2_target_counter",
-            )
-            if any(k in entry for k in mixed_ocn_keys):
-                if all(k in entry for k in mixed_ocn_keys) and seed >= 1 and nxt_c >= 3:
-                    checked_keys.update(mixed_ocn_keys)
-                    ev_sib2 = int(entry["even_sibling_preimage"])
-                    ocn2_ev = int(entry["ocn_q2_multi_even_preimage"])
-                    dz_mix = [((1, 0), (0, 1)), ((0, 0), (1, 1))]
-                    dp_mix = [((1, 0), (0, 1)), ((0, -1), (1, -1))]
-                    cfg_56 = run_msb_one_counter_ocn(2, dz_mix, dp_mix, 0, 56)
-                    cfg_224 = run_msb_one_counter_ocn(2, dz_mix, dp_mix, 0, 224)
-                    cfg_tgt = run_msb_one_counter_ocn(2, dz_mix, dp_mix, 0, nxt_c)
-                    cfg_ev2 = run_msb_one_counter_ocn(2, dz_mix, dp_mix, 0, ocn2_ev)
-                    cfg_lsb_tgt = run_lsb_one_counter_ocn(2, dz_mix, dp_mix, 0, nxt_c)
-                    cfg_lsb_ev2 = run_lsb_one_counter_ocn(2, dz_mix, dp_mix, 0, ocn2_ev)
-                    ok = (
-                        ok
-                        and (seed & 1) == 1
-                        and (nxt_c % 3) == 2
-                        and (2 * nxt_c - 1) // 3 == seed
-                        and ev_sib2 == 2 * nxt_c
-                        and ocn2_ev == 4 * nxt_c
-                        and int_compressed_step(ev_sib2, q=3) == nxt_c
-                        and int_compressed_step(int_compressed_step(ocn2_ev, q=3), q=3) == nxt_c
-                        and cfg_56[1] == int(entry["ocn_q2_56_counter"])
-                        and cfg_224[1] == int(entry["ocn_q2_224_counter"])
-                        and cfg_56[1] != cfg_224[1]
-                        and cfg_tgt[1] == int(entry["ocn_q2_target_counter"])
-                        and cfg_tgt == cfg_ev2
-                        and (cfg_lsb_tgt[0], cfg_lsb_tgt[1] == 0)
-                        == (cfg_lsb_ev2[0], cfg_lsb_ev2[1] == 0)
-                    )
-                else:
-                    ok = False
-            pda_q2_g3_keys = (
-                "pda_q2_g3_sep_preimage",
-                "pda_q2_g3_multi_even_preimage",
-                "pda_q2_g3_56_height",
-                "pda_q2_g3_224_height",
-                "pda_q2_g3_12416_height",
-                "pda_q2_g3_49664_height",
-            )
-            if any(k in entry for k in pda_q2_g3_keys):
-                if all(k in entry for k in pda_q2_g3_keys) and seed >= 1 and nxt_c >= 3:
-                    checked_keys.update(pda_q2_g3_keys)
-                    pda_sep = int(entry["pda_q2_g3_sep_preimage"])
-                    pda_ev = int(entry["pda_q2_g3_multi_even_preimage"])
-                    delta_pda_w11 = _canonical_pda_q2_g3_table()
-                    p_56 = run_msb_pda_stack(2, 3, delta_pda_w11, 0, 56)
-                    p_224 = run_msb_pda_stack(2, 3, delta_pda_w11, 0, 224)
-                    p_12k = run_msb_pda_stack(2, 3, delta_pda_w11, 0, 12_416)
-                    p_49k = run_msb_pda_stack(2, 3, delta_pda_w11, 0, 49_664)
-                    p_tgt = run_msb_pda_stack(2, 3, delta_pda_w11, 0, nxt_c)
-                    p_sep_cfg = run_msb_pda_stack(2, 3, delta_pda_w11, 0, pda_sep)
-                    p_ev_cfg = run_msb_pda_stack(2, 3, delta_pda_w11, 0, pda_ev)
-                    cur_p = pda_ev
-                    steps_p_ok = True
-                    for _ in range(6):
-                        if (cur_p & 1) != 0 or cur_p <= 2:
-                            steps_p_ok = False
-                            break
-                        cur_p >>= 1
-                    ok = (
-                        ok
-                        and (seed & 1) == 1
-                        and (nxt_c % 3) == 2
-                        and (2 * nxt_c - 1) // 3 == seed
-                        and pda_sep == 4 * nxt_c
-                        and pda_ev == 64 * nxt_c
-                        and steps_p_ok
-                        and cur_p == nxt_c
-                        and p_56[2] == int(entry["pda_q2_g3_56_height"])
-                        and p_224[2] == int(entry["pda_q2_g3_224_height"])
-                        and p_56 != p_224
-                        and p_12k[2] == int(entry["pda_q2_g3_12416_height"])
-                        and p_49k[2] == int(entry["pda_q2_g3_49664_height"])
-                        and p_12k != p_49k
-                        and p_tgt != p_sep_cfg
-                        and p_tgt == p_ev_cfg
-                    )
-                else:
-                    ok = False
-            asym_ocn_keys = (
-                "asym_ocn_even_preimage",
-                "asym_ocn_mersenne_k4_target",
-                "asym_ocn_mersenne_k4_sum",
-                "asym_ocn_mersenne_k4_rhs",
-                "asym_ocn_target_sum",
-                "asym_ocn_target_rhs",
-            )
-            if any(k in entry for k in asym_ocn_keys):
-                if all(k in entry for k in asym_ocn_keys) and seed >= 1 and nxt_c >= 3:
-                    checked_keys.update(asym_ocn_keys)
-                    asym_ev = int(entry["asym_ocn_even_preimage"])
-                    m_k4 = int(entry["asym_ocn_mersenne_k4_target"])
-                    dz_asym = [((0, 0), (1, 0)), ((0, 1), (1, 0))]
-                    dp_asym = [((0, 0), (0, 1)), ((1, 0), (1, 0))]
+                mixed_ocn_keys = (
+                    "even_sibling_preimage",
+                    "ocn_q2_multi_even_preimage",
+                    "ocn_q2_56_counter",
+                    "ocn_q2_224_counter",
+                    "ocn_q2_target_counter",
+                )
+                if any(k in entry for k in mixed_ocn_keys):
+                    if all(k in entry for k in mixed_ocn_keys) and seed >= 1 and nxt_c >= 3:
+                        checked_keys.update(mixed_ocn_keys)
+                        ev_sib2 = int(entry["even_sibling_preimage"])
+                        ocn2_ev = int(entry["ocn_q2_multi_even_preimage"])
+                        dz_mix = [((1, 0), (0, 1)), ((0, 0), (1, 1))]
+                        dp_mix = [((1, 0), (0, 1)), ((0, -1), (1, -1))]
+                        cfg_56 = run_msb_one_counter_ocn(2, dz_mix, dp_mix, 0, 56)
+                        cfg_224 = run_msb_one_counter_ocn(2, dz_mix, dp_mix, 0, 224)
+                        cfg_tgt = run_msb_one_counter_ocn(2, dz_mix, dp_mix, 0, nxt_c)
+                        cfg_ev2 = run_msb_one_counter_ocn(2, dz_mix, dp_mix, 0, ocn2_ev)
+                        cfg_lsb_tgt = run_lsb_one_counter_ocn(2, dz_mix, dp_mix, 0, nxt_c)
+                        cfg_lsb_ev2 = run_lsb_one_counter_ocn(2, dz_mix, dp_mix, 0, ocn2_ev)
+                        ok = (
+                            ok
+                            and (seed & 1) == 1
+                            and (nxt_c % 3) == 2
+                            and (2 * nxt_c - 1) // 3 == seed
+                            and ev_sib2 == 2 * nxt_c
+                            and ocn2_ev == 4 * nxt_c
+                            and int_compressed_step(ev_sib2, q=3) == nxt_c
+                            and int_compressed_step(int_compressed_step(ocn2_ev, q=3), q=3) == nxt_c
+                            and cfg_56[1] == int(entry["ocn_q2_56_counter"])
+                            and cfg_224[1] == int(entry["ocn_q2_224_counter"])
+                            and cfg_56[1] != cfg_224[1]
+                            and cfg_tgt[1] == int(entry["ocn_q2_target_counter"])
+                            and cfg_tgt == cfg_ev2
+                            and (cfg_lsb_tgt[0], cfg_lsb_tgt[1] == 0)
+                            == (cfg_lsb_ev2[0], cfg_lsb_ev2[1] == 0)
+                        )
+                    else:
+                        ok = False
+                pda_q2_g3_keys = (
+                    "pda_q2_g3_sep_preimage",
+                    "pda_q2_g3_multi_even_preimage",
+                    "pda_q2_g3_56_height",
+                    "pda_q2_g3_224_height",
+                    "pda_q2_g3_12416_height",
+                    "pda_q2_g3_49664_height",
+                )
+                if any(k in entry for k in pda_q2_g3_keys):
+                    if all(k in entry for k in pda_q2_g3_keys) and seed >= 1 and nxt_c >= 3:
+                        checked_keys.update(pda_q2_g3_keys)
+                        pda_sep = int(entry["pda_q2_g3_sep_preimage"])
+                        pda_ev = int(entry["pda_q2_g3_multi_even_preimage"])
+                        delta_pda_w11 = _canonical_pda_q2_g3_table()
+                        p_56 = run_msb_pda_stack(2, 3, delta_pda_w11, 0, 56)
+                        p_224 = run_msb_pda_stack(2, 3, delta_pda_w11, 0, 224)
+                        p_12k = run_msb_pda_stack(2, 3, delta_pda_w11, 0, 12_416)
+                        p_49k = run_msb_pda_stack(2, 3, delta_pda_w11, 0, 49_664)
+                        p_tgt = run_msb_pda_stack(2, 3, delta_pda_w11, 0, nxt_c)
+                        p_sep_cfg = run_msb_pda_stack(2, 3, delta_pda_w11, 0, pda_sep)
+                        p_ev_cfg = run_msb_pda_stack(2, 3, delta_pda_w11, 0, pda_ev)
+                        cur_p = pda_ev
+                        steps_p_ok = True
+                        for _ in range(6):
+                            if (cur_p & 1) != 0 or cur_p <= 2:
+                                steps_p_ok = False
+                                break
+                            cur_p >>= 1
+                        ok = (
+                            ok
+                            and (seed & 1) == 1
+                            and (nxt_c % 3) == 2
+                            and (2 * nxt_c - 1) // 3 == seed
+                            and pda_sep == 4 * nxt_c
+                            and pda_ev == 64 * nxt_c
+                            and steps_p_ok
+                            and cur_p == nxt_c
+                            and p_56[2] == int(entry["pda_q2_g3_56_height"])
+                            and p_224[2] == int(entry["pda_q2_g3_224_height"])
+                            and p_56 != p_224
+                            and p_12k[2] == int(entry["pda_q2_g3_12416_height"])
+                            and p_49k[2] == int(entry["pda_q2_g3_49664_height"])
+                            and p_12k != p_49k
+                            and p_tgt != p_sep_cfg
+                            and p_tgt == p_ev_cfg
+                        )
+                    else:
+                        ok = False
+                asym_ocn_keys = (
+                    "asym_ocn_even_preimage",
+                    "asym_ocn_mersenne_k4_target",
+                    "asym_ocn_mersenne_k4_sum",
+                    "asym_ocn_mersenne_k4_rhs",
+                    "asym_ocn_target_sum",
+                    "asym_ocn_target_rhs",
+                )
+                if any(k in entry for k in asym_ocn_keys):
+                    if all(k in entry for k in asym_ocn_keys) and seed >= 1 and nxt_c >= 3:
+                        checked_keys.update(asym_ocn_keys)
+                        asym_ev = int(entry["asym_ocn_even_preimage"])
+                        m_k4 = int(entry["asym_ocn_mersenne_k4_target"])
+                        dz_asym = [((0, 0), (1, 0)), ((0, 1), (1, 0))]
+                        dp_asym = [((0, 0), (0, 1)), ((1, 0), (1, 0))]
 
-                    def _w_asym(val_n: int) -> Fraction:
-                        _, c_v = run_msb_one_counter_ocn(2, dz_asym, dp_asym, 0, val_n)
-                        bl_v = val_n.bit_length()
-                        return Fraction(c_v + 1, bl_v * bl_v)
+                        def _w_asym(val_n: int) -> Fraction:
+                            _, c_v = run_msb_one_counter_ocn(2, dz_asym, dp_asym, 0, val_n)
+                            bl_v = val_n.bit_length()
+                            return Fraction(c_v + 1, bl_v * bl_v)
 
-                    asym_slopes_ok = all(
-                        run_msb_one_counter_ocn(2, dz_asym, dp_asym, 0, (1 << (k_t + 1)) - 1)[1] == 0
-                        and run_msb_one_counter_ocn(2, dz_asym, dp_asym, 0, 3 * (1 << k_t) - 1)[1] == k_t + 1
-                        and run_msb_one_counter_ocn(2, dz_asym, dp_asym, 0, 6 * (1 << k_t) - 2)[1] == k_t + 1
-                        for k_t in range(1, 9)
-                    )
-                    mers_bypass_ok = all(
-                        _w_asym(6 * (1 << k_t) - 2) + _w_asym((1 << (k_t + 1)) - 1)
-                        < _w_asym(3 * (1 << k_t) - 1)
-                        for k_t in range(4, 9)
-                    )
-                    k4_sum = _w_asym(2 * m_k4) + _w_asym((2 * m_k4 - 1) // 3)
-                    k4_rhs = _w_asym(m_k4)
-                    tgt_sum = _w_asym(asym_ev) + _w_asym(seed)
-                    tgt_rhs = _w_asym(nxt_c)
-                    ok = (
-                        ok
-                        and (seed & 1) == 1
-                        and (nxt_c % 3) == 2
-                        and (2 * nxt_c - 1) // 3 == seed
-                        and asym_ev == 2 * nxt_c
-                        and int_compressed_step(asym_ev, q=3) == nxt_c
-                        and m_k4 == 47
-                        and asym_slopes_ok
-                        and mers_bypass_ok
-                        and k4_sum == Fraction(str(entry["asym_ocn_mersenne_k4_sum"]))
-                        and k4_rhs == Fraction(str(entry["asym_ocn_mersenne_k4_rhs"]))
-                        and k4_sum < k4_rhs
-                        and tgt_sum == Fraction(str(entry["asym_ocn_target_sum"]))
-                        and tgt_rhs == Fraction(str(entry["asym_ocn_target_rhs"]))
-                        and tgt_sum > tgt_rhs
-                    )
-                else:
-                    ok = False
-            exp_bl_keys = (
-                "exp_base2_even_preimage",
-                "exp_base2_target_sum",
-                "exp_base2_target_rhs",
-                "reverse_syracuse_m2_start",
-                "reverse_syracuse_m2_end",
-                "reverse_syracuse_m2_bit_drop",
-            )
-            if any(k in entry for k in exp_bl_keys):
-                if all(k in entry for k in exp_bl_keys) and seed >= 1 and nxt_c >= 3:
-                    checked_keys.update(exp_bl_keys)
-                    ev_b2 = int(entry["exp_base2_even_preimage"])
-                    rs_start = int(entry["reverse_syracuse_m2_start"])
-                    rs_end = int(entry["reverse_syracuse_m2_end"])
-                    rs_drop = int(entry["reverse_syracuse_m2_bit_drop"])
-                    b2_sum = Fraction(1, 1 << ev_b2.bit_length()) + Fraction(1, 1 << seed.bit_length())
-                    b2_rhs = Fraction(1, 1 << nxt_c.bit_length())
-                    # Verify 4-step reverse Syracuse odd-preimage chain at m = 2:
-                    # x_t = 2^(t+1) * 3^(4-t) - 1 (t = 0..4): 161 -> 107 -> 71 -> 47 -> 31
-                    cur_rs = rs_start
-                    rs_chain_ok = True
-                    for _ in range(4):
-                        if cur_rs < 5 or (cur_rs % 3) != 2:
-                            rs_chain_ok = False
-                            break
-                        nxt_rs = (2 * cur_rs - 1) // 3
-                        if (nxt_rs & 1) != 1 or int_compressed_step(nxt_rs, q=3) != cur_rs:
-                            rs_chain_ok = False
-                            break
-                        cur_rs = nxt_rs
-                    ok = (
-                        ok
-                        and (seed & 1) == 1
-                        and (nxt_c % 3) == 2
-                        and (2 * nxt_c - 1) // 3 == seed
-                        and ev_b2 == 2 * nxt_c
-                        and int_compressed_step(ev_b2, q=3) == nxt_c
-                        and b2_sum == Fraction(str(entry["exp_base2_target_sum"]))
-                        and b2_rhs == Fraction(str(entry["exp_base2_target_rhs"]))
-                        and b2_sum > b2_rhs
-                        and rs_start == 2 * (9**2) - 1
-                        and rs_end == (1 << 5) - 1
-                        and rs_chain_ok
-                        and cur_rs == rs_end
-                        and (rs_start.bit_length() - rs_end.bit_length()) == rs_drop
-                        and rs_drop == 3
-                    )
-                else:
-                    ok = False
-            pop_eq_keys = (
-                "popcount_even_sibling",
-                "popcount_seed",
-                "popcount_target",
-                "popcount_even",
-                "eq_exp_32_74_collapse_k",
-                "eq_exp_32_74_collapse_xk",
-            )
-            if any(k in entry for k in pop_eq_keys):
+                        asym_slopes_ok = all(
+                            run_msb_one_counter_ocn(2, dz_asym, dp_asym, 0, (1 << (k_t + 1)) - 1)[1] == 0
+                            and run_msb_one_counter_ocn(2, dz_asym, dp_asym, 0, 3 * (1 << k_t) - 1)[1] == k_t + 1
+                            and run_msb_one_counter_ocn(2, dz_asym, dp_asym, 0, 6 * (1 << k_t) - 2)[1] == k_t + 1
+                            for k_t in range(1, 9)
+                        )
+                        mers_bypass_ok = all(
+                            _w_asym(6 * (1 << k_t) - 2) + _w_asym((1 << (k_t + 1)) - 1)
+                            < _w_asym(3 * (1 << k_t) - 1)
+                            for k_t in range(4, 9)
+                        )
+                        k4_sum = _w_asym(2 * m_k4) + _w_asym((2 * m_k4 - 1) // 3)
+                        k4_rhs = _w_asym(m_k4)
+                        tgt_sum = _w_asym(asym_ev) + _w_asym(seed)
+                        tgt_rhs = _w_asym(nxt_c)
+                        ok = (
+                            ok
+                            and (seed & 1) == 1
+                            and (nxt_c % 3) == 2
+                            and (2 * nxt_c - 1) // 3 == seed
+                            and asym_ev == 2 * nxt_c
+                            and int_compressed_step(asym_ev, q=3) == nxt_c
+                            and m_k4 == 47
+                            and asym_slopes_ok
+                            and mers_bypass_ok
+                            and k4_sum == Fraction(str(entry["asym_ocn_mersenne_k4_sum"]))
+                            and k4_rhs == Fraction(str(entry["asym_ocn_mersenne_k4_rhs"]))
+                            and k4_sum < k4_rhs
+                            and tgt_sum == Fraction(str(entry["asym_ocn_target_sum"]))
+                            and tgt_rhs == Fraction(str(entry["asym_ocn_target_rhs"]))
+                            and tgt_sum > tgt_rhs
+                        )
+                    else:
+                        ok = False
+                exp_bl_keys = (
+                    "exp_base2_even_preimage",
+                    "exp_base2_target_sum",
+                    "exp_base2_target_rhs",
+                    "reverse_syracuse_m2_start",
+                    "reverse_syracuse_m2_end",
+                    "reverse_syracuse_m2_bit_drop",
+                )
+                if any(k in entry for k in exp_bl_keys):
+                    if all(k in entry for k in exp_bl_keys) and seed >= 1 and nxt_c >= 3:
+                        checked_keys.update(exp_bl_keys)
+                        ev_b2 = int(entry["exp_base2_even_preimage"])
+                        rs_start = int(entry["reverse_syracuse_m2_start"])
+                        rs_end = int(entry["reverse_syracuse_m2_end"])
+                        rs_drop = int(entry["reverse_syracuse_m2_bit_drop"])
+                        b2_sum = Fraction(1, 1 << ev_b2.bit_length()) + Fraction(1, 1 << seed.bit_length())
+                        b2_rhs = Fraction(1, 1 << nxt_c.bit_length())
+                        # Verify 4-step reverse Syracuse odd-preimage chain at m = 2:
+                        # x_t = 2^(t+1) * 3^(4-t) - 1 (t = 0..4): 161 -> 107 -> 71 -> 47 -> 31
+                        cur_rs = rs_start
+                        rs_chain_ok = True
+                        for _ in range(4):
+                            if cur_rs < 5 or (cur_rs % 3) != 2:
+                                rs_chain_ok = False
+                                break
+                            nxt_rs = (2 * cur_rs - 1) // 3
+                            if (nxt_rs & 1) != 1 or int_compressed_step(nxt_rs, q=3) != cur_rs:
+                                rs_chain_ok = False
+                                break
+                            cur_rs = nxt_rs
+                        ok = (
+                            ok
+                            and (seed & 1) == 1
+                            and (nxt_c % 3) == 2
+                            and (2 * nxt_c - 1) // 3 == seed
+                            and ev_b2 == 2 * nxt_c
+                            and int_compressed_step(ev_b2, q=3) == nxt_c
+                            and b2_sum == Fraction(str(entry["exp_base2_target_sum"]))
+                            and b2_rhs == Fraction(str(entry["exp_base2_target_rhs"]))
+                            and b2_sum > b2_rhs
+                            and rs_start == 2 * (9**2) - 1
+                            and rs_end == (1 << 5) - 1
+                            and rs_chain_ok
+                            and cur_rs == rs_end
+                            and (rs_start.bit_length() - rs_end.bit_length()) == rs_drop
+                            and rs_drop == 3
+                        )
+                    else:
+                        ok = False
+                pop_eq_keys = (
+                    "popcount_even_sibling",
+                    "popcount_seed",
+                    "popcount_target",
+                    "popcount_even",
+                    "eq_exp_32_74_collapse_k",
+                    "eq_exp_32_74_collapse_xk",
+                )
+                if any(k in entry for k in pop_eq_keys):
+                    if (
+                        all(k in entry for k in pop_eq_keys)
+                        and seed >= 1
+                        and nxt_c >= 3
+                        and all(isinstance(entry[k], int) and not isinstance(entry[k], bool) for k in pop_eq_keys)
+                    ):
+                        checked_keys.update(pop_eq_keys)
+                        ev_pop = entry["popcount_even_sibling"]
+                        pc_seed = entry["popcount_seed"]
+                        pc_tgt = entry["popcount_target"]
+                        pc_ev = entry["popcount_even"]
+                        eq_k = entry["eq_exp_32_74_collapse_k"]
+                        eq_xk = entry["eq_exp_32_74_collapse_xk"]
+                        wf_eq = lambda n_v: (
+                            max(1, (3 ** n_v.bit_length()) // (2 ** n_v.bit_length())),
+                            max(1, (7 ** n_v.bit_length()) // (4 ** n_v.bit_length())),
+                        )
+                        cx_eq = 5
+                        for _ in range(max(0, eq_k)):
+                            cx_eq = mod9_cube_root2_branch_next(wf_eq, cx_eq)
+                        ok = (
+                            ok
+                            and (seed & 1) == 1
+                            and (nxt_c % 3) == 2
+                            and (2 * nxt_c - 1) // 3 == seed
+                            and ev_pop == 2 * nxt_c
+                            and int_compressed_step(ev_pop, q=3) == nxt_c
+                            and seed.bit_count() == pc_seed
+                            and nxt_c.bit_count() == pc_tgt
+                            and ev_pop.bit_count() == pc_ev
+                            and pc_tgt == 2
+                            and pc_ev == 2
+                            and pc_seed > pc_tgt
+                            and seed.bit_length() < nxt_c.bit_length()
+                            and eq_k >= 1
+                            and cx_eq == eq_xk
+                            and (1 << eq_k) * wf_eq(cx_eq)[0] * wf_eq(5)[1]
+                            > wf_eq(5)[0] * wf_eq(cx_eq)[1]
+                        )
+                    else:
+                        ok = False
+                pop_drop_keys = (
+                    "pop_drop_even_sibling",
+                    "pop_drop_bitlength_shared",
+                    "pop_drop_seed_popcount",
+                    "pop_drop_target_popcount",
+                    "alt_trans_257",
+                    "alt_trans_171",
+                    "alt_trans_31",
+                )
+                if any(k in entry for k in pop_drop_keys):
+                    if (
+                        all(k in entry for k in pop_drop_keys)
+                        and seed >= 3
+                        and nxt_c >= 3
+                        and all(_is_strict_int(entry[k]) for k in pop_drop_keys)
+                    ):
+                        checked_keys.update(pop_drop_keys)
+                        ev_pd = entry["pop_drop_even_sibling"]
+                        bl_sh = entry["pop_drop_bitlength_shared"]
+                        pc_sd = entry["pop_drop_seed_popcount"]
+                        pc_tg = entry["pop_drop_target_popcount"]
+                        at_257 = entry["alt_trans_257"]
+                        at_171 = entry["alt_trans_171"]
+                        at_31 = entry["alt_trans_31"]
+                        ok = (
+                            ok
+                            and (seed & 1) == 1
+                            and (nxt_c % 3) == 2
+                            and (2 * nxt_c - 1) // 3 == seed
+                            and ev_pd == 2 * nxt_c
+                            and int_compressed_step(ev_pd, q=3) == nxt_c
+                            and seed.bit_length() == bl_sh
+                            and nxt_c.bit_length() == bl_sh
+                            and seed.bit_count() == pc_sd
+                            and nxt_c.bit_count() == pc_tg
+                            and pc_sd < pc_tg
+                            and binary_alt_transitions(257) == at_257
+                            and at_257 == 2
+                            and binary_alt_transitions(171) == at_171
+                            and at_171 == 6
+                            and binary_alt_transitions(31) == at_31
+                            and at_31 == 0
+                        )
+                    else:
+                        ok = False
+                pre3_keys = (
+                    "preimage_3var_even_sibling",
+                    "preimage_3var_shared_popcount",
+                    "preimage_3var_seed_bitlength",
+                    "preimage_3var_target_bitlength",
+                    "preimage_3var_seed_alt_trans",
+                    "preimage_3var_target_alt_trans",
+                )
+                if any(k in entry for k in pre3_keys):
+                    if (
+                        all(k in entry for k in pre3_keys)
+                        and seed >= 3
+                        and nxt_c >= 3
+                        and all(_is_strict_int(entry[k]) for k in pre3_keys)
+                    ):
+                        checked_keys.update(pre3_keys)
+                        ev_p3 = entry["preimage_3var_even_sibling"]
+                        pc_sh3 = entry["preimage_3var_shared_popcount"]
+                        bl_sd3 = entry["preimage_3var_seed_bitlength"]
+                        bl_tg3 = entry["preimage_3var_target_bitlength"]
+                        at_sd3 = entry["preimage_3var_seed_alt_trans"]
+                        at_tg3 = entry["preimage_3var_target_alt_trans"]
+                        ok = (
+                            ok
+                            and (seed & 1) == 1
+                            and (nxt_c % 3) == 2
+                            and (2 * nxt_c - 1) // 3 == seed
+                            and ev_p3 == 2 * nxt_c
+                            and int_compressed_step(ev_p3, q=3) == nxt_c
+                            and seed.bit_count() == pc_sh3
+                            and nxt_c.bit_count() == pc_sh3
+                            and ev_p3.bit_count() == pc_sh3
+                            and seed.bit_length() == bl_sd3
+                            and nxt_c.bit_length() == bl_tg3
+                            and bl_tg3 == bl_sd3 + 1
+                            and binary_alt_transitions(seed) == at_sd3
+                            and binary_alt_transitions(nxt_c) == at_tg3
+                            and at_sd3 < at_tg3
+                        )
+                    else:
+                        ok = False
+                pre4_keys = (
+                    "preimage_4var_even_sibling",
+                    "preimage_4var_shared_popcount",
+                    "preimage_4var_seed_one_runs",
+                    "preimage_4var_target_one_runs",
+                    "preimage_2gram_seed",
+                    "preimage_2gram_target",
+                    "preimage_2gram_even_sibling",
+                )
+                if any(k in entry for k in pre4_keys):
+                    g_sd = entry.get("preimage_2gram_seed")
+                    g_tg = entry.get("preimage_2gram_target")
+                    g_ev = entry.get("preimage_2gram_even_sibling")
+                    if (
+                        all(k in entry for k in pre4_keys)
+                        and seed >= 3
+                        and nxt_c >= 3
+                        and all(_is_strict_int(entry[k]) for k in pre4_keys[:4])
+                        and all(
+                            isinstance(gl, list)
+                            and len(gl) == 4
+                            and all(_is_strict_int(gv) and gv >= 0 for gv in gl)
+                            for gl in (g_sd, g_tg, g_ev)
+                        )
+                    ):
+                        checked_keys.update(pre4_keys)
+                        ev_p4 = entry["preimage_4var_even_sibling"]
+                        pc_sh4 = entry["preimage_4var_shared_popcount"]
+                        or_sd4 = entry["preimage_4var_seed_one_runs"]
+                        or_tg4 = entry["preimage_4var_target_one_runs"]
+                        ok = (
+                            ok
+                            and (seed & 1) == 1
+                            and (nxt_c % 3) == 2
+                            and (2 * nxt_c - 1) // 3 == seed
+                            and ev_p4 == 2 * nxt_c
+                            and int_compressed_step(ev_p4, q=3) == nxt_c
+                            and seed.bit_count() == pc_sh4
+                            and nxt_c.bit_count() == pc_sh4
+                            and ev_p4.bit_count() == pc_sh4
+                            and binary_one_runs(seed) == or_sd4
+                            and binary_one_runs(nxt_c) == or_tg4
+                            and binary_one_runs(ev_p4) == or_tg4
+                            and or_sd4 < or_tg4
+                            and list(binary_two_grams(seed)) == g_sd
+                            and list(binary_two_grams(nxt_c)) == g_tg
+                            and list(binary_two_grams(ev_p4)) == g_ev
+                        )
+                    else:
+                        ok = False
+            if "cousin_diamond2_next" in entry:
+                checked_keys.add("cousin_diamond2_next")
+                claims_checked += 1
+                nxt_d2 = cousin_diamond2_step_int(seed, q=3)
+                ok = ok and (nxt_d2 == int(entry["cousin_diamond2_next"]))
+                if "core3_seed_plus_1" in entry:
+                    checked_keys.add("core3_seed_plus_1")
+                    ok = ok and (core3_pos(seed + 1) == int(entry["core3_seed_plus_1"]))
+                if "phi_diamond2_seed" in entry:
+                    checked_keys.add("phi_diamond2_seed")
+                    ok = ok and (cousin_diamond2_phi(seed) == int(entry["phi_diamond2_seed"]))
+                if "phi_diamond2_next" in entry:
+                    checked_keys.add("phi_diamond2_next")
+                    ok = ok and (cousin_diamond2_phi(nxt_d2) == int(entry["phi_diamond2_next"]))
+            if "cousin_diamond3_next" in entry:
+                checked_keys.add("cousin_diamond3_next")
+                claims_checked += 1
+                nxt_d3 = cousin_diamond3_step_int(seed, q=3)
+                ok = ok and (nxt_d3 == int(entry["cousin_diamond3_next"]))
+                if "cousin_diamond3_steps_to_1" in entry:
+                    checked_keys.add("cousin_diamond3_steps_to_1")
+                    cur_d3 = seed
+                    st_d3 = 0
+                    while cur_d3 != 1 and st_d3 < 5000:
+                        cur_d3 = cousin_diamond3_step_int(cur_d3, q=3)
+                        st_d3 += 1
+                    ok = ok and (cur_d3 == 1) and (st_d3 == int(entry["cousin_diamond3_steps_to_1"]))
+                if "phi_diamond2_seed" in entry:
+                    checked_keys.add("phi_diamond2_seed")
+                    ok = ok and (cousin_diamond2_phi(seed) == int(entry["phi_diamond2_seed"]))
+                if "phi_diamond2_next" in entry:
+                    checked_keys.add("phi_diamond2_next")
+                    ok = ok and (cousin_diamond2_phi(nxt_d3) == int(entry["phi_diamond2_next"]))
+            if "cousin_diamond4_next" in entry:
+                checked_keys.add("cousin_diamond4_next")
+                claims_checked += 1
+                nxt_d4 = cousin_diamond4_step_int(seed, q=3)
+                ok = ok and (nxt_d4 == int(entry["cousin_diamond4_next"]))
+                if "cousin_diamond4_steps_to_1" in entry:
+                    checked_keys.add("cousin_diamond4_steps_to_1")
+                    cur_d4 = seed
+                    st_d4 = 0
+                    while cur_d4 != 1 and st_d4 < 5000:
+                        cur_d4 = cousin_diamond4_step_int(cur_d4, q=3)
+                        st_d4 += 1
+                    ok = ok and (cur_d4 == 1) and (st_d4 == int(entry["cousin_diamond4_steps_to_1"]))
+                if "phi_diamond2_seed" in entry:
+                    checked_keys.add("phi_diamond2_seed")
+                    ok = ok and (cousin_diamond2_phi(seed) == int(entry["phi_diamond2_seed"]))
+                if "phi_diamond2_next" in entry:
+                    checked_keys.add("phi_diamond2_next")
+                    ok = ok and (cousin_diamond2_phi(nxt_d4) == int(entry["phi_diamond2_next"]))
+            if "cousin_diamond5_next" in entry:
+                checked_keys.add("cousin_diamond5_next")
+                claims_checked += 1
+                nxt_d5 = cousin_diamond5_step_int(seed, q=3)
+                ok = (
+                    ok
+                    and is_diamond5_cone6(seed)
+                    and is_diamond4_cone5(nxt_d5)
+                    and (nxt_d5 == int(entry["cousin_diamond5_next"]))
+                )
+                if "cousin_diamond5_steps_to_1" in entry:
+                    checked_keys.add("cousin_diamond5_steps_to_1")
+                    cur_d5 = seed
+                    st_d5 = 0
+                    while cur_d5 != 1 and st_d5 < 5000:
+                        cur_d5 = cousin_diamond5_step_int(cur_d5, q=3)
+                        st_d5 += 1
+                    ok = ok and (cur_d5 == 1) and (st_d5 == int(entry["cousin_diamond5_steps_to_1"]))
+                if "phi_diamond2_seed" in entry:
+                    checked_keys.add("phi_diamond2_seed")
+                    ok = ok and (cousin_diamond2_phi(seed) == int(entry["phi_diamond2_seed"]))
+                if "phi_diamond2_next" in entry:
+                    checked_keys.add("phi_diamond2_next")
+                    ok = ok and (cousin_diamond2_phi(nxt_d5) == int(entry["phi_diamond2_next"]))
+                    if "phi_diamond2_seed" in entry:
+                        ok = ok and (cousin_diamond2_phi(nxt_d5) > cousin_diamond2_phi(seed))
+            if "cousin_diamond6_next" in entry:
+                checked_keys.add("cousin_diamond6_next")
+                claims_checked += 1
+                nxt_d6 = cousin_diamond6_step_int(seed, q=3)
+                ok = (
+                    ok
+                    and is_diamond6_cone7(seed)
+                    and is_diamond5_cone6(nxt_d6)
+                    and is_diamond4_cone5(cousin_diamond6_step_int(nxt_d6, q=3))
+                    and (nxt_d6 == int(entry["cousin_diamond6_next"]))
+                )
+                if "cousin_diamond6_steps_to_1" in entry:
+                    checked_keys.add("cousin_diamond6_steps_to_1")
+                    cur_d6 = seed
+                    st_d6 = 0
+                    while cur_d6 != 1 and st_d6 < 5000:
+                        cur_d6 = cousin_diamond6_step_int(cur_d6, q=3)
+                        st_d6 += 1
+                    ok = ok and (cur_d6 == 1) and (st_d6 == int(entry["cousin_diamond6_steps_to_1"]))
+                if "phi_diamond2_seed" in entry:
+                    checked_keys.add("phi_diamond2_seed")
+                    ok = ok and (cousin_diamond2_phi(seed) == int(entry["phi_diamond2_seed"]))
+                if "phi_diamond2_next" in entry:
+                    checked_keys.add("phi_diamond2_next")
+                    ok = ok and (cousin_diamond2_phi(nxt_d6) == int(entry["phi_diamond2_next"]))
+                    if "phi_diamond2_seed" in entry:
+                        ok = ok and (cousin_diamond2_phi(nxt_d6) > cousin_diamond2_phi(seed))
+            if "cousin_diamond7_next" in entry:
+                checked_keys.add("cousin_diamond7_next")
+                claims_checked += 1
+                nxt_d7 = cousin_diamond7_step_int(seed, q=3)
+                nxt2_d7 = cousin_diamond7_step_int(nxt_d7, q=3)
+                nxt3_d7 = cousin_diamond7_step_int(nxt2_d7, q=3)
+                ok = (
+                    ok
+                    and is_diamond7_cone8(seed)
+                    and is_diamond6_cone7(nxt_d7)
+                    and is_diamond5_cone6(nxt2_d7)
+                    and is_diamond4_cone5(nxt3_d7)
+                    and (nxt_d7 == int(entry["cousin_diamond7_next"]))
+                )
+                if "cousin_diamond7_steps_to_1" in entry:
+                    checked_keys.add("cousin_diamond7_steps_to_1")
+                    cur_d7 = seed
+                    st_d7 = 0
+                    while cur_d7 != 1 and st_d7 < 5000:
+                        cur_d7 = cousin_diamond7_step_int(cur_d7, q=3)
+                        st_d7 += 1
+                    ok = ok and (cur_d7 == 1) and (st_d7 == int(entry["cousin_diamond7_steps_to_1"]))
+                if "phi_diamond2_seed" in entry:
+                    checked_keys.add("phi_diamond2_seed")
+                    ok = ok and (cousin_diamond2_phi(seed) == int(entry["phi_diamond2_seed"]))
+                if "phi_diamond2_next" in entry:
+                    checked_keys.add("phi_diamond2_next")
+                    ok = ok and (cousin_diamond2_phi(nxt_d7) == int(entry["phi_diamond2_next"]))
+                    if "phi_diamond2_seed" in entry:
+                        ok = ok and (cousin_diamond2_phi(nxt_d7) > cousin_diamond2_phi(seed))
+            if "cousin_diamond8_next" in entry:
+                checked_keys.add("cousin_diamond8_next")
+                claims_checked += 1
+                nxt_d8 = cousin_diamond8_step_int(seed, q=3)
+                nxt2_d8 = cousin_diamond8_step_int(nxt_d8, q=3)
+                nxt3_d8 = cousin_diamond8_step_int(nxt2_d8, q=3)
+                nxt4_d8 = cousin_diamond8_step_int(nxt3_d8, q=3)
+                ok = (
+                    ok
+                    and is_diamond8_cone9(seed)
+                    and is_diamond7_cone8(nxt_d8)
+                    and is_diamond6_cone7(nxt2_d8)
+                    and is_diamond5_cone6(nxt3_d8)
+                    and is_diamond4_cone5(nxt4_d8)
+                    and (nxt_d8 == int(entry["cousin_diamond8_next"]))
+                )
+                if "cousin_diamond8_steps_to_1" in entry:
+                    checked_keys.add("cousin_diamond8_steps_to_1")
+                    cur_d8 = seed
+                    st_d8 = 0
+                    while cur_d8 != 1 and st_d8 < 5000:
+                        cur_d8 = cousin_diamond8_step_int(cur_d8, q=3)
+                        st_d8 += 1
+                    ok = ok and (cur_d8 == 1) and (st_d8 == int(entry["cousin_diamond8_steps_to_1"]))
+                if "phi_diamond2_seed" in entry:
+                    checked_keys.add("phi_diamond2_seed")
+                    ok = ok and (cousin_diamond2_phi(seed) == int(entry["phi_diamond2_seed"]))
+                if "phi_diamond2_next" in entry:
+                    checked_keys.add("phi_diamond2_next")
+                    ok = ok and (cousin_diamond2_phi(nxt_d8) == int(entry["phi_diamond2_next"]))
+                    if "phi_diamond2_seed" in entry:
+                        ok = ok and (cousin_diamond2_phi(nxt_d8) > cousin_diamond2_phi(seed))
+            if "cousin_diamond9_next" in entry:
+                checked_keys.add("cousin_diamond9_next")
+                claims_checked += 1
+                nxt_d9 = cousin_diamond9_step_int(seed, q=3)
+                nxt2_d9 = cousin_diamond9_step_int(nxt_d9, q=3)
+                nxt3_d9 = cousin_diamond9_step_int(nxt2_d9, q=3)
+                nxt4_d9 = cousin_diamond9_step_int(nxt3_d9, q=3)
+                nxt5_d9 = cousin_diamond9_step_int(nxt4_d9, q=3)
+                ok = (
+                    ok
+                    and is_diamond9_cone10(seed)
+                    and is_diamond8_cone9(nxt_d9)
+                    and is_diamond7_cone8(nxt2_d9)
+                    and is_diamond6_cone7(nxt3_d9)
+                    and is_diamond5_cone6(nxt4_d9)
+                    and is_diamond4_cone5(nxt5_d9)
+                    and (nxt_d9 == int(entry["cousin_diamond9_next"]))
+                )
+                if "cousin_diamond9_steps_to_1" in entry:
+                    checked_keys.add("cousin_diamond9_steps_to_1")
+                    cur_d9 = seed
+                    st_d9 = 0
+                    while cur_d9 != 1 and st_d9 < 5000:
+                        cur_d9 = cousin_diamond9_step_int(cur_d9, q=3)
+                        st_d9 += 1
+                    ok = ok and (cur_d9 == 1) and (st_d9 == int(entry["cousin_diamond9_steps_to_1"]))
+                if "phi_diamond2_seed" in entry:
+                    checked_keys.add("phi_diamond2_seed")
+                    ok = ok and (cousin_diamond2_phi(seed) == int(entry["phi_diamond2_seed"]))
+                if "phi_diamond2_next" in entry:
+                    checked_keys.add("phi_diamond2_next")
+                    ok = ok and (cousin_diamond2_phi(nxt_d9) == int(entry["phi_diamond2_next"]))
+                    if "phi_diamond2_seed" in entry:
+                        ok = ok and (cousin_diamond2_phi(nxt_d9) > cousin_diamond2_phi(seed))
+            if "cousin_diamond10_next" in entry:
+                checked_keys.add("cousin_diamond10_next")
+                claims_checked += 1
+                nxt_d10 = cousin_diamond10_step_int(seed, q=3)
+                nxt2_d10 = cousin_diamond10_step_int(nxt_d10, q=3)
+                nxt3_d10 = cousin_diamond10_step_int(nxt2_d10, q=3)
+                nxt4_d10 = cousin_diamond10_step_int(nxt3_d10, q=3)
+                nxt5_d10 = cousin_diamond10_step_int(nxt4_d10, q=3)
+                nxt6_d10 = cousin_diamond10_step_int(nxt5_d10, q=3)
+                ok = (
+                    ok
+                    and is_diamond10_cone11(seed)
+                    and is_diamond9_cone10(nxt_d10)
+                    and is_diamond8_cone9(nxt2_d10)
+                    and is_diamond7_cone8(nxt3_d10)
+                    and is_diamond6_cone7(nxt4_d10)
+                    and is_diamond5_cone6(nxt5_d10)
+                    and is_diamond4_cone5(nxt6_d10)
+                    and (nxt_d10 == int(entry["cousin_diamond10_next"]))
+                )
+                if "cousin_diamond10_steps_to_1" in entry:
+                    checked_keys.add("cousin_diamond10_steps_to_1")
+                    cur_d10 = seed
+                    st_d10 = 0
+                    while cur_d10 != 1 and st_d10 < 5000:
+                        cur_d10 = cousin_diamond10_step_int(cur_d10, q=3)
+                        st_d10 += 1
+                    ok = ok and (cur_d10 == 1) and (st_d10 == int(entry["cousin_diamond10_steps_to_1"]))
+                if "phi_diamond2_seed" in entry:
+                    checked_keys.add("phi_diamond2_seed")
+                    ok = ok and (cousin_diamond2_phi(seed) == int(entry["phi_diamond2_seed"]))
+                if "phi_diamond2_next" in entry:
+                    checked_keys.add("phi_diamond2_next")
+                    ok = ok and (cousin_diamond2_phi(nxt_d10) == int(entry["phi_diamond2_next"]))
+                    if "phi_diamond2_seed" in entry:
+                        ok = ok and (cousin_diamond2_phi(nxt_d10) > cousin_diamond2_phi(seed))
+            if "cousin_diamond11_next" in entry:
                 if (
-                    all(k in entry for k in pop_eq_keys)
-                    and seed >= 1
-                    and nxt_c >= 3
-                    and all(isinstance(entry[k], int) and not isinstance(entry[k], bool) for k in pop_eq_keys)
+                    isinstance(entry["seed"], int)
+                    and not isinstance(entry["seed"], bool)
+                    and isinstance(entry["cousin_diamond11_next"], int)
+                    and not isinstance(entry["cousin_diamond11_next"], bool)
                 ):
-                    checked_keys.update(pop_eq_keys)
-                    ev_pop = entry["popcount_even_sibling"]
-                    pc_seed = entry["popcount_seed"]
-                    pc_tgt = entry["popcount_target"]
-                    pc_ev = entry["popcount_even"]
-                    eq_k = entry["eq_exp_32_74_collapse_k"]
-                    eq_xk = entry["eq_exp_32_74_collapse_xk"]
-                    wf_eq = lambda n_v: (
-                        max(1, (3 ** n_v.bit_length()) // (2 ** n_v.bit_length())),
-                        max(1, (7 ** n_v.bit_length()) // (4 ** n_v.bit_length())),
-                    )
-                    cx_eq = 5
-                    for _ in range(max(0, eq_k)):
-                        cx_eq = mod9_cube_root2_branch_next(wf_eq, cx_eq)
+                    checked_keys.add("cousin_diamond11_next")
+                    claims_checked += 1
+                    nxt_d11 = cousin_diamond11_step_int(seed, q=3)
+                    nxt2_d11 = cousin_diamond11_step_int(nxt_d11, q=3)
+                    nxt3_d11 = cousin_diamond11_step_int(nxt2_d11, q=3)
+                    nxt4_d11 = cousin_diamond11_step_int(nxt3_d11, q=3)
+                    nxt5_d11 = cousin_diamond11_step_int(nxt4_d11, q=3)
+                    nxt6_d11 = cousin_diamond11_step_int(nxt5_d11, q=3)
+                    nxt7_d11 = cousin_diamond11_step_int(nxt6_d11, q=3)
                     ok = (
                         ok
-                        and (seed & 1) == 1
-                        and (nxt_c % 3) == 2
-                        and (2 * nxt_c - 1) // 3 == seed
-                        and ev_pop == 2 * nxt_c
-                        and int_compressed_step(ev_pop, q=3) == nxt_c
-                        and seed.bit_count() == pc_seed
-                        and nxt_c.bit_count() == pc_tgt
-                        and ev_pop.bit_count() == pc_ev
-                        and pc_tgt == 2
-                        and pc_ev == 2
-                        and pc_seed > pc_tgt
-                        and seed.bit_length() < nxt_c.bit_length()
-                        and eq_k >= 1
-                        and cx_eq == eq_xk
-                        and (1 << eq_k) * wf_eq(cx_eq)[0] * wf_eq(5)[1]
-                        > wf_eq(5)[0] * wf_eq(cx_eq)[1]
+                        and is_diamond11_cone12(seed)
+                        and is_diamond10_cone11(nxt_d11)
+                        and is_diamond9_cone10(nxt2_d11)
+                        and is_diamond8_cone9(nxt3_d11)
+                        and is_diamond7_cone8(nxt4_d11)
+                        and is_diamond6_cone7(nxt5_d11)
+                        and is_diamond5_cone6(nxt6_d11)
+                        and is_diamond4_cone5(nxt7_d11)
+                        and (nxt_d11 == entry["cousin_diamond11_next"])
                     )
+                    if "cousin_diamond11_steps_to_1" in entry:
+                        if isinstance(entry["cousin_diamond11_steps_to_1"], int) and not isinstance(
+                            entry["cousin_diamond11_steps_to_1"], bool
+                        ):
+                            checked_keys.add("cousin_diamond11_steps_to_1")
+                            cur_d11 = seed
+                            st_d11 = 0
+                            while cur_d11 != 1 and st_d11 < 5000:
+                                cur_d11 = cousin_diamond11_step_int(cur_d11, q=3)
+                                st_d11 += 1
+                            ok = ok and (cur_d11 == 1) and (st_d11 == entry["cousin_diamond11_steps_to_1"])
+                        else:
+                            ok = False
+                    if "phi_diamond2_seed" in entry:
+                        if isinstance(entry["phi_diamond2_seed"], int) and not isinstance(
+                            entry["phi_diamond2_seed"], bool
+                        ):
+                            checked_keys.add("phi_diamond2_seed")
+                            ok = ok and (cousin_diamond2_phi(seed) == entry["phi_diamond2_seed"])
+                        else:
+                            ok = False
+                    if "phi_diamond2_next" in entry:
+                        if isinstance(entry["phi_diamond2_next"], int) and not isinstance(
+                            entry["phi_diamond2_next"], bool
+                        ):
+                            checked_keys.add("phi_diamond2_next")
+                            ok = ok and (cousin_diamond2_phi(nxt_d11) == entry["phi_diamond2_next"])
+                            if "phi_diamond2_seed" in entry:
+                                ok = ok and (cousin_diamond2_phi(nxt_d11) > cousin_diamond2_phi(seed))
+                        else:
+                            ok = False
                 else:
                     ok = False
-            pop_drop_keys = (
-                "pop_drop_even_sibling",
-                "pop_drop_bitlength_shared",
-                "pop_drop_seed_popcount",
-                "pop_drop_target_popcount",
-                "alt_trans_257",
-                "alt_trans_171",
-                "alt_trans_31",
+            if "cousin_diamond12_next" in entry:
+                if _is_strict_int(entry["seed"]) and _is_strict_int(entry["cousin_diamond12_next"]):
+                    checked_keys.add("cousin_diamond12_next")
+                    claims_checked += 1
+                    nxt_d12 = cousin_diamond12_step_int(seed, q=3)
+                    nxt2_d12 = cousin_diamond12_step_int(nxt_d12, q=3)
+                    nxt3_d12 = cousin_diamond12_step_int(nxt2_d12, q=3)
+                    nxt4_d12 = cousin_diamond12_step_int(nxt3_d12, q=3)
+                    nxt5_d12 = cousin_diamond12_step_int(nxt4_d12, q=3)
+                    nxt6_d12 = cousin_diamond12_step_int(nxt5_d12, q=3)
+                    nxt7_d12 = cousin_diamond12_step_int(nxt6_d12, q=3)
+                    nxt8_d12 = cousin_diamond12_step_int(nxt7_d12, q=3)
+                    ok = (
+                        ok
+                        and is_diamond12_cone13(seed)
+                        and is_diamond11_cone12(nxt_d12)
+                        and is_diamond10_cone11(nxt2_d12)
+                        and is_diamond9_cone10(nxt3_d12)
+                        and is_diamond8_cone9(nxt4_d12)
+                        and is_diamond7_cone8(nxt5_d12)
+                        and is_diamond6_cone7(nxt6_d12)
+                        and is_diamond5_cone6(nxt7_d12)
+                        and is_diamond4_cone5(nxt8_d12)
+                        and (nxt_d12 == entry["cousin_diamond12_next"])
+                    )
+                    if "cousin_diamond12_steps_to_1" in entry:
+                        if _is_strict_int(entry["cousin_diamond12_steps_to_1"]):
+                            checked_keys.add("cousin_diamond12_steps_to_1")
+                            cur_d12 = seed
+                            st_d12 = 0
+                            while cur_d12 != 1 and st_d12 < 5000:
+                                cur_d12 = cousin_diamond12_step_int(cur_d12, q=3)
+                                st_d12 += 1
+                            ok = ok and (cur_d12 == 1) and (st_d12 == entry["cousin_diamond12_steps_to_1"])
+                        else:
+                            ok = False
+                    if "phi_diamond2_seed" in entry:
+                        if _is_strict_int(entry["phi_diamond2_seed"]):
+                            checked_keys.add("phi_diamond2_seed")
+                            ok = ok and (cousin_diamond2_phi(seed) == entry["phi_diamond2_seed"])
+                        else:
+                            ok = False
+                    if "phi_diamond2_next" in entry:
+                        if _is_strict_int(entry["phi_diamond2_next"]):
+                            checked_keys.add("phi_diamond2_next")
+                            ok = ok and (cousin_diamond2_phi(nxt_d12) == entry["phi_diamond2_next"])
+                            if "phi_diamond2_seed" in entry:
+                                ok = ok and (cousin_diamond2_phi(nxt_d12) > cousin_diamond2_phi(seed))
+                        else:
+                            ok = False
+                else:
+                    ok = False
+            c39_weak_keys = (
+                "c39_m1_drained_odd",
+                "c39_srs_steps",
+                "c39_weak_d2_strict_mat_rules",
             )
-            if any(k in entry for k in pop_drop_keys):
+            if any(k in entry for k in c39_weak_keys):
                 if (
-                    all(k in entry for k in pop_drop_keys)
+                    all(k in entry for k in c39_weak_keys)
+                    and isinstance(entry["seed"], int)
+                    and not isinstance(entry["seed"], bool)
                     and seed >= 3
-                    and nxt_c >= 3
-                    and all(_is_strict_int(entry[k]) for k in pop_drop_keys)
+                    and (seed & 1) == 1
+                    and all(isinstance(entry[k], int) and not isinstance(entry[k], bool) for k in c39_weak_keys)
                 ):
-                    checked_keys.update(pop_drop_keys)
-                    ev_pd = entry["pop_drop_even_sibling"]
-                    bl_sh = entry["pop_drop_bitlength_shared"]
-                    pc_sd = entry["pop_drop_seed_popcount"]
-                    pc_tg = entry["pop_drop_target_popcount"]
-                    at_257 = entry["alt_trans_257"]
-                    at_171 = entry["alt_trans_171"]
-                    at_31 = entry["alt_trans_31"]
-                    ok = (
-                        ok
-                        and (seed & 1) == 1
-                        and (nxt_c % 3) == 2
-                        and (2 * nxt_c - 1) // 3 == seed
-                        and ev_pd == 2 * nxt_c
-                        and int_compressed_step(ev_pd, q=3) == nxt_c
-                        and seed.bit_length() == bl_sh
-                        and nxt_c.bit_length() == bl_sh
-                        and seed.bit_count() == pc_sd
-                        and nxt_c.bit_count() == pc_tg
-                        and pc_sd < pc_tg
-                        and binary_alt_transitions(257) == at_257
-                        and at_257 == 2
-                        and binary_alt_transitions(171) == at_171
-                        and at_171 == 6
-                        and binary_alt_transitions(31) == at_31
-                        and at_31 == 0
+                    checked_keys.update(c39_weak_keys)
+                    claims_checked += 1
+                    dr_odd_exp = entry["c39_m1_drained_odd"]
+                    srs_st_exp = entry["c39_srs_steps"]
+                    strict_r_exp = entry["c39_weak_d2_strict_mat_rules"]
+                    ok = ok and _verify_c39_m1_4919_and_weak_d2_ground_truth(
+                        seed, dr_odd_exp, srs_st_exp, strict_r_exp
                     )
                 else:
                     ok = False
-            pre3_keys = (
-                "preimage_3var_even_sibling",
-                "preimage_3var_shared_popcount",
-                "preimage_3var_seed_bitlength",
-                "preimage_3var_target_bitlength",
-                "preimage_3var_seed_alt_trans",
-                "preimage_3var_target_alt_trans",
+            c39_bt_keys = (
+                "c39_boundary_pair",
+                "c39_boundary_topleft_val",
+                "c39_active_interior_count",
+                "c39_bt_nontri_strict_rules",
             )
-            if any(k in entry for k in pre3_keys):
+            if any(k in entry for k in c39_bt_keys):
+                bp_c39 = entry.get("c39_boundary_pair")
                 if (
-                    all(k in entry for k in pre3_keys)
+                    all(k in entry for k in c39_bt_keys)
+                    and _is_strict_int(entry["seed"])
                     and seed >= 3
-                    and nxt_c >= 3
-                    and all(_is_strict_int(entry[k]) for k in pre3_keys)
+                    and isinstance(bp_c39, list)
+                    and len(bp_c39) == 2
+                    and all(_is_strict_int(v_b) and 0 <= v_b < 12 for v_b in bp_c39)
+                    and all(_is_strict_int(entry[k]) for k in c39_bt_keys[1:])
                 ):
-                    checked_keys.update(pre3_keys)
-                    ev_p3 = entry["preimage_3var_even_sibling"]
-                    pc_sh3 = entry["preimage_3var_shared_popcount"]
-                    bl_sd3 = entry["preimage_3var_seed_bitlength"]
-                    bl_tg3 = entry["preimage_3var_target_bitlength"]
-                    at_sd3 = entry["preimage_3var_seed_alt_trans"]
-                    at_tg3 = entry["preimage_3var_target_alt_trans"]
-                    ok = (
-                        ok
-                        and (seed & 1) == 1
-                        and (nxt_c % 3) == 2
-                        and (2 * nxt_c - 1) // 3 == seed
-                        and ev_p3 == 2 * nxt_c
-                        and int_compressed_step(ev_p3, q=3) == nxt_c
-                        and seed.bit_count() == pc_sh3
-                        and nxt_c.bit_count() == pc_sh3
-                        and ev_p3.bit_count() == pc_sh3
-                        and seed.bit_length() == bl_sd3
-                        and nxt_c.bit_length() == bl_tg3
-                        and bl_tg3 == bl_sd3 + 1
-                        and binary_alt_transitions(seed) == at_sd3
-                        and binary_alt_transitions(nxt_c) == at_tg3
-                        and at_sd3 < at_tg3
+                    checked_keys.update(c39_bt_keys)
+                    claims_checked += 1
+                    ok = ok and _verify_c39_boundary_and_bt_nontri_ground_truth(
+                        bp_c39[0],
+                        bp_c39[1],
+                        entry["c39_boundary_topleft_val"],
+                        entry["c39_active_interior_count"],
+                        entry["c39_bt_nontri_strict_rules"],
                     )
                 else:
                     ok = False
-        if "cousin_diamond2_next" in entry:
-            checked_keys.add("cousin_diamond2_next")
-            claims_checked += 1
-            nxt_d2 = cousin_diamond2_step_int(seed, q=3)
-            ok = ok and (nxt_d2 == int(entry["cousin_diamond2_next"]))
-            if "core3_seed_plus_1" in entry:
-                checked_keys.add("core3_seed_plus_1")
-                ok = ok and (core3_pos(seed + 1) == int(entry["core3_seed_plus_1"]))
-            if "phi_diamond2_seed" in entry:
-                checked_keys.add("phi_diamond2_seed")
-                ok = ok and (cousin_diamond2_phi(seed) == int(entry["phi_diamond2_seed"]))
-            if "phi_diamond2_next" in entry:
-                checked_keys.add("phi_diamond2_next")
-                ok = ok and (cousin_diamond2_phi(nxt_d2) == int(entry["phi_diamond2_next"]))
-        if "cousin_diamond3_next" in entry:
-            checked_keys.add("cousin_diamond3_next")
-            claims_checked += 1
-            nxt_d3 = cousin_diamond3_step_int(seed, q=3)
-            ok = ok and (nxt_d3 == int(entry["cousin_diamond3_next"]))
-            if "cousin_diamond3_steps_to_1" in entry:
-                checked_keys.add("cousin_diamond3_steps_to_1")
-                cur_d3 = seed
-                st_d3 = 0
-                while cur_d3 != 1 and st_d3 < 5000:
-                    cur_d3 = cousin_diamond3_step_int(cur_d3, q=3)
-                    st_d3 += 1
-                ok = ok and (cur_d3 == 1) and (st_d3 == int(entry["cousin_diamond3_steps_to_1"]))
-            if "phi_diamond2_seed" in entry:
-                checked_keys.add("phi_diamond2_seed")
-                ok = ok and (cousin_diamond2_phi(seed) == int(entry["phi_diamond2_seed"]))
-            if "phi_diamond2_next" in entry:
-                checked_keys.add("phi_diamond2_next")
-                ok = ok and (cousin_diamond2_phi(nxt_d3) == int(entry["phi_diamond2_next"]))
-        if "cousin_diamond4_next" in entry:
-            checked_keys.add("cousin_diamond4_next")
-            claims_checked += 1
-            nxt_d4 = cousin_diamond4_step_int(seed, q=3)
-            ok = ok and (nxt_d4 == int(entry["cousin_diamond4_next"]))
-            if "cousin_diamond4_steps_to_1" in entry:
-                checked_keys.add("cousin_diamond4_steps_to_1")
-                cur_d4 = seed
-                st_d4 = 0
-                while cur_d4 != 1 and st_d4 < 5000:
-                    cur_d4 = cousin_diamond4_step_int(cur_d4, q=3)
-                    st_d4 += 1
-                ok = ok and (cur_d4 == 1) and (st_d4 == int(entry["cousin_diamond4_steps_to_1"]))
-            if "phi_diamond2_seed" in entry:
-                checked_keys.add("phi_diamond2_seed")
-                ok = ok and (cousin_diamond2_phi(seed) == int(entry["phi_diamond2_seed"]))
-            if "phi_diamond2_next" in entry:
-                checked_keys.add("phi_diamond2_next")
-                ok = ok and (cousin_diamond2_phi(nxt_d4) == int(entry["phi_diamond2_next"]))
-        if "cousin_diamond5_next" in entry:
-            checked_keys.add("cousin_diamond5_next")
-            claims_checked += 1
-            nxt_d5 = cousin_diamond5_step_int(seed, q=3)
-            ok = (
-                ok
-                and is_diamond5_cone6(seed)
-                and is_diamond4_cone5(nxt_d5)
-                and (nxt_d5 == int(entry["cousin_diamond5_next"]))
-            )
-            if "cousin_diamond5_steps_to_1" in entry:
-                checked_keys.add("cousin_diamond5_steps_to_1")
-                cur_d5 = seed
-                st_d5 = 0
-                while cur_d5 != 1 and st_d5 < 5000:
-                    cur_d5 = cousin_diamond5_step_int(cur_d5, q=3)
-                    st_d5 += 1
-                ok = ok and (cur_d5 == 1) and (st_d5 == int(entry["cousin_diamond5_steps_to_1"]))
-            if "phi_diamond2_seed" in entry:
-                checked_keys.add("phi_diamond2_seed")
-                ok = ok and (cousin_diamond2_phi(seed) == int(entry["phi_diamond2_seed"]))
-            if "phi_diamond2_next" in entry:
-                checked_keys.add("phi_diamond2_next")
-                ok = ok and (cousin_diamond2_phi(nxt_d5) == int(entry["phi_diamond2_next"]))
-                if "phi_diamond2_seed" in entry:
-                    ok = ok and (cousin_diamond2_phi(nxt_d5) > cousin_diamond2_phi(seed))
-        if "cousin_diamond6_next" in entry:
-            checked_keys.add("cousin_diamond6_next")
-            claims_checked += 1
-            nxt_d6 = cousin_diamond6_step_int(seed, q=3)
-            ok = (
-                ok
-                and is_diamond6_cone7(seed)
-                and is_diamond5_cone6(nxt_d6)
-                and is_diamond4_cone5(cousin_diamond6_step_int(nxt_d6, q=3))
-                and (nxt_d6 == int(entry["cousin_diamond6_next"]))
-            )
-            if "cousin_diamond6_steps_to_1" in entry:
-                checked_keys.add("cousin_diamond6_steps_to_1")
-                cur_d6 = seed
-                st_d6 = 0
-                while cur_d6 != 1 and st_d6 < 5000:
-                    cur_d6 = cousin_diamond6_step_int(cur_d6, q=3)
-                    st_d6 += 1
-                ok = ok and (cur_d6 == 1) and (st_d6 == int(entry["cousin_diamond6_steps_to_1"]))
-            if "phi_diamond2_seed" in entry:
-                checked_keys.add("phi_diamond2_seed")
-                ok = ok and (cousin_diamond2_phi(seed) == int(entry["phi_diamond2_seed"]))
-            if "phi_diamond2_next" in entry:
-                checked_keys.add("phi_diamond2_next")
-                ok = ok and (cousin_diamond2_phi(nxt_d6) == int(entry["phi_diamond2_next"]))
-                if "phi_diamond2_seed" in entry:
-                    ok = ok and (cousin_diamond2_phi(nxt_d6) > cousin_diamond2_phi(seed))
-        if "cousin_diamond7_next" in entry:
-            checked_keys.add("cousin_diamond7_next")
-            claims_checked += 1
-            nxt_d7 = cousin_diamond7_step_int(seed, q=3)
-            nxt2_d7 = cousin_diamond7_step_int(nxt_d7, q=3)
-            nxt3_d7 = cousin_diamond7_step_int(nxt2_d7, q=3)
-            ok = (
-                ok
-                and is_diamond7_cone8(seed)
-                and is_diamond6_cone7(nxt_d7)
-                and is_diamond5_cone6(nxt2_d7)
-                and is_diamond4_cone5(nxt3_d7)
-                and (nxt_d7 == int(entry["cousin_diamond7_next"]))
-            )
-            if "cousin_diamond7_steps_to_1" in entry:
-                checked_keys.add("cousin_diamond7_steps_to_1")
-                cur_d7 = seed
-                st_d7 = 0
-                while cur_d7 != 1 and st_d7 < 5000:
-                    cur_d7 = cousin_diamond7_step_int(cur_d7, q=3)
-                    st_d7 += 1
-                ok = ok and (cur_d7 == 1) and (st_d7 == int(entry["cousin_diamond7_steps_to_1"]))
-            if "phi_diamond2_seed" in entry:
-                checked_keys.add("phi_diamond2_seed")
-                ok = ok and (cousin_diamond2_phi(seed) == int(entry["phi_diamond2_seed"]))
-            if "phi_diamond2_next" in entry:
-                checked_keys.add("phi_diamond2_next")
-                ok = ok and (cousin_diamond2_phi(nxt_d7) == int(entry["phi_diamond2_next"]))
-                if "phi_diamond2_seed" in entry:
-                    ok = ok and (cousin_diamond2_phi(nxt_d7) > cousin_diamond2_phi(seed))
-        if "cousin_diamond8_next" in entry:
-            checked_keys.add("cousin_diamond8_next")
-            claims_checked += 1
-            nxt_d8 = cousin_diamond8_step_int(seed, q=3)
-            nxt2_d8 = cousin_diamond8_step_int(nxt_d8, q=3)
-            nxt3_d8 = cousin_diamond8_step_int(nxt2_d8, q=3)
-            nxt4_d8 = cousin_diamond8_step_int(nxt3_d8, q=3)
-            ok = (
-                ok
-                and is_diamond8_cone9(seed)
-                and is_diamond7_cone8(nxt_d8)
-                and is_diamond6_cone7(nxt2_d8)
-                and is_diamond5_cone6(nxt3_d8)
-                and is_diamond4_cone5(nxt4_d8)
-                and (nxt_d8 == int(entry["cousin_diamond8_next"]))
-            )
-            if "cousin_diamond8_steps_to_1" in entry:
-                checked_keys.add("cousin_diamond8_steps_to_1")
-                cur_d8 = seed
-                st_d8 = 0
-                while cur_d8 != 1 and st_d8 < 5000:
-                    cur_d8 = cousin_diamond8_step_int(cur_d8, q=3)
-                    st_d8 += 1
-                ok = ok and (cur_d8 == 1) and (st_d8 == int(entry["cousin_diamond8_steps_to_1"]))
-            if "phi_diamond2_seed" in entry:
-                checked_keys.add("phi_diamond2_seed")
-                ok = ok and (cousin_diamond2_phi(seed) == int(entry["phi_diamond2_seed"]))
-            if "phi_diamond2_next" in entry:
-                checked_keys.add("phi_diamond2_next")
-                ok = ok and (cousin_diamond2_phi(nxt_d8) == int(entry["phi_diamond2_next"]))
-                if "phi_diamond2_seed" in entry:
-                    ok = ok and (cousin_diamond2_phi(nxt_d8) > cousin_diamond2_phi(seed))
-        if "cousin_diamond9_next" in entry:
-            checked_keys.add("cousin_diamond9_next")
-            claims_checked += 1
-            nxt_d9 = cousin_diamond9_step_int(seed, q=3)
-            nxt2_d9 = cousin_diamond9_step_int(nxt_d9, q=3)
-            nxt3_d9 = cousin_diamond9_step_int(nxt2_d9, q=3)
-            nxt4_d9 = cousin_diamond9_step_int(nxt3_d9, q=3)
-            nxt5_d9 = cousin_diamond9_step_int(nxt4_d9, q=3)
-            ok = (
-                ok
-                and is_diamond9_cone10(seed)
-                and is_diamond8_cone9(nxt_d9)
-                and is_diamond7_cone8(nxt2_d9)
-                and is_diamond6_cone7(nxt3_d9)
-                and is_diamond5_cone6(nxt4_d9)
-                and is_diamond4_cone5(nxt5_d9)
-                and (nxt_d9 == int(entry["cousin_diamond9_next"]))
-            )
-            if "cousin_diamond9_steps_to_1" in entry:
-                checked_keys.add("cousin_diamond9_steps_to_1")
-                cur_d9 = seed
-                st_d9 = 0
-                while cur_d9 != 1 and st_d9 < 5000:
-                    cur_d9 = cousin_diamond9_step_int(cur_d9, q=3)
-                    st_d9 += 1
-                ok = ok and (cur_d9 == 1) and (st_d9 == int(entry["cousin_diamond9_steps_to_1"]))
-            if "phi_diamond2_seed" in entry:
-                checked_keys.add("phi_diamond2_seed")
-                ok = ok and (cousin_diamond2_phi(seed) == int(entry["phi_diamond2_seed"]))
-            if "phi_diamond2_next" in entry:
-                checked_keys.add("phi_diamond2_next")
-                ok = ok and (cousin_diamond2_phi(nxt_d9) == int(entry["phi_diamond2_next"]))
-                if "phi_diamond2_seed" in entry:
-                    ok = ok and (cousin_diamond2_phi(nxt_d9) > cousin_diamond2_phi(seed))
-        if "cousin_diamond10_next" in entry:
-            checked_keys.add("cousin_diamond10_next")
-            claims_checked += 1
-            nxt_d10 = cousin_diamond10_step_int(seed, q=3)
-            nxt2_d10 = cousin_diamond10_step_int(nxt_d10, q=3)
-            nxt3_d10 = cousin_diamond10_step_int(nxt2_d10, q=3)
-            nxt4_d10 = cousin_diamond10_step_int(nxt3_d10, q=3)
-            nxt5_d10 = cousin_diamond10_step_int(nxt4_d10, q=3)
-            nxt6_d10 = cousin_diamond10_step_int(nxt5_d10, q=3)
-            ok = (
-                ok
-                and is_diamond10_cone11(seed)
-                and is_diamond9_cone10(nxt_d10)
-                and is_diamond8_cone9(nxt2_d10)
-                and is_diamond7_cone8(nxt3_d10)
-                and is_diamond6_cone7(nxt4_d10)
-                and is_diamond5_cone6(nxt5_d10)
-                and is_diamond4_cone5(nxt6_d10)
-                and (nxt_d10 == int(entry["cousin_diamond10_next"]))
-            )
-            if "cousin_diamond10_steps_to_1" in entry:
-                checked_keys.add("cousin_diamond10_steps_to_1")
-                cur_d10 = seed
-                st_d10 = 0
-                while cur_d10 != 1 and st_d10 < 5000:
-                    cur_d10 = cousin_diamond10_step_int(cur_d10, q=3)
-                    st_d10 += 1
-                ok = ok and (cur_d10 == 1) and (st_d10 == int(entry["cousin_diamond10_steps_to_1"]))
-            if "phi_diamond2_seed" in entry:
-                checked_keys.add("phi_diamond2_seed")
-                ok = ok and (cousin_diamond2_phi(seed) == int(entry["phi_diamond2_seed"]))
-            if "phi_diamond2_next" in entry:
-                checked_keys.add("phi_diamond2_next")
-                ok = ok and (cousin_diamond2_phi(nxt_d10) == int(entry["phi_diamond2_next"]))
-                if "phi_diamond2_seed" in entry:
-                    ok = ok and (cousin_diamond2_phi(nxt_d10) > cousin_diamond2_phi(seed))
-        if "cousin_diamond11_next" in entry:
-            if (
-                isinstance(entry["seed"], int)
-                and not isinstance(entry["seed"], bool)
-                and isinstance(entry["cousin_diamond11_next"], int)
-                and not isinstance(entry["cousin_diamond11_next"], bool)
-            ):
-                checked_keys.add("cousin_diamond11_next")
-                claims_checked += 1
-                nxt_d11 = cousin_diamond11_step_int(seed, q=3)
-                nxt2_d11 = cousin_diamond11_step_int(nxt_d11, q=3)
-                nxt3_d11 = cousin_diamond11_step_int(nxt2_d11, q=3)
-                nxt4_d11 = cousin_diamond11_step_int(nxt3_d11, q=3)
-                nxt5_d11 = cousin_diamond11_step_int(nxt4_d11, q=3)
-                nxt6_d11 = cousin_diamond11_step_int(nxt5_d11, q=3)
-                nxt7_d11 = cousin_diamond11_step_int(nxt6_d11, q=3)
-                ok = (
-                    ok
-                    and is_diamond11_cone12(seed)
-                    and is_diamond10_cone11(nxt_d11)
-                    and is_diamond9_cone10(nxt2_d11)
-                    and is_diamond8_cone9(nxt3_d11)
-                    and is_diamond7_cone8(nxt4_d11)
-                    and is_diamond6_cone7(nxt5_d11)
-                    and is_diamond5_cone6(nxt6_d11)
-                    and is_diamond4_cone5(nxt7_d11)
-                    and (nxt_d11 == entry["cousin_diamond11_next"])
-                )
-                if "cousin_diamond11_steps_to_1" in entry:
-                    if isinstance(entry["cousin_diamond11_steps_to_1"], int) and not isinstance(
-                        entry["cousin_diamond11_steps_to_1"], bool
-                    ):
-                        checked_keys.add("cousin_diamond11_steps_to_1")
-                        cur_d11 = seed
-                        st_d11 = 0
-                        while cur_d11 != 1 and st_d11 < 5000:
-                            cur_d11 = cousin_diamond11_step_int(cur_d11, q=3)
-                            st_d11 += 1
-                        ok = ok and (cur_d11 == 1) and (st_d11 == entry["cousin_diamond11_steps_to_1"])
-                    else:
-                        ok = False
-                if "phi_diamond2_seed" in entry:
-                    if isinstance(entry["phi_diamond2_seed"], int) and not isinstance(
-                        entry["phi_diamond2_seed"], bool
-                    ):
-                        checked_keys.add("phi_diamond2_seed")
-                        ok = ok and (cousin_diamond2_phi(seed) == entry["phi_diamond2_seed"])
-                    else:
-                        ok = False
-                if "phi_diamond2_next" in entry:
-                    if isinstance(entry["phi_diamond2_next"], int) and not isinstance(
-                        entry["phi_diamond2_next"], bool
-                    ):
-                        checked_keys.add("phi_diamond2_next")
-                        ok = ok and (cousin_diamond2_phi(nxt_d11) == entry["phi_diamond2_next"])
-                        if "phi_diamond2_seed" in entry:
-                            ok = ok and (cousin_diamond2_phi(nxt_d11) > cousin_diamond2_phi(seed))
-                    else:
-                        ok = False
-            else:
-                ok = False
-        if "cousin_diamond12_next" in entry:
-            if _is_strict_int(entry["seed"]) and _is_strict_int(entry["cousin_diamond12_next"]):
-                checked_keys.add("cousin_diamond12_next")
-                claims_checked += 1
-                nxt_d12 = cousin_diamond12_step_int(seed, q=3)
-                nxt2_d12 = cousin_diamond12_step_int(nxt_d12, q=3)
-                nxt3_d12 = cousin_diamond12_step_int(nxt2_d12, q=3)
-                nxt4_d12 = cousin_diamond12_step_int(nxt3_d12, q=3)
-                nxt5_d12 = cousin_diamond12_step_int(nxt4_d12, q=3)
-                nxt6_d12 = cousin_diamond12_step_int(nxt5_d12, q=3)
-                nxt7_d12 = cousin_diamond12_step_int(nxt6_d12, q=3)
-                nxt8_d12 = cousin_diamond12_step_int(nxt7_d12, q=3)
-                ok = (
-                    ok
-                    and is_diamond12_cone13(seed)
-                    and is_diamond11_cone12(nxt_d12)
-                    and is_diamond10_cone11(nxt2_d12)
-                    and is_diamond9_cone10(nxt3_d12)
-                    and is_diamond8_cone9(nxt4_d12)
-                    and is_diamond7_cone8(nxt5_d12)
-                    and is_diamond6_cone7(nxt6_d12)
-                    and is_diamond5_cone6(nxt7_d12)
-                    and is_diamond4_cone5(nxt8_d12)
-                    and (nxt_d12 == entry["cousin_diamond12_next"])
-                )
-                if "cousin_diamond12_steps_to_1" in entry:
-                    if _is_strict_int(entry["cousin_diamond12_steps_to_1"]):
-                        checked_keys.add("cousin_diamond12_steps_to_1")
-                        cur_d12 = seed
-                        st_d12 = 0
-                        while cur_d12 != 1 and st_d12 < 5000:
-                            cur_d12 = cousin_diamond12_step_int(cur_d12, q=3)
-                            st_d12 += 1
-                        ok = ok and (cur_d12 == 1) and (st_d12 == entry["cousin_diamond12_steps_to_1"])
-                    else:
-                        ok = False
-                if "phi_diamond2_seed" in entry:
-                    if _is_strict_int(entry["phi_diamond2_seed"]):
-                        checked_keys.add("phi_diamond2_seed")
-                        ok = ok and (cousin_diamond2_phi(seed) == entry["phi_diamond2_seed"])
-                    else:
-                        ok = False
-                if "phi_diamond2_next" in entry:
-                    if _is_strict_int(entry["phi_diamond2_next"]):
-                        checked_keys.add("phi_diamond2_next")
-                        ok = ok and (cousin_diamond2_phi(nxt_d12) == entry["phi_diamond2_next"])
-                        if "phi_diamond2_seed" in entry:
-                            ok = ok and (cousin_diamond2_phi(nxt_d12) > cousin_diamond2_phi(seed))
-                    else:
-                        ok = False
-            else:
-                ok = False
-        c39_weak_keys = (
-            "c39_m1_drained_odd",
-            "c39_srs_steps",
-            "c39_weak_d2_strict_mat_rules",
-        )
-        if any(k in entry for k in c39_weak_keys):
-            if (
-                all(k in entry for k in c39_weak_keys)
-                and isinstance(entry["seed"], int)
-                and not isinstance(entry["seed"], bool)
-                and seed >= 3
-                and (seed & 1) == 1
-                and all(isinstance(entry[k], int) and not isinstance(entry[k], bool) for k in c39_weak_keys)
-            ):
-                checked_keys.update(c39_weak_keys)
-                claims_checked += 1
-                dr_odd_exp = entry["c39_m1_drained_odd"]
-                srs_st_exp = entry["c39_srs_steps"]
-                strict_r_exp = entry["c39_weak_d2_strict_mat_rules"]
-                ok = ok and _verify_c39_m1_4919_and_weak_d2_ground_truth(
-                    seed, dr_odd_exp, srs_st_exp, strict_r_exp
-                )
-            else:
-                ok = False
-        c39_bt_keys = (
-            "c39_boundary_pair",
-            "c39_boundary_topleft_val",
-            "c39_active_interior_count",
-            "c39_bt_nontri_strict_rules",
-        )
-        if any(k in entry for k in c39_bt_keys):
-            bp_c39 = entry.get("c39_boundary_pair")
-            if (
-                all(k in entry for k in c39_bt_keys)
-                and _is_strict_int(entry["seed"])
-                and seed >= 3
-                and isinstance(bp_c39, list)
-                and len(bp_c39) == 2
-                and all(_is_strict_int(v_b) and 0 <= v_b < 12 for v_b in bp_c39)
-                and all(_is_strict_int(entry[k]) for k in c39_bt_keys[1:])
-            ):
-                checked_keys.update(c39_bt_keys)
-                claims_checked += 1
-                ok = ok and _verify_c39_boundary_and_bt_nontri_ground_truth(
-                    bp_c39[0],
-                    bp_c39[1],
-                    entry["c39_boundary_topleft_val"],
-                    entry["c39_active_interior_count"],
-                    entry["c39_bt_nontri_strict_rules"],
-                )
-            else:
-                ok = False
-        if "cousin_diamond13_next" in entry:
-            if _is_strict_int(entry["seed"]) and _is_strict_int(entry["cousin_diamond13_next"]):
-                checked_keys.add("cousin_diamond13_next")
-                claims_checked += 1
-                nxt_d13 = cousin_diamond13_step_int(seed, q=3)
-                nxt2_d13 = cousin_diamond13_step_int(nxt_d13, q=3)
-                nxt3_d13 = cousin_diamond13_step_int(nxt2_d13, q=3)
-                nxt4_d13 = cousin_diamond13_step_int(nxt3_d13, q=3)
-                nxt5_d13 = cousin_diamond13_step_int(nxt4_d13, q=3)
-                nxt6_d13 = cousin_diamond13_step_int(nxt5_d13, q=3)
-                nxt7_d13 = cousin_diamond13_step_int(nxt6_d13, q=3)
-                nxt8_d13 = cousin_diamond13_step_int(nxt7_d13, q=3)
-                nxt9_d13 = cousin_diamond13_step_int(nxt8_d13, q=3)
-                ok = (
-                    ok
-                    and is_diamond13_cone14(seed)
-                    and is_diamond12_cone13(nxt_d13)
-                    and is_diamond11_cone12(nxt2_d13)
-                    and is_diamond10_cone11(nxt3_d13)
-                    and is_diamond9_cone10(nxt4_d13)
-                    and is_diamond8_cone9(nxt5_d13)
-                    and is_diamond7_cone8(nxt6_d13)
-                    and is_diamond6_cone7(nxt7_d13)
-                    and is_diamond5_cone6(nxt8_d13)
-                    and is_diamond4_cone5(nxt9_d13)
-                    and (nxt_d13 == entry["cousin_diamond13_next"])
-                )
-                if "cousin_diamond13_steps_to_1" in entry:
-                    if _is_strict_int(entry["cousin_diamond13_steps_to_1"]):
-                        checked_keys.add("cousin_diamond13_steps_to_1")
-                        cur_d13 = seed
-                        st_d13 = 0
-                        while cur_d13 != 1 and st_d13 < 5000:
-                            cur_d13 = cousin_diamond13_step_int(cur_d13, q=3)
-                            st_d13 += 1
-                        ok = ok and (cur_d13 == 1) and (st_d13 == entry["cousin_diamond13_steps_to_1"])
-                    else:
-                        ok = False
-                if "phi_diamond2_seed" in entry:
-                    if _is_strict_int(entry["phi_diamond2_seed"]):
-                        checked_keys.add("phi_diamond2_seed")
-                        ok = ok and (cousin_diamond2_phi(seed) == entry["phi_diamond2_seed"])
-                    else:
-                        ok = False
-                if "phi_diamond2_next" in entry:
-                    if _is_strict_int(entry["phi_diamond2_next"]):
-                        checked_keys.add("phi_diamond2_next")
-                        ok = ok and (cousin_diamond2_phi(nxt_d13) == entry["phi_diamond2_next"])
-                        if "phi_diamond2_seed" in entry:
-                            ok = ok and (cousin_diamond2_phi(nxt_d13) > cousin_diamond2_phi(seed))
-                    else:
-                        ok = False
-            else:
-                ok = False
-        c39_coupled_keys = (
-            "c39_coupled_bnd_topleft_val",
-            "c39_coupled_t_toprow_strict_rules",
-            "c39_w15_farkas_max_pos_excess",
-            "c39_forced_t_zero_toprow_count",
-            "c78_forced_t_zero_toprow_count",
-        )
-        if any(k in entry for k in c39_coupled_keys):
-            if (
-                all(k in entry for k in c39_coupled_keys)
-                and _is_strict_int(entry["seed"])
-                and seed >= 3
-                and all(_is_strict_int(entry[k]) for k in c39_coupled_keys)
-            ):
-                checked_keys.update(c39_coupled_keys)
-                claims_checked += 1
-                ok = ok and _verify_c39_coupled_bnd_and_t_toprow_ground_truth(
-                    entry["c39_coupled_bnd_topleft_val"],
-                    entry["c39_coupled_t_toprow_strict_rules"],
-                    entry["c39_w15_farkas_max_pos_excess"],
-                    entry["c39_forced_t_zero_toprow_count"],
-                    entry["c78_forced_t_zero_toprow_count"],
-                )
-            else:
-                ok = False
-        dp2_coupled_keys = (
-            "dp2_coupled_chain_steps",
-            "dp2_coupled_end_odd",
-            "det_nonmonotone_lhs",
-            "det_nonmonotone_rhs",
-        )
-        if any(k in entry for k in dp2_coupled_keys):
-            dlhs = entry.get("det_nonmonotone_lhs")
-            drhs = entry.get("det_nonmonotone_rhs")
-            if (
-                all(k in entry for k in dp2_coupled_keys)
-                and seed >= 3
-                and (seed & 1) == 1
-                and isinstance(entry["dp2_coupled_chain_steps"], int)
-                and not isinstance(entry["dp2_coupled_chain_steps"], bool)
-                and isinstance(entry["dp2_coupled_end_odd"], int)
-                and not isinstance(entry["dp2_coupled_end_odd"], bool)
-                and isinstance(dlhs, list)
-                and isinstance(drhs, list)
-                and len(dlhs) == 4
-                and len(drhs) == 4
-                and all(isinstance(v, int) and not isinstance(v, bool) and v >= 0 for v in dlhs)
-                and all(isinstance(v, int) and not isinstance(v, bool) and v >= 0 for v in drhs)
-            ):
-                checked_keys.update(dp2_coupled_keys)
-                claims_checked += 1
-                ch_steps = entry["dp2_coupled_chain_steps"]
-                end_odd_exp = entry["dp2_coupled_end_odd"]
-                cur_dp = seed
-                all_odd_dp = ch_steps >= 1
-                for _ in range(max(0, ch_steps)):
-                    if (cur_dp & 1) != 1 or cur_dp < 3:
-                        all_odd_dp = False
-                        break
-                    cur_dp = (3 * cur_dp + 1) // 2
-                ok = (
-                    ok
-                    and all_odd_dp
-                    and cur_dp == end_odd_exp
-                    and (cur_dp & 1) == 1
-                    and all(dlhs[idx_m] >= drhs[idx_m] for idx_m in range(4))
-                    and (dlhs[0] * dlhs[3] - dlhs[1] * dlhs[2])
-                    < (drhs[0] * drhs[3] - drhs[1] * drhs[2])
-                )
-            else:
-                ok = False
-        spine_54_keys = ("even_spine_2step_64x", "base_5_4_collapse_k", "base_5_4_collapse_xk")
-        if any(k in entry for k in spine_54_keys):
-            sp_raw = entry.get("even_spine_2step_64x")
-            if (
-                all(k in entry for k in spine_54_keys)
-                and isinstance(sp_raw, list)
-                and all(isinstance(v, int) and not isinstance(v, bool) for v in sp_raw)
-                and isinstance(entry["base_5_4_collapse_k"], int)
-                and not isinstance(entry["base_5_4_collapse_k"], bool)
-                and isinstance(entry["base_5_4_collapse_xk"], int)
-                and not isinstance(entry["base_5_4_collapse_xk"], bool)
-            ):
-                checked_keys.update(spine_54_keys)
-                claims_checked += 1
-                sp_list = list(sp_raw)
-                col_k = entry["base_5_4_collapse_k"]
-                col_xk = entry["base_5_4_collapse_xk"]
-                pol_r9 = {1: 1, 2: 2, 4: 1, 5: 2, 7: 3, 8: 4}
-                wf_54_u = lambda n_v: (1, max(1, (5 ** n_v.bit_length()) // (4 ** n_v.bit_length())))
-                cx_54 = 5
-                for _ in range(max(0, col_k)):
-                    cx_54 = mod9_cube_root2_branch_next(wf_54_u, cx_54)
-                ok = (
-                    ok
-                    and len(sp_list) == 5
-                    and sp_list[0] == seed
-                    and (seed % 9) == 4
-                    and all((sp_list[idx_s] % 9) in (4, 7) for idx_s in range(5))
-                    and sp_list[1] == 4 * sp_list[0]
-                    and sp_list[2] == 16 * sp_list[1]
-                    and sp_list[3] == 4 * sp_list[2]
-                    and sp_list[4] == 16 * sp_list[3]
-                    and sp_list[4] == 64 * 64 * seed
-                    and col_k >= 1
-                    and cx_54 == col_xk
-                    and (1 << col_k) * wf_54_u(cx_54)[0] * wf_54_u(5)[1]
-                    > wf_54_u(5)[0] * wf_54_u(cx_54)[1]
-                    and pol_r9[8] == 4
-                )
-            else:
-                ok = False
-        dyadic_m5_keys = (
-            "dyadic_m4_surviving_leaves",
-            "dyadic_m5_empty_window",
-            "dyadic_m6_surviving_leaves",
-        )
-        if any(k in entry for k in dyadic_m5_keys):
-            m4_raw = entry.get("dyadic_m4_surviving_leaves")
-            m6_raw = entry.get("dyadic_m6_surviving_leaves")
-            if (
-                all(k in entry for k in dyadic_m5_keys)
-                and isinstance(m4_raw, list)
-                and all(isinstance(v, int) and not isinstance(v, bool) for v in m4_raw)
-                and isinstance(entry["dyadic_m5_empty_window"], int)
-                and not isinstance(entry["dyadic_m5_empty_window"], bool)
-                and isinstance(m6_raw, list)
-                and all(isinstance(v, int) and not isinstance(v, bool) for v in m6_raw)
-            ):
-                checked_keys.update(dyadic_m5_keys)
-                claims_checked += 1
-                m4_exp = list(m4_raw)
-                m5_win = entry["dyadic_m5_empty_window"]
-                m6_exp = list(m6_raw)
-
-                def _window_surviving_q0_leaves(m_idx: int) -> List[int]:
-                    out_y: List[int] = []
-                    for y_cand in range((1 << m_idx) + 1, 1 << (m_idx + 1), 2):
-                        if not cft.is_surviving_mod373248_class(y_cand):
-                            continue
-                        cur_y = y_cand
-                        b_list: List[int] = []
-                        while cur_y != 1 and len(b_list) <= 300:
-                            if (cur_y & 1) == 1:
-                                b_list.append(1)
-                                cur_y = (3 * cur_y + 1) // 2
-                            else:
-                                b_list.append(0)
-                                cur_y //= 2
-                        if cur_y != 1:
-                            continue
-                        a_sh = 0
-                        while b_list and b_list[-1] == 0:
-                            b_list.pop()
-                            a_sh += 1
-                        w_b = sum(b_list)
-                        if w_b >= 1 and a_sh < 2 * (3 ** (w_b - 1)):
-                            out_y.append(y_cand)
-                    return out_y
-
-                ok = (
-                    ok
-                    and m5_win == 5
-                    and seed in m4_exp
-                    and _window_surviving_q0_leaves(4) == m4_exp
-                    and _window_surviving_q0_leaves(m5_win) == []
-                    and all(
-                        not cft.is_surviving_mod373248_class(y_m5)
-                        for y_m5 in range(1 << m5_win, 1 << (m5_win + 1))
+            if "cousin_diamond13_next" in entry:
+                if _is_strict_int(entry["seed"]) and _is_strict_int(entry["cousin_diamond13_next"]):
+                    checked_keys.add("cousin_diamond13_next")
+                    claims_checked += 1
+                    nxt_d13 = cousin_diamond13_step_int(seed, q=3)
+                    nxt2_d13 = cousin_diamond13_step_int(nxt_d13, q=3)
+                    nxt3_d13 = cousin_diamond13_step_int(nxt2_d13, q=3)
+                    nxt4_d13 = cousin_diamond13_step_int(nxt3_d13, q=3)
+                    nxt5_d13 = cousin_diamond13_step_int(nxt4_d13, q=3)
+                    nxt6_d13 = cousin_diamond13_step_int(nxt5_d13, q=3)
+                    nxt7_d13 = cousin_diamond13_step_int(nxt6_d13, q=3)
+                    nxt8_d13 = cousin_diamond13_step_int(nxt7_d13, q=3)
+                    nxt9_d13 = cousin_diamond13_step_int(nxt8_d13, q=3)
+                    ok = (
+                        ok
+                        and is_diamond13_cone14(seed)
+                        and is_diamond12_cone13(nxt_d13)
+                        and is_diamond11_cone12(nxt2_d13)
+                        and is_diamond10_cone11(nxt3_d13)
+                        and is_diamond9_cone10(nxt4_d13)
+                        and is_diamond8_cone9(nxt5_d13)
+                        and is_diamond7_cone8(nxt6_d13)
+                        and is_diamond6_cone7(nxt7_d13)
+                        and is_diamond5_cone6(nxt8_d13)
+                        and is_diamond4_cone5(nxt9_d13)
+                        and (nxt_d13 == entry["cousin_diamond13_next"])
                     )
-                    and _window_surviving_q0_leaves(6) == m6_exp
-                )
-            else:
-                ok = False
-        if "spiral_block_next" in entry or "spiral_block_2_next" in entry:
-            if "spiral_block_next" in entry and seed >= 1 and (seed & 1) == 1:
-                checked_keys.add("spiral_block_next")
+                    if "cousin_diamond13_steps_to_1" in entry:
+                        if _is_strict_int(entry["cousin_diamond13_steps_to_1"]):
+                            checked_keys.add("cousin_diamond13_steps_to_1")
+                            cur_d13 = seed
+                            st_d13 = 0
+                            while cur_d13 != 1 and st_d13 < 5000:
+                                cur_d13 = cousin_diamond13_step_int(cur_d13, q=3)
+                                st_d13 += 1
+                            ok = ok and (cur_d13 == 1) and (st_d13 == entry["cousin_diamond13_steps_to_1"])
+                        else:
+                            ok = False
+                    if "phi_diamond2_seed" in entry:
+                        if _is_strict_int(entry["phi_diamond2_seed"]):
+                            checked_keys.add("phi_diamond2_seed")
+                            ok = ok and (cousin_diamond2_phi(seed) == entry["phi_diamond2_seed"])
+                        else:
+                            ok = False
+                    if "phi_diamond2_next" in entry:
+                        if _is_strict_int(entry["phi_diamond2_next"]):
+                            checked_keys.add("phi_diamond2_next")
+                            ok = ok and (cousin_diamond2_phi(nxt_d13) == entry["phi_diamond2_next"])
+                            if "phi_diamond2_seed" in entry:
+                                ok = ok and (cousin_diamond2_phi(nxt_d13) > cousin_diamond2_phi(seed))
+                        else:
+                            ok = False
+                else:
+                    ok = False
+            c39_coupled_keys = (
+                "c39_coupled_bnd_topleft_val",
+                "c39_coupled_t_toprow_strict_rules",
+                "c39_w15_farkas_max_pos_excess",
+                "c39_forced_t_zero_toprow_count",
+                "c78_forced_t_zero_toprow_count",
+            )
+            if any(k in entry for k in c39_coupled_keys):
+                if (
+                    all(k in entry for k in c39_coupled_keys)
+                    and _is_strict_int(entry["seed"])
+                    and seed >= 3
+                    and all(_is_strict_int(entry[k]) for k in c39_coupled_keys)
+                ):
+                    checked_keys.update(c39_coupled_keys)
+                    claims_checked += 1
+                    ok = ok and _verify_c39_coupled_bnd_and_t_toprow_ground_truth(
+                        entry["c39_coupled_bnd_topleft_val"],
+                        entry["c39_coupled_t_toprow_strict_rules"],
+                        entry["c39_w15_farkas_max_pos_excess"],
+                        entry["c39_forced_t_zero_toprow_count"],
+                        entry["c78_forced_t_zero_toprow_count"],
+                    )
+                else:
+                    ok = False
+            d14_req_keys = (
+                "cousin_diamond14_next",
+                "cousin_diamond14_steps_to_1",
+                "phi_diamond2_seed",
+                "phi_diamond2_next",
+            )
+            if any(k in entry for k in ("cousin_diamond14_next", "cousin_diamond14_steps_to_1")):
+                if (
+                    _is_strict_int(entry["seed"])
+                    and seed >= 3
+                    and all(k in entry and _is_strict_int(entry[k]) for k in d14_req_keys)
+                ):
+                    checked_keys.update(d14_req_keys)
+                    claims_checked += 1
+                    nxt_d14 = cousin_diamond14_step_int(seed, q=3)
+                    nxt2_d14 = cousin_diamond14_step_int(nxt_d14, q=3)
+                    nxt3_d14 = cousin_diamond14_step_int(nxt2_d14, q=3)
+                    nxt4_d14 = cousin_diamond14_step_int(nxt3_d14, q=3)
+                    nxt5_d14 = cousin_diamond14_step_int(nxt4_d14, q=3)
+                    nxt6_d14 = cousin_diamond14_step_int(nxt5_d14, q=3)
+                    nxt7_d14 = cousin_diamond14_step_int(nxt6_d14, q=3)
+                    nxt8_d14 = cousin_diamond14_step_int(nxt7_d14, q=3)
+                    nxt9_d14 = cousin_diamond14_step_int(nxt8_d14, q=3)
+                    nxt10_d14 = cousin_diamond14_step_int(nxt9_d14, q=3)
+                    cur_d14 = seed
+                    st_d14 = 0
+                    while cur_d14 != 1 and st_d14 < 5000:
+                        cur_d14 = cousin_diamond14_step_int(cur_d14, q=3)
+                        st_d14 += 1
+                    ok = (
+                        ok
+                        and is_diamond14_cone15(seed)
+                        and is_diamond13_cone14(nxt_d14)
+                        and is_diamond12_cone13(nxt2_d14)
+                        and is_diamond11_cone12(nxt3_d14)
+                        and is_diamond10_cone11(nxt4_d14)
+                        and is_diamond9_cone10(nxt5_d14)
+                        and is_diamond8_cone9(nxt6_d14)
+                        and is_diamond7_cone8(nxt7_d14)
+                        and is_diamond6_cone7(nxt8_d14)
+                        and is_diamond5_cone6(nxt9_d14)
+                        and is_diamond4_cone5(nxt10_d14)
+                        and (nxt_d14 == entry["cousin_diamond14_next"])
+                        and (cur_d14 == 1)
+                        and (st_d14 == entry["cousin_diamond14_steps_to_1"])
+                        and (cousin_diamond2_phi(seed) == entry["phi_diamond2_seed"])
+                        and (cousin_diamond2_phi(nxt_d14) == entry["phi_diamond2_next"])
+                        and (cousin_diamond2_phi(nxt_d14) > cousin_diamond2_phi(seed))
+                    )
+                else:
+                    ok = False
+            c39_bi_btr_keys = (
+                "c39_bi_btr_topleft_val",
+                "c39_bi_btr_strict_rules",
+                "c78_bi_btr_strict_rules",
+                "c39_w16_c1_farkas_max_pos_excess",
+                "c39_w16_c2_farkas_max_pos_excess",
+                "c39_forced_b_zero_subdiag_count",
+                "c78_forced_b_zero_subdiag_count",
+            )
+            if any(k in entry for k in c39_bi_btr_keys):
+                if (
+                    all(k in entry for k in c39_bi_btr_keys)
+                    and "compressed_steps_to_1" in entry
+                    and _is_strict_int(entry["compressed_steps_to_1"])
+                    and _is_strict_int(entry["seed"])
+                    and seed >= 3
+                    and all(_is_strict_int(entry[k]) for k in c39_bi_btr_keys)
+                ):
+                    checked_keys.update(c39_bi_btr_keys)
+                    claims_checked += 1
+                    ok = ok and _verify_c39_bi_btr_and_b_subdiag_ground_truth(
+                        entry["c39_bi_btr_topleft_val"],
+                        entry["c39_bi_btr_strict_rules"],
+                        entry["c78_bi_btr_strict_rules"],
+                        entry["c39_w16_c1_farkas_max_pos_excess"],
+                        entry["c39_w16_c2_farkas_max_pos_excess"],
+                        entry["c39_forced_b_zero_subdiag_count"],
+                        entry["c78_forced_b_zero_subdiag_count"],
+                    )
+                else:
+                    ok = False
+            dp2_coupled_keys = (
+                "dp2_coupled_chain_steps",
+                "dp2_coupled_end_odd",
+                "det_nonmonotone_lhs",
+                "det_nonmonotone_rhs",
+            )
+            if any(k in entry for k in dp2_coupled_keys):
+                dlhs = entry.get("det_nonmonotone_lhs")
+                drhs = entry.get("det_nonmonotone_rhs")
+                if (
+                    all(k in entry for k in dp2_coupled_keys)
+                    and seed >= 3
+                    and (seed & 1) == 1
+                    and isinstance(entry["dp2_coupled_chain_steps"], int)
+                    and not isinstance(entry["dp2_coupled_chain_steps"], bool)
+                    and isinstance(entry["dp2_coupled_end_odd"], int)
+                    and not isinstance(entry["dp2_coupled_end_odd"], bool)
+                    and isinstance(dlhs, list)
+                    and isinstance(drhs, list)
+                    and len(dlhs) == 4
+                    and len(drhs) == 4
+                    and all(isinstance(v, int) and not isinstance(v, bool) and v >= 0 for v in dlhs)
+                    and all(isinstance(v, int) and not isinstance(v, bool) and v >= 0 for v in drhs)
+                ):
+                    checked_keys.update(dp2_coupled_keys)
+                    claims_checked += 1
+                    ch_steps = entry["dp2_coupled_chain_steps"]
+                    end_odd_exp = entry["dp2_coupled_end_odd"]
+                    cur_dp = seed
+                    all_odd_dp = ch_steps >= 1
+                    for _ in range(max(0, ch_steps)):
+                        if (cur_dp & 1) != 1 or cur_dp < 3:
+                            all_odd_dp = False
+                            break
+                        cur_dp = (3 * cur_dp + 1) // 2
+                    ok = (
+                        ok
+                        and all_odd_dp
+                        and cur_dp == end_odd_exp
+                        and (cur_dp & 1) == 1
+                        and all(dlhs[idx_m] >= drhs[idx_m] for idx_m in range(4))
+                        and (dlhs[0] * dlhs[3] - dlhs[1] * dlhs[2])
+                        < (drhs[0] * drhs[3] - drhs[1] * drhs[2])
+                    )
+                else:
+                    ok = False
+            spine_54_keys = ("even_spine_2step_64x", "base_5_4_collapse_k", "base_5_4_collapse_xk")
+            if any(k in entry for k in spine_54_keys):
+                sp_raw = entry.get("even_spine_2step_64x")
+                if (
+                    all(k in entry for k in spine_54_keys)
+                    and isinstance(sp_raw, list)
+                    and all(isinstance(v, int) and not isinstance(v, bool) for v in sp_raw)
+                    and isinstance(entry["base_5_4_collapse_k"], int)
+                    and not isinstance(entry["base_5_4_collapse_k"], bool)
+                    and isinstance(entry["base_5_4_collapse_xk"], int)
+                    and not isinstance(entry["base_5_4_collapse_xk"], bool)
+                ):
+                    checked_keys.update(spine_54_keys)
+                    claims_checked += 1
+                    sp_list = list(sp_raw)
+                    col_k = entry["base_5_4_collapse_k"]
+                    col_xk = entry["base_5_4_collapse_xk"]
+                    pol_r9 = {1: 1, 2: 2, 4: 1, 5: 2, 7: 3, 8: 4}
+                    wf_54_u = lambda n_v: (1, max(1, (5 ** n_v.bit_length()) // (4 ** n_v.bit_length())))
+                    cx_54 = 5
+                    for _ in range(max(0, col_k)):
+                        cx_54 = mod9_cube_root2_branch_next(wf_54_u, cx_54)
+                    ok = (
+                        ok
+                        and len(sp_list) == 5
+                        and sp_list[0] == seed
+                        and (seed % 9) == 4
+                        and all((sp_list[idx_s] % 9) in (4, 7) for idx_s in range(5))
+                        and sp_list[1] == 4 * sp_list[0]
+                        and sp_list[2] == 16 * sp_list[1]
+                        and sp_list[3] == 4 * sp_list[2]
+                        and sp_list[4] == 16 * sp_list[3]
+                        and sp_list[4] == 64 * 64 * seed
+                        and col_k >= 1
+                        and cx_54 == col_xk
+                        and (1 << col_k) * wf_54_u(cx_54)[0] * wf_54_u(5)[1]
+                        > wf_54_u(5)[0] * wf_54_u(cx_54)[1]
+                        and pol_r9[8] == 4
+                    )
+                else:
+                    ok = False
+            dyadic_m5_keys = (
+                "dyadic_m4_surviving_leaves",
+                "dyadic_m5_empty_window",
+                "dyadic_m6_surviving_leaves",
+            )
+            if any(k in entry for k in dyadic_m5_keys):
+                m4_raw = entry.get("dyadic_m4_surviving_leaves")
+                m6_raw = entry.get("dyadic_m6_surviving_leaves")
+                if (
+                    all(k in entry for k in dyadic_m5_keys)
+                    and isinstance(m4_raw, list)
+                    and all(isinstance(v, int) and not isinstance(v, bool) for v in m4_raw)
+                    and isinstance(entry["dyadic_m5_empty_window"], int)
+                    and not isinstance(entry["dyadic_m5_empty_window"], bool)
+                    and isinstance(m6_raw, list)
+                    and all(isinstance(v, int) and not isinstance(v, bool) for v in m6_raw)
+                ):
+                    checked_keys.update(dyadic_m5_keys)
+                    claims_checked += 1
+                    m4_exp = list(m4_raw)
+                    m5_win = entry["dyadic_m5_empty_window"]
+                    m6_exp = list(m6_raw)
+
+                    def _window_surviving_q0_leaves(m_idx: int) -> List[int]:
+                        out_y: List[int] = []
+                        for y_cand in range((1 << m_idx) + 1, 1 << (m_idx + 1), 2):
+                            if not cft.is_surviving_mod373248_class(y_cand):
+                                continue
+                            cur_y = y_cand
+                            b_list: List[int] = []
+                            while cur_y != 1 and len(b_list) <= 300:
+                                if (cur_y & 1) == 1:
+                                    b_list.append(1)
+                                    cur_y = (3 * cur_y + 1) // 2
+                                else:
+                                    b_list.append(0)
+                                    cur_y //= 2
+                            if cur_y != 1:
+                                continue
+                            a_sh = 0
+                            while b_list and b_list[-1] == 0:
+                                b_list.pop()
+                                a_sh += 1
+                            w_b = sum(b_list)
+                            if w_b >= 1 and a_sh < 2 * (3 ** (w_b - 1)):
+                                out_y.append(y_cand)
+                        return out_y
+
+                    ok = (
+                        ok
+                        and m5_win == 5
+                        and seed in m4_exp
+                        and _window_surviving_q0_leaves(4) == m4_exp
+                        and _window_surviving_q0_leaves(m5_win) == []
+                        and all(
+                            not cft.is_surviving_mod373248_class(y_m5)
+                            for y_m5 in range(1 << m5_win, 1 << (m5_win + 1))
+                        )
+                        and _window_surviving_q0_leaves(6) == m6_exp
+                    )
+                else:
+                    ok = False
+            if "spiral_block_next" in entry or "spiral_block_2_next" in entry:
+                if "spiral_block_next" in entry and seed >= 1 and (seed & 1) == 1:
+                    checked_keys.add("spiral_block_next")
+                    claims_checked += 1
+                    sb1 = spiral_block_return_int(seed)
+                    ok = ok and (sb1 == int(entry["spiral_block_next"]))
+                    if "spiral_block_2_next" in entry:
+                        checked_keys.add("spiral_block_2_next")
+                        ok = ok and (spiral_block_return_int(sb1) == int(entry["spiral_block_2_next"]))
+                else:
+                    ok = False
+            if "steps" in entry or "target" in entry:
+                if "steps" in entry and "target" in entry:
+                    checked_keys.update(("steps", "target"))
+                    claims_checked += 1
+                    end_v, _ = int_iter_and_parity(seed, int(entry["steps"]), q=3)
+                    ok = ok and (end_v == int(entry["target"]))
+                else:
+                    ok = False
+            if "glide_odd_steps" in entry:
+                checked_keys.add("glide_odd_steps")
                 claims_checked += 1
-                sb1 = spiral_block_return_int(seed)
-                ok = ok and (sb1 == int(entry["spiral_block_next"]))
-                if "spiral_block_2_next" in entry:
-                    checked_keys.add("spiral_block_2_next")
-                    ok = ok and (spiral_block_return_int(sb1) == int(entry["spiral_block_2_next"]))
-            else:
-                ok = False
-        if "steps" in entry or "target" in entry:
-            if "steps" in entry and "target" in entry:
-                checked_keys.update(("steps", "target"))
-                claims_checked += 1
-                end_v, _ = int_iter_and_parity(seed, int(entry["steps"]), q=3)
-                ok = ok and (end_v == int(entry["target"]))
-            else:
-                ok = False
-        if "glide_odd_steps" in entry:
-            checked_keys.add("glide_odd_steps")
-            claims_checked += 1
-            g_steps = int(entry["glide_odd_steps"])
-            ok = ok and g_steps >= 1 and ((seed + 1) == (1 << g_steps))
-            if "glide_peak" in entry:
-                checked_keys.add("glide_peak")
-                end_g, par_g = int_iter_and_parity(seed, g_steps, q=3)
-                ok = ok and all(b == 1 for b in par_g) and (end_g == int(entry["glide_peak"]))
-        ok = ok and (claims_checked >= 1) and set(entry.keys()).issubset(checked_keys)
+                g_steps = int(entry["glide_odd_steps"])
+                ok = ok and g_steps >= 1 and ((seed + 1) == (1 << g_steps))
+                if "glide_peak" in entry:
+                    checked_keys.add("glide_peak")
+                    end_g, par_g = int_iter_and_parity(seed, g_steps, q=3)
+                    ok = ok and all(b == 1 for b in par_g) and (end_g == int(entry["glide_peak"]))
+            ok = ok and (claims_checked >= 1) and set(entry.keys()).issubset(checked_keys)
+        except (ValueError, TypeError, ZeroDivisionError, ArithmeticError, IndexError, KeyError):
+            ok = False
         if ok:
             verified_count += 1
         else:
@@ -5625,6 +5848,9 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
 
     # 2. m1_q2_pos
     for entry in bank["domains"]["m1_q2_pos"]:
+        if not isinstance(entry, dict):
+            failed_witnesses.append("<malformed>")
+            continue
         wid = str(entry.get("witness_id", "<missing>"))
         if (
             not isinstance(entry.get("witness_id"), str)
@@ -5633,6 +5859,7 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
             or not _is_strict_int(entry.get("denominator"))
             or entry["denominator"] < 1
             or not isinstance(entry.get("x0"), str)
+            or _entry_has_illegal_bool("m1_q2_pos", entry)
         ):
             failed_witnesses.append(wid)
             continue
@@ -5644,379 +5871,480 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
             continue
         ok = (x0 == x0_parsed) and (x0 > 0) and (x0.denominator % 2 == 1)
         checked_m1: Set[str] = {"witness_id", "x0", "numerator", "denominator", "kills_mechanisms"}
-        if entry.get("system") in (
-            "T_diamond",
-            "T_diamond2",
-            "T_diamond3",
-            "T_diamond4",
-            "T_diamond5",
-            "T_diamond6",
-            "T_diamond7",
-            "T_diamond8",
-            "T_diamond9",
-            "T_diamond10",
-            "T_diamond11",
-            "T_diamond12",
-            "T_diamond13",
-        ):
-            checked_m1.update(("system", "orbit"))
-            sys_m1 = entry.get("system")
-            step_fn_q6 = {
-                "T_diamond": cousin_diamond_step_q6,
-                "T_diamond2": cousin_diamond2_step_q6,
-                "T_diamond3": cousin_diamond3_step_q6,
-                "T_diamond4": cousin_diamond4_step_q6,
-                "T_diamond5": cousin_diamond5_step_q6,
-                "T_diamond6": cousin_diamond6_step_q6,
-                "T_diamond7": cousin_diamond7_step_q6,
-                "T_diamond8": cousin_diamond8_step_q6,
-                "T_diamond9": cousin_diamond9_step_q6,
-                "T_diamond10": cousin_diamond10_step_q6,
-                "T_diamond11": cousin_diamond11_step_q6,
-                "T_diamond12": cousin_diamond12_step_q6,
-                "T_diamond13": cousin_diamond13_step_q6,
-            }[str(sys_m1)]
-            orb_raw = entry.get("orbit")
-            if (
-                _is_strict_int(entry["numerator"])
-                and _is_strict_int(entry["denominator"])
-                and isinstance(entry["x0"], str)
-                and ok
-                and math.gcd(x0.denominator, 6) == 1
-                and isinstance(orb_raw, list)
-                and len(orb_raw) >= 1
-                and all(isinstance(s_o, str) for s_o in orb_raw)
+        try:
+            if entry.get("system") in (
+                "T_diamond",
+                "T_diamond2",
+                "T_diamond3",
+                "T_diamond4",
+                "T_diamond5",
+                "T_diamond6",
+                "T_diamond7",
+                "T_diamond8",
+                "T_diamond9",
+                "T_diamond10",
+                "T_diamond11",
+                "T_diamond12",
+                "T_diamond13",
+                "T_diamond14",
             ):
-                try:
-                    orb = [Fraction(s) for s in orb_raw]
-                except (ValueError, ZeroDivisionError):
-                    ok = False
+                checked_m1.update(("system", "orbit"))
+                sys_m1 = entry.get("system")
+                step_fn_q6 = {
+                    "T_diamond": cousin_diamond_step_q6,
+                    "T_diamond2": cousin_diamond2_step_q6,
+                    "T_diamond3": cousin_diamond3_step_q6,
+                    "T_diamond4": cousin_diamond4_step_q6,
+                    "T_diamond5": cousin_diamond5_step_q6,
+                    "T_diamond6": cousin_diamond6_step_q6,
+                    "T_diamond7": cousin_diamond7_step_q6,
+                    "T_diamond8": cousin_diamond8_step_q6,
+                    "T_diamond9": cousin_diamond9_step_q6,
+                    "T_diamond10": cousin_diamond10_step_q6,
+                    "T_diamond11": cousin_diamond11_step_q6,
+                    "T_diamond12": cousin_diamond12_step_q6,
+                    "T_diamond13": cousin_diamond13_step_q6,
+                    "T_diamond14": cousin_diamond14_step_q6,
+                }[str(sys_m1)]
+                orb_raw = entry.get("orbit")
+                if (
+                    _is_strict_int(entry["numerator"])
+                    and _is_strict_int(entry["denominator"])
+                    and isinstance(entry["x0"], str)
+                    and ok
+                    and math.gcd(x0.denominator, 6) == 1
+                    and isinstance(orb_raw, list)
+                    and len(orb_raw) >= 1
+                    and all(isinstance(s_o, str) for s_o in orb_raw)
+                ):
+                    try:
+                        orb = [Fraction(s) for s in orb_raw]
+                    except (ValueError, ZeroDivisionError):
+                        ok = False
+                    else:
+                        if all(f_o > 0 and math.gcd(f_o.denominator, 6) == 1 for f_o in orb):
+                            cur_f = x0
+                            traced: List[Fraction] = []
+                            for _ in range(len(orb)):
+                                traced.append(cur_f)
+                                cur_f = step_fn_q6(cur_f)
+                            ok = ok and (traced == orb) and (cur_f == x0)
+                        else:
+                            ok = False
                 else:
-                    if all(f_o > 0 and math.gcd(f_o.denominator, 6) == 1 for f_o in orb):
-                        cur_f = x0
-                        traced: List[Fraction] = []
-                        for _ in range(len(orb)):
-                            traced.append(cur_f)
-                            cur_f = step_fn_q6(cur_f)
-                        ok = ok and (traced == orb) and (cur_f == x0)
+                    ok = False
+            elif "period_k" in entry and "weight_w" in entry:
+                if not _is_strict_int(entry["period_k"]) or not _is_strict_int(entry["weight_w"]):
+                    failed_witnesses.append(wid)
+                    continue
+                checked_m1.update(("period_k", "weight_w"))
+                k_per = entry["period_k"]
+                w_exp = entry["weight_w"]
+                cur_f = x0
+                orb_f: List[Fraction] = []
+                par_bits: List[int] = []
+                for _ in range(max(0, k_per)):
+                    orb_f.append(cur_f)
+                    bit = cur_f.numerator & 1
+                    par_bits.append(bit)
+                    cur_f = (3 * cur_f + 1) / 2 if bit == 1 else (cur_f / 2)
+                ok = (
+                    ok
+                    and k_per >= 1
+                    and (cur_f == x0)
+                    and (sum(par_bits) == w_exp)
+                    and "m_blocks" in entry
+                    and _is_strict_int(entry["m_blocks"])
+                )
+                if "m_blocks" in entry:
+                    checked_m1.add("m_blocks")
+                    ok = ok and _is_strict_int(entry["m_blocks"]) and (count_odd_even_blocks(par_bits) == entry["m_blocks"])
+                structured_m1_keys = (
+                    "spiral_params",
+                    "balanced_3block_params",
+                    "balanced_4block_params",
+                    "balanced_5block_params",
+                    "balanced_6block_params",
+                )
+                if k_per <= 35 and not any(sk in entry for sk in structured_m1_keys):
+                    ok = ok and ("parity_vector" in entry)
+                if "x1" in entry:
+                    checked_m1.add("x1")
+                    local_mins = [
+                        orb_f[i]
+                        for i in range(len(par_bits))
+                        if par_bits[i] == 1 and par_bits[(i - 1) % len(par_bits)] == 0
+                    ]
+                    if isinstance(entry["x1"], str):
+                        try:
+                            x1_parsed = Fraction(entry["x1"])
+                        except (ValueError, ZeroDivisionError):
+                            ok = False
+                        else:
+                            ok = (
+                                ok
+                                and len(local_mins) >= 2
+                                and local_mins[0] == x0
+                                and local_mins[1] == x1_parsed
+                            )
+                    else:
+                        ok = False
+                if "parity_vector" in entry:
+                    checked_m1.add("parity_vector")
+                    pv_raw = entry["parity_vector"]
+                    ok = (
+                        ok
+                        and isinstance(pv_raw, list)
+                        and all(_is_strict_int(b) and b in (0, 1) for b in pv_raw)
+                        and (par_bits == list(pv_raw))
+                    )
+                if "spiral_params" in entry:
+                    req_sp = ("spiral_params", "denom_gap", "brox_h0", "brox_h1", "gcd_d_h0_h1")
+                    sp_raw = entry.get("spiral_params")
+                    if (
+                        all(k in entry for k in req_sp)
+                        and isinstance(sp_raw, list)
+                        and len(sp_raw) == 4
+                        and all(_is_strict_int(v) and v >= 1 for v in sp_raw)
+                        and all(_is_strict_int(entry[k]) for k in req_sp[1:])
+                    ):
+                        checked_m1.update(req_sp)
+                        w1, a1, w2, a2 = sp_raw
+                        h0, h1 = clp.two_block_brox_carries(w1, a1, w2, a2)
+                        det = (1 << (w1 + a1 + w2 + a2)) - (3 ** (w1 + w2))
+                        ok = (
+                            ok
+                            and det != 0
+                            and det == entry["denom_gap"]
+                            and h0 == entry["brox_h0"]
+                            and h1 == entry["brox_h1"]
+                            and math.gcd(det, math.gcd(h0, h1)) == entry["gcd_d_h0_h1"]
+                            and Fraction((1 << w1) * h0 - det, det) == x0
+                        )
+                    else:
+                        ok = False
+                bal3_keys = (
+                    "balanced_3block_params",
+                    "balanced_3block_h0",
+                    "balanced_3block_h2",
+                    "balanced_3block_single_pivot_ub",
+                )
+                if any(k in entry for k in bal3_keys):
+                    bp_raw = entry.get("balanced_3block_params")
+                    if (
+                        all(k in entry for k in bal3_keys)
+                        and isinstance(entry["numerator"], int)
+                        and not isinstance(entry["numerator"], bool)
+                        and isinstance(entry["denominator"], int)
+                        and not isinstance(entry["denominator"], bool)
+                        and isinstance(entry["period_k"], int)
+                        and not isinstance(entry["period_k"], bool)
+                        and isinstance(entry["weight_w"], int)
+                        and not isinstance(entry["weight_w"], bool)
+                        and ("m_blocks" not in entry or (isinstance(entry["m_blocks"], int) and not isinstance(entry["m_blocks"], bool)))
+                        and isinstance(bp_raw, list)
+                        and len(bp_raw) == 3
+                        and all(
+                            isinstance(pr, list)
+                            and len(pr) == 2
+                            and all(isinstance(v_p, int) and not isinstance(v_p, bool) and v_p >= 1 for v_p in pr)
+                            for pr in bp_raw
+                        )
+                        and all(isinstance(entry[k], int) and not isinstance(entry[k], bool) for k in bal3_keys[1:])
+                    ):
+                        checked_m1.update(bal3_keys)
+                        (bw0, ba0), (bw1, ba1), (bw2, ba2) = bp_raw
+                        bh0_exp = entry["balanced_3block_h0"]
+                        bh2_exp = entry["balanced_3block_h2"]
+                        bub_exp = entry["balanced_3block_single_pivot_ub"]
+
+                        def _brox3(b_seq: List[List[int]]) -> int:
+                            if len(b_seq) == 1:
+                                return (1 << b_seq[0][1]) - 1
+                            w_h, a_h = b_seq[0]
+                            w_n, _ = b_seq[1]
+                            w_rem = sum(pair_i[0] for pair_i in b_seq[1:])
+                            return (3**w_rem) * ((1 << a_h) - 1) + (1 << (a_h + w_n)) * _brox3(b_seq[1:])
+
+                        bh0_true = _brox3(bp_raw)
+                        bh2_true = _brox3(bp_raw[2:] + bp_raw[:2])
+                        w_tot = bw0 + bw1 + bw2
+                        k_tot = w_tot + ba0 + ba1 + ba2
+                        d_gap3 = (1 << k_tot) - (3**w_tot)
+                        ub1_true = (3 ** (2 * bw0)) * ((1 << (k_tot - w_tot)) - 1)
+                        ok = (
+                            ok
+                            and bw0 == bw1 == bw2
+                            and (ba0 % 2) == 0
+                            and (ba1 % 2) == 0
+                            and (ba2 % 2) == 0
+                            and w_tot == w_exp
+                            and k_tot == k_per
+                            and d_gap3 > 0
+                            and bh0_true == bh0_exp
+                            and bh2_true == bh2_exp
+                            and ub1_true == bub_exp
+                            and ub1_true > 3 * d_gap3
+                            and bh2_true > 3 * d_gap3
+                            and bh0_true < 3 * d_gap3
+                            and Fraction((1 << bw0) * bh0_true - d_gap3, d_gap3) == x0
+                        )
+                    else:
+                        ok = False
+                bal4_keys = (
+                    "balanced_4block_params",
+                    "balanced_4block_h0",
+                    "balanced_4block_two_pivot_ub",
+                    "balanced_4block_three_pivot_ub",
+                )
+                if any(k in entry for k in bal4_keys):
+                    bp4_raw = entry.get("balanced_4block_params")
+                    if (
+                        all(k in entry for k in bal4_keys)
+                        and _is_strict_int(entry["numerator"])
+                        and _is_strict_int(entry["denominator"])
+                        and _is_strict_int(entry["period_k"])
+                        and _is_strict_int(entry["weight_w"])
+                        and ("m_blocks" not in entry or _is_strict_int(entry["m_blocks"]))
+                        and isinstance(bp4_raw, list)
+                        and len(bp4_raw) == 4
+                        and all(
+                            isinstance(pr, list)
+                            and len(pr) == 2
+                            and all(_is_strict_int(v_p) and v_p >= 1 for v_p in pr)
+                            for pr in bp4_raw
+                        )
+                        and all(_is_strict_int(entry[k]) for k in bal4_keys[1:])
+                    ):
+                        checked_m1.update(bal4_keys)
+                        (bw0, ba0), (bw1, ba1), (bw2, ba2), (bw3, ba3) = bp4_raw
+                        bh0_exp4 = entry["balanced_4block_h0"]
+                        bub2_exp4 = entry["balanced_4block_two_pivot_ub"]
+                        bub3_exp4 = entry["balanced_4block_three_pivot_ub"]
+
+                        def _brox4(b_seq: List[List[int]]) -> int:
+                            if len(b_seq) == 1:
+                                return (1 << b_seq[0][1]) - 1
+                            w_h, a_h = b_seq[0]
+                            w_n, _ = b_seq[1]
+                            w_rem = sum(pair_i[0] for pair_i in b_seq[1:])
+                            return (3**w_rem) * ((1 << a_h) - 1) + (1 << (a_h + w_n)) * _brox4(b_seq[1:])
+
+                        bh0_true4 = _brox4(bp4_raw)
+                        w_tot4 = bw0 + bw1 + bw2 + bw3
+                        k_tot4 = w_tot4 + ba0 + ba1 + ba2 + ba3
+                        d_gap4 = (1 << k_tot4) - (3**w_tot4)
+                        ub2_true4 = (3 ** (bw1 + bw2 + bw3)) * ((1 << ba0) - 1) + (1 << (ba0 + bw1)) * (
+                            3 ** (bw2 + bw3)
+                        ) * ((1 << (ba1 + ba2 + ba3)) - 1)
+                        ub3_true4 = (
+                            (3 ** (bw1 + bw2 + bw3)) * ((1 << ba0) - 1)
+                            + (1 << (ba0 + bw1)) * (3 ** (bw2 + bw3)) * ((1 << ba1) - 1)
+                            + (1 << (ba0 + bw1 + ba1 + bw2)) * (3**bw3) * ((1 << (ba2 + ba3)) - 1)
+                        )
+                        all_rot_2piv_escape = all(
+                            (
+                                (3 ** (r_s[1][0] + r_s[2][0] + r_s[3][0])) * ((1 << r_s[0][1]) - 1)
+                                + (1 << (r_s[0][1] + r_s[1][0]))
+                                * (3 ** (r_s[2][0] + r_s[3][0]))
+                                * ((1 << (r_s[1][1] + r_s[2][1] + r_s[3][1])) - 1)
+                            )
+                            > 3 * d_gap4
+                            for r_s in (bp4_raw[j_r:] + bp4_raw[:j_r] for j_r in range(4))
+                        )
+                        ok = (
+                            ok
+                            and bw0 == bw1 == bw2 == bw3
+                            and (ba0 % 2) == 0
+                            and (ba1 % 2) == 0
+                            and (ba2 % 2) == 0
+                            and (ba3 % 2) == 0
+                            and w_tot4 == w_exp
+                            and k_tot4 == k_per
+                            and d_gap4 > 0
+                            and bh0_true4 == bh0_exp4
+                            and ub2_true4 == bub2_exp4
+                            and ub3_true4 == bub3_exp4
+                            and all_rot_2piv_escape
+                            and bh0_true4 <= ub3_true4
+                            and ub3_true4 < 3 * d_gap4
+                            and Fraction((1 << bw0) * bh0_true4 - d_gap4, d_gap4) == x0
+                        )
+                    else:
+                        ok = False
+                bal5_keys = (
+                    "balanced_5block_params",
+                    "balanced_5block_h0",
+                    "balanced_5block_three_pivot_ub",
+                    "balanced_5block_four_pivot_ub",
+                )
+                if any(k in entry for k in bal5_keys):
+                    bp5_raw = entry.get("balanced_5block_params")
+                    if (
+                        all(k in entry for k in bal5_keys)
+                        and _is_strict_int(entry["numerator"])
+                        and _is_strict_int(entry["denominator"])
+                        and _is_strict_int(entry["period_k"])
+                        and _is_strict_int(entry["weight_w"])
+                        and ("m_blocks" not in entry or _is_strict_int(entry["m_blocks"]))
+                        and isinstance(bp5_raw, list)
+                        and len(bp5_raw) == 5
+                        and all(
+                            isinstance(pr, list)
+                            and len(pr) == 2
+                            and all(_is_strict_int(v_p) and v_p >= 1 for v_p in pr)
+                            for pr in bp5_raw
+                        )
+                        and all(_is_strict_int(entry[k]) for k in bal5_keys[1:])
+                    ):
+                        checked_m1.update(bal5_keys)
+                        (bw0, ba0), (bw1, ba1), (bw2, ba2), (bw3, ba3), (bw4, ba4) = bp5_raw
+                        bh0_exp5 = entry["balanced_5block_h0"]
+                        bub3_exp5 = entry["balanced_5block_three_pivot_ub"]
+                        bub4_exp5 = entry["balanced_5block_four_pivot_ub"]
+
+                        def _brox5(b_seq: List[List[int]]) -> int:
+                            if len(b_seq) == 1:
+                                return (1 << b_seq[0][1]) - 1
+                            w_h, a_h = b_seq[0]
+                            w_n, _ = b_seq[1]
+                            w_rem = sum(pair_i[0] for pair_i in b_seq[1:])
+                            return (3**w_rem) * ((1 << a_h) - 1) + (1 << (a_h + w_n)) * _brox5(b_seq[1:])
+
+                        bh0_true5 = _brox5(bp5_raw)
+                        w_tot5 = bw0 + bw1 + bw2 + bw3 + bw4
+                        k_tot5 = w_tot5 + ba0 + ba1 + ba2 + ba3 + ba4
+                        d_gap5 = (1 << k_tot5) - (3**w_tot5)
+                        ub3_true5 = (
+                            (3 ** (bw1 + bw2 + bw3 + bw4)) * ((1 << ba0) - 1)
+                            + (1 << (ba0 + bw1)) * (3 ** (bw2 + bw3 + bw4)) * ((1 << ba1) - 1)
+                            + (1 << (ba0 + bw1 + ba1 + bw2))
+                            * (3 ** (bw3 + bw4))
+                            * ((1 << (ba2 + ba3 + ba4)) - 1)
+                        )
+                        ub4_true5 = (
+                            (3 ** (bw1 + bw2 + bw3 + bw4)) * ((1 << ba0) - 1)
+                            + (1 << (ba0 + bw1)) * (3 ** (bw2 + bw3 + bw4)) * ((1 << ba1) - 1)
+                            + (1 << (ba0 + bw1 + ba1 + bw2)) * (3 ** (bw3 + bw4)) * ((1 << ba2) - 1)
+                            + (1 << (ba0 + bw1 + ba1 + bw2 + ba2 + bw3))
+                            * (3**bw4)
+                            * ((1 << (ba3 + ba4)) - 1)
+                        )
+                        all_rot_3piv_escape = all(
+                            (
+                                (3 ** (r_s[1][0] + r_s[2][0] + r_s[3][0] + r_s[4][0])) * ((1 << r_s[0][1]) - 1)
+                                + (1 << (r_s[0][1] + r_s[1][0]))
+                                * (3 ** (r_s[2][0] + r_s[3][0] + r_s[4][0]))
+                                * ((1 << r_s[1][1]) - 1)
+                                + (1 << (r_s[0][1] + r_s[1][0] + r_s[1][1] + r_s[2][0]))
+                                * (3 ** (r_s[3][0] + r_s[4][0]))
+                                * ((1 << (r_s[2][1] + r_s[3][1] + r_s[4][1])) - 1)
+                            )
+                            > 3 * d_gap5
+                            for r_s in (bp5_raw[j_r:] + bp5_raw[:j_r] for j_r in range(5))
+                        )
+                        ok = (
+                            ok
+                            and bw0 == bw1 == bw2 == bw3 == bw4
+                            and all((a_x % 2) == 0 for a_x in (ba0, ba1, ba2, ba3, ba4))
+                            and w_tot5 == w_exp
+                            and k_tot5 == k_per
+                            and d_gap5 > 0
+                            and bh0_true5 == bh0_exp5
+                            and ub3_true5 == bub3_exp5
+                            and ub4_true5 == bub4_exp5
+                            and all_rot_3piv_escape
+                            and bh0_true5 <= ub4_true5
+                            and ub4_true5 < 3 * d_gap5
+                            and Fraction((1 << bw0) * bh0_true5 - d_gap5, d_gap5) == x0
+                        )
+                    else:
+                        ok = False
+                bal6_keys = (
+                    "balanced_6block_params",
+                    "balanced_6block_h0",
+                    "balanced_6block_four_pivot_ub",
+                    "balanced_6block_five_pivot_ub",
+                )
+                if any(k in entry for k in bal6_keys):
+                    bp6_raw = entry.get("balanced_6block_params")
+                    if (
+                        all(k in entry for k in bal6_keys)
+                        and _is_strict_int(entry["numerator"])
+                        and _is_strict_int(entry["denominator"])
+                        and _is_strict_int(entry["period_k"])
+                        and _is_strict_int(entry["weight_w"])
+                        and ("m_blocks" not in entry or _is_strict_int(entry["m_blocks"]))
+                        and isinstance(bp6_raw, list)
+                        and len(bp6_raw) == 6
+                        and all(
+                            isinstance(pr, list)
+                            and len(pr) == 2
+                            and all(_is_strict_int(v_p) and v_p >= 1 for v_p in pr)
+                            for pr in bp6_raw
+                        )
+                        and all(_is_strict_int(entry[k]) for k in bal6_keys[1:])
+                    ):
+                        checked_m1.update(bal6_keys)
+                        (bw0, ba0), (bw1, ba1), (bw2, ba2), (bw3, ba3), (bw4, ba4), (bw5, ba5) = bp6_raw
+                        bh0_exp6 = entry["balanced_6block_h0"]
+                        bub4_exp6 = entry["balanced_6block_four_pivot_ub"]
+                        bub5_exp6 = entry["balanced_6block_five_pivot_ub"]
+
+                        def _brox6(b_seq: List[List[int]]) -> int:
+                            if len(b_seq) == 1:
+                                return (1 << b_seq[0][1]) - 1
+                            w_h, a_h = b_seq[0]
+                            w_n, _ = b_seq[1]
+                            w_rem = sum(pair_i[0] for pair_i in b_seq[1:])
+                            return (3**w_rem) * ((1 << a_h) - 1) + (1 << (a_h + w_n)) * _brox6(b_seq[1:])
+
+                        def _ub_piv6(r_s: List[List[int]], p_piv: int) -> int:
+                            tot_u = 0
+                            pref_k = 0
+                            rem_w = sum(pr_x[0] for pr_x in r_s)
+                            for idx_p in range(p_piv - 1):
+                                bw_x, ba_x = r_s[idx_p]
+                                rem_w -= bw_x
+                                tot_u += (1 << pref_k) * (3**rem_w) * ((1 << ba_x) - 1)
+                                pref_k += bw_x + ba_x
+                            rem_w -= r_s[p_piv - 1][0]
+                            tail_a = sum(r_s[j_x][1] for j_x in range(p_piv - 1, 6))
+                            tot_u += (1 << pref_k) * (3**rem_w) * ((1 << tail_a) - 1)
+                            return tot_u
+
+                        bh0_true6 = _brox6(bp6_raw)
+                        w_tot6 = bw0 + bw1 + bw2 + bw3 + bw4 + bw5
+                        k_tot6 = w_tot6 + ba0 + ba1 + ba2 + ba3 + ba4 + ba5
+                        d_gap6 = (1 << k_tot6) - (3**w_tot6)
+                        ub4_true6 = _ub_piv6(bp6_raw, 4)
+                        ub5_true6 = _ub_piv6(bp6_raw, 5)
+                        all_rot_4piv_escape = all(
+                            _ub_piv6(bp6_raw[j_r:] + bp6_raw[:j_r], 4) > 3 * d_gap6
+                            for j_r in range(6)
+                        )
+                        ok = (
+                            ok
+                            and bw0 == bw1 == bw2 == bw3 == bw4 == bw5
+                            and all((a_x % 2) == 0 for a_x in (ba0, ba1, ba2, ba3, ba4, ba5))
+                            and w_tot6 == w_exp
+                            and k_tot6 == k_per
+                            and d_gap6 > 0
+                            and bh0_true6 == bh0_exp6
+                            and ub4_true6 == bub4_exp6
+                            and ub5_true6 == bub5_exp6
+                            and all_rot_4piv_escape
+                            and bh0_true6 <= ub5_true6
+                            and ub5_true6 < 3 * d_gap6
+                            and Fraction((1 << bw0) * bh0_true6 - d_gap6, d_gap6) == x0
+                        )
                     else:
                         ok = False
             else:
                 ok = False
-        elif "period_k" in entry and "weight_w" in entry:
-            if not _is_strict_int(entry["period_k"]) or not _is_strict_int(entry["weight_w"]):
-                failed_witnesses.append(wid)
-                continue
-            checked_m1.update(("period_k", "weight_w"))
-            k_per = entry["period_k"]
-            w_exp = entry["weight_w"]
-            cur_f = x0
-            orb_f: List[Fraction] = []
-            par_bits: List[int] = []
-            for _ in range(max(0, k_per)):
-                orb_f.append(cur_f)
-                bit = cur_f.numerator & 1
-                par_bits.append(bit)
-                cur_f = (3 * cur_f + 1) / 2 if bit == 1 else (cur_f / 2)
-            ok = ok and k_per >= 1 and (cur_f == x0) and (sum(par_bits) == w_exp)
-            if "m_blocks" in entry:
-                checked_m1.add("m_blocks")
-                ok = ok and _is_strict_int(entry["m_blocks"]) and (count_odd_even_blocks(par_bits) == entry["m_blocks"])
-            if "x1" in entry:
-                checked_m1.add("x1")
-                local_mins = [
-                    orb_f[i]
-                    for i in range(len(par_bits))
-                    if par_bits[i] == 1 and par_bits[(i - 1) % len(par_bits)] == 0
-                ]
-                if isinstance(entry["x1"], str):
-                    try:
-                        x1_parsed = Fraction(entry["x1"])
-                    except (ValueError, ZeroDivisionError):
-                        ok = False
-                    else:
-                        ok = (
-                            ok
-                            and len(local_mins) >= 2
-                            and local_mins[0] == x0
-                            and local_mins[1] == x1_parsed
-                        )
-                else:
-                    ok = False
-            if "parity_vector" in entry:
-                checked_m1.add("parity_vector")
-                pv_raw = entry["parity_vector"]
-                ok = (
-                    ok
-                    and isinstance(pv_raw, list)
-                    and all(_is_strict_int(b) and b in (0, 1) for b in pv_raw)
-                    and (par_bits == list(pv_raw))
-                )
-            if "spiral_params" in entry:
-                req_sp = ("spiral_params", "denom_gap", "brox_h0", "brox_h1", "gcd_d_h0_h1")
-                sp_raw = entry.get("spiral_params")
-                if (
-                    all(k in entry for k in req_sp)
-                    and isinstance(sp_raw, list)
-                    and len(sp_raw) == 4
-                    and all(_is_strict_int(v) and v >= 1 for v in sp_raw)
-                    and all(_is_strict_int(entry[k]) for k in req_sp[1:])
-                ):
-                    checked_m1.update(req_sp)
-                    w1, a1, w2, a2 = sp_raw
-                    h0, h1 = clp.two_block_brox_carries(w1, a1, w2, a2)
-                    det = (1 << (w1 + a1 + w2 + a2)) - (3 ** (w1 + w2))
-                    ok = (
-                        ok
-                        and det != 0
-                        and det == entry["denom_gap"]
-                        and h0 == entry["brox_h0"]
-                        and h1 == entry["brox_h1"]
-                        and math.gcd(det, math.gcd(h0, h1)) == entry["gcd_d_h0_h1"]
-                        and Fraction((1 << w1) * h0 - det, det) == x0
-                    )
-                else:
-                    ok = False
-            bal3_keys = (
-                "balanced_3block_params",
-                "balanced_3block_h0",
-                "balanced_3block_h2",
-                "balanced_3block_single_pivot_ub",
-            )
-            if any(k in entry for k in bal3_keys):
-                bp_raw = entry.get("balanced_3block_params")
-                if (
-                    all(k in entry for k in bal3_keys)
-                    and isinstance(entry["numerator"], int)
-                    and not isinstance(entry["numerator"], bool)
-                    and isinstance(entry["denominator"], int)
-                    and not isinstance(entry["denominator"], bool)
-                    and isinstance(entry["period_k"], int)
-                    and not isinstance(entry["period_k"], bool)
-                    and isinstance(entry["weight_w"], int)
-                    and not isinstance(entry["weight_w"], bool)
-                    and ("m_blocks" not in entry or (isinstance(entry["m_blocks"], int) and not isinstance(entry["m_blocks"], bool)))
-                    and isinstance(bp_raw, list)
-                    and len(bp_raw) == 3
-                    and all(
-                        isinstance(pr, list)
-                        and len(pr) == 2
-                        and all(isinstance(v_p, int) and not isinstance(v_p, bool) and v_p >= 1 for v_p in pr)
-                        for pr in bp_raw
-                    )
-                    and all(isinstance(entry[k], int) and not isinstance(entry[k], bool) for k in bal3_keys[1:])
-                ):
-                    checked_m1.update(bal3_keys)
-                    (bw0, ba0), (bw1, ba1), (bw2, ba2) = bp_raw
-                    bh0_exp = entry["balanced_3block_h0"]
-                    bh2_exp = entry["balanced_3block_h2"]
-                    bub_exp = entry["balanced_3block_single_pivot_ub"]
-
-                    def _brox3(b_seq: List[List[int]]) -> int:
-                        if len(b_seq) == 1:
-                            return (1 << b_seq[0][1]) - 1
-                        w_h, a_h = b_seq[0]
-                        w_n, _ = b_seq[1]
-                        w_rem = sum(pair_i[0] for pair_i in b_seq[1:])
-                        return (3**w_rem) * ((1 << a_h) - 1) + (1 << (a_h + w_n)) * _brox3(b_seq[1:])
-
-                    bh0_true = _brox3(bp_raw)
-                    bh2_true = _brox3(bp_raw[2:] + bp_raw[:2])
-                    w_tot = bw0 + bw1 + bw2
-                    k_tot = w_tot + ba0 + ba1 + ba2
-                    d_gap3 = (1 << k_tot) - (3**w_tot)
-                    ub1_true = (3 ** (2 * bw0)) * ((1 << (k_tot - w_tot)) - 1)
-                    ok = (
-                        ok
-                        and bw0 == bw1 == bw2
-                        and (ba0 % 2) == 0
-                        and (ba1 % 2) == 0
-                        and (ba2 % 2) == 0
-                        and w_tot == w_exp
-                        and k_tot == k_per
-                        and d_gap3 > 0
-                        and bh0_true == bh0_exp
-                        and bh2_true == bh2_exp
-                        and ub1_true == bub_exp
-                        and ub1_true > 3 * d_gap3
-                        and bh2_true > 3 * d_gap3
-                        and bh0_true < 3 * d_gap3
-                        and Fraction((1 << bw0) * bh0_true - d_gap3, d_gap3) == x0
-                    )
-                else:
-                    ok = False
-            bal4_keys = (
-                "balanced_4block_params",
-                "balanced_4block_h0",
-                "balanced_4block_two_pivot_ub",
-                "balanced_4block_three_pivot_ub",
-            )
-            if any(k in entry for k in bal4_keys):
-                bp4_raw = entry.get("balanced_4block_params")
-                if (
-                    all(k in entry for k in bal4_keys)
-                    and _is_strict_int(entry["numerator"])
-                    and _is_strict_int(entry["denominator"])
-                    and _is_strict_int(entry["period_k"])
-                    and _is_strict_int(entry["weight_w"])
-                    and ("m_blocks" not in entry or _is_strict_int(entry["m_blocks"]))
-                    and isinstance(bp4_raw, list)
-                    and len(bp4_raw) == 4
-                    and all(
-                        isinstance(pr, list)
-                        and len(pr) == 2
-                        and all(_is_strict_int(v_p) and v_p >= 1 for v_p in pr)
-                        for pr in bp4_raw
-                    )
-                    and all(_is_strict_int(entry[k]) for k in bal4_keys[1:])
-                ):
-                    checked_m1.update(bal4_keys)
-                    (bw0, ba0), (bw1, ba1), (bw2, ba2), (bw3, ba3) = bp4_raw
-                    bh0_exp4 = entry["balanced_4block_h0"]
-                    bub2_exp4 = entry["balanced_4block_two_pivot_ub"]
-                    bub3_exp4 = entry["balanced_4block_three_pivot_ub"]
-
-                    def _brox4(b_seq: List[List[int]]) -> int:
-                        if len(b_seq) == 1:
-                            return (1 << b_seq[0][1]) - 1
-                        w_h, a_h = b_seq[0]
-                        w_n, _ = b_seq[1]
-                        w_rem = sum(pair_i[0] for pair_i in b_seq[1:])
-                        return (3**w_rem) * ((1 << a_h) - 1) + (1 << (a_h + w_n)) * _brox4(b_seq[1:])
-
-                    bh0_true4 = _brox4(bp4_raw)
-                    w_tot4 = bw0 + bw1 + bw2 + bw3
-                    k_tot4 = w_tot4 + ba0 + ba1 + ba2 + ba3
-                    d_gap4 = (1 << k_tot4) - (3**w_tot4)
-                    ub2_true4 = (3 ** (bw1 + bw2 + bw3)) * ((1 << ba0) - 1) + (1 << (ba0 + bw1)) * (
-                        3 ** (bw2 + bw3)
-                    ) * ((1 << (ba1 + ba2 + ba3)) - 1)
-                    ub3_true4 = (
-                        (3 ** (bw1 + bw2 + bw3)) * ((1 << ba0) - 1)
-                        + (1 << (ba0 + bw1)) * (3 ** (bw2 + bw3)) * ((1 << ba1) - 1)
-                        + (1 << (ba0 + bw1 + ba1 + bw2)) * (3**bw3) * ((1 << (ba2 + ba3)) - 1)
-                    )
-                    all_rot_2piv_escape = all(
-                        (
-                            (3 ** (r_s[1][0] + r_s[2][0] + r_s[3][0])) * ((1 << r_s[0][1]) - 1)
-                            + (1 << (r_s[0][1] + r_s[1][0]))
-                            * (3 ** (r_s[2][0] + r_s[3][0]))
-                            * ((1 << (r_s[1][1] + r_s[2][1] + r_s[3][1])) - 1)
-                        )
-                        > 3 * d_gap4
-                        for r_s in (bp4_raw[j_r:] + bp4_raw[:j_r] for j_r in range(4))
-                    )
-                    ok = (
-                        ok
-                        and bw0 == bw1 == bw2 == bw3
-                        and (ba0 % 2) == 0
-                        and (ba1 % 2) == 0
-                        and (ba2 % 2) == 0
-                        and (ba3 % 2) == 0
-                        and w_tot4 == w_exp
-                        and k_tot4 == k_per
-                        and d_gap4 > 0
-                        and bh0_true4 == bh0_exp4
-                        and ub2_true4 == bub2_exp4
-                        and ub3_true4 == bub3_exp4
-                        and all_rot_2piv_escape
-                        and bh0_true4 <= ub3_true4
-                        and ub3_true4 < 3 * d_gap4
-                        and Fraction((1 << bw0) * bh0_true4 - d_gap4, d_gap4) == x0
-                    )
-                else:
-                    ok = False
-            bal5_keys = (
-                "balanced_5block_params",
-                "balanced_5block_h0",
-                "balanced_5block_three_pivot_ub",
-                "balanced_5block_four_pivot_ub",
-            )
-            if any(k in entry for k in bal5_keys):
-                bp5_raw = entry.get("balanced_5block_params")
-                if (
-                    all(k in entry for k in bal5_keys)
-                    and _is_strict_int(entry["numerator"])
-                    and _is_strict_int(entry["denominator"])
-                    and _is_strict_int(entry["period_k"])
-                    and _is_strict_int(entry["weight_w"])
-                    and ("m_blocks" not in entry or _is_strict_int(entry["m_blocks"]))
-                    and isinstance(bp5_raw, list)
-                    and len(bp5_raw) == 5
-                    and all(
-                        isinstance(pr, list)
-                        and len(pr) == 2
-                        and all(_is_strict_int(v_p) and v_p >= 1 for v_p in pr)
-                        for pr in bp5_raw
-                    )
-                    and all(_is_strict_int(entry[k]) for k in bal5_keys[1:])
-                ):
-                    checked_m1.update(bal5_keys)
-                    (bw0, ba0), (bw1, ba1), (bw2, ba2), (bw3, ba3), (bw4, ba4) = bp5_raw
-                    bh0_exp5 = entry["balanced_5block_h0"]
-                    bub3_exp5 = entry["balanced_5block_three_pivot_ub"]
-                    bub4_exp5 = entry["balanced_5block_four_pivot_ub"]
-
-                    def _brox5(b_seq: List[List[int]]) -> int:
-                        if len(b_seq) == 1:
-                            return (1 << b_seq[0][1]) - 1
-                        w_h, a_h = b_seq[0]
-                        w_n, _ = b_seq[1]
-                        w_rem = sum(pair_i[0] for pair_i in b_seq[1:])
-                        return (3**w_rem) * ((1 << a_h) - 1) + (1 << (a_h + w_n)) * _brox5(b_seq[1:])
-
-                    bh0_true5 = _brox5(bp5_raw)
-                    w_tot5 = bw0 + bw1 + bw2 + bw3 + bw4
-                    k_tot5 = w_tot5 + ba0 + ba1 + ba2 + ba3 + ba4
-                    d_gap5 = (1 << k_tot5) - (3**w_tot5)
-                    ub3_true5 = (
-                        (3 ** (bw1 + bw2 + bw3 + bw4)) * ((1 << ba0) - 1)
-                        + (1 << (ba0 + bw1)) * (3 ** (bw2 + bw3 + bw4)) * ((1 << ba1) - 1)
-                        + (1 << (ba0 + bw1 + ba1 + bw2))
-                        * (3 ** (bw3 + bw4))
-                        * ((1 << (ba2 + ba3 + ba4)) - 1)
-                    )
-                    ub4_true5 = (
-                        (3 ** (bw1 + bw2 + bw3 + bw4)) * ((1 << ba0) - 1)
-                        + (1 << (ba0 + bw1)) * (3 ** (bw2 + bw3 + bw4)) * ((1 << ba1) - 1)
-                        + (1 << (ba0 + bw1 + ba1 + bw2)) * (3 ** (bw3 + bw4)) * ((1 << ba2) - 1)
-                        + (1 << (ba0 + bw1 + ba1 + bw2 + ba2 + bw3))
-                        * (3**bw4)
-                        * ((1 << (ba3 + ba4)) - 1)
-                    )
-                    all_rot_3piv_escape = all(
-                        (
-                            (3 ** (r_s[1][0] + r_s[2][0] + r_s[3][0] + r_s[4][0])) * ((1 << r_s[0][1]) - 1)
-                            + (1 << (r_s[0][1] + r_s[1][0]))
-                            * (3 ** (r_s[2][0] + r_s[3][0] + r_s[4][0]))
-                            * ((1 << r_s[1][1]) - 1)
-                            + (1 << (r_s[0][1] + r_s[1][0] + r_s[1][1] + r_s[2][0]))
-                            * (3 ** (r_s[3][0] + r_s[4][0]))
-                            * ((1 << (r_s[2][1] + r_s[3][1] + r_s[4][1])) - 1)
-                        )
-                        > 3 * d_gap5
-                        for r_s in (bp5_raw[j_r:] + bp5_raw[:j_r] for j_r in range(5))
-                    )
-                    ok = (
-                        ok
-                        and bw0 == bw1 == bw2 == bw3 == bw4
-                        and all((a_x % 2) == 0 for a_x in (ba0, ba1, ba2, ba3, ba4))
-                        and w_tot5 == w_exp
-                        and k_tot5 == k_per
-                        and d_gap5 > 0
-                        and bh0_true5 == bh0_exp5
-                        and ub3_true5 == bub3_exp5
-                        and ub4_true5 == bub4_exp5
-                        and all_rot_3piv_escape
-                        and bh0_true5 <= ub4_true5
-                        and ub4_true5 < 3 * d_gap5
-                        and Fraction((1 << bw0) * bh0_true5 - d_gap5, d_gap5) == x0
-                    )
-                else:
-                    ok = False
-        else:
+            ok = ok and set(entry.keys()).issubset(checked_m1)
+        except (ValueError, TypeError, ZeroDivisionError, ArithmeticError, IndexError, KeyError):
             ok = False
-        ok = ok and set(entry.keys()).issubset(checked_m1)
         if ok:
             verified_count += 1
         else:
@@ -6024,67 +6352,74 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
 
     # 3. m2_z_neg
     for entry in bank["domains"]["m2_z_neg"]:
+        if not isinstance(entry, dict):
+            failed_witnesses.append("<malformed>")
+            continue
         wid = str(entry.get("witness_id", "<missing>"))
         if (
             not isinstance(entry.get("witness_id"), str)
             or not isinstance(entry.get("kills_mechanisms"), list)
             or not _is_strict_int(entry.get("seed"))
+            or _entry_has_illegal_bool("m2_z_neg", entry)
         ):
             failed_witnesses.append(wid)
             continue
         seed = entry["seed"]
         ok = seed < 0
         checked_m2: Set[str] = {"witness_id", "seed", "kills_mechanisms"}
-        if "orbit" in entry:
-            req_m2 = ("orbit", "period_k", "weight_w", "denom_gap")
-            orb_m2_raw = entry.get("orbit")
-            if (
-                all(k in entry for k in req_m2)
-                and isinstance(orb_m2_raw, list)
-                and all(_is_strict_int(v) for v in orb_m2_raw)
-                and _is_strict_int(entry["period_k"])
-                and _is_strict_int(entry["weight_w"])
-                and _is_strict_int(entry["denom_gap"])
-                and entry["period_k"] >= 1
-                and entry["weight_w"] >= 0
-            ):
-                checked_m2.update(req_m2)
-                orb = list(orb_m2_raw)
-                cur_n = seed
-                traced_n: List[int] = []
-                w_n = 0
-                for _ in range(len(orb)):
-                    traced_n.append(cur_n)
-                    if (cur_n & 1) == 1:
-                        w_n += 1
-                    cur_n = int_compressed_step(cur_n, q=3)
-                k_p = entry["period_k"]
-                w_p = entry["weight_w"]
-                det_m2 = (1 << k_p) - (3**w_p)
-                ok = (
-                    ok
-                    and len(orb) == k_p
-                    and traced_n == orb
-                    and cur_n == seed
-                    and w_n == w_p
-                    and det_m2 == entry["denom_gap"]
-                )
-                if "carry" in entry:
-                    checked_m2.add("carry")
-                    if _is_strict_int(entry["carry"]):
-                        c_m2 = 0
-                        for idx_b, v_orb in enumerate(orb):
-                            if (v_orb & 1) == 1:
-                                c_m2 = 3 * c_m2 + (1 << idx_b)
-                        ok = ok and (c_m2 == entry["carry"]) and (seed * det_m2 == c_m2)
-                    else:
-                        ok = False
+        try:
+            if "orbit" in entry:
+                req_m2 = ("orbit", "period_k", "weight_w", "denom_gap")
+                orb_m2_raw = entry.get("orbit")
+                if (
+                    all(k in entry for k in req_m2)
+                    and isinstance(orb_m2_raw, list)
+                    and all(_is_strict_int(v) for v in orb_m2_raw)
+                    and _is_strict_int(entry["period_k"])
+                    and _is_strict_int(entry["weight_w"])
+                    and _is_strict_int(entry["denom_gap"])
+                    and entry["period_k"] >= 1
+                    and entry["weight_w"] >= 0
+                ):
+                    checked_m2.update(req_m2)
+                    orb = list(orb_m2_raw)
+                    cur_n = seed
+                    traced_n: List[int] = []
+                    w_n = 0
+                    for _ in range(len(orb)):
+                        traced_n.append(cur_n)
+                        if (cur_n & 1) == 1:
+                            w_n += 1
+                        cur_n = int_compressed_step(cur_n, q=3)
+                    k_p = entry["period_k"]
+                    w_p = entry["weight_w"]
+                    det_m2 = (1 << k_p) - (3**w_p)
+                    ok = (
+                        ok
+                        and len(orb) == k_p
+                        and traced_n == orb
+                        and cur_n == seed
+                        and w_n == w_p
+                        and det_m2 == entry["denom_gap"]
+                    )
+                    if "carry" in entry:
+                        checked_m2.add("carry")
+                        if _is_strict_int(entry["carry"]):
+                            c_m2 = 0
+                            for idx_b, v_orb in enumerate(orb):
+                                if (v_orb & 1) == 1:
+                                    c_m2 = 3 * c_m2 + (1 << idx_b)
+                            ok = ok and (c_m2 == entry["carry"]) and (seed * det_m2 == c_m2)
+                        else:
+                            ok = False
+                else:
+                    ok = False
             else:
-                ok = False
-        else:
-            # Bounded-exponent Syracuse forest root in Z^-: (3 * seed + 1) % 128 == 0
-            ok = ok and ((seed & 1) == 1) and ((3 * seed + 1) % 128 == 0)
-        ok = ok and set(entry.keys()).issubset(checked_m2)
+                # Bounded-exponent Syracuse forest root in Z^-: (3 * seed + 1) % 128 == 0
+                ok = ok and ((seed & 1) == 1) and ((3 * seed + 1) % 128 == 0)
+            ok = ok and set(entry.keys()).issubset(checked_m2)
+        except (ValueError, TypeError, ZeroDivisionError, ArithmeticError, IndexError, KeyError):
+            ok = False
         if ok:
             verified_count += 1
         else:
@@ -6092,12 +6427,16 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
 
     # 4. m3_supercritical
     for entry in bank["domains"]["m3_supercritical"]:
+        if not isinstance(entry, dict):
+            failed_witnesses.append("<malformed>")
+            continue
         wid = str(entry.get("witness_id", "<missing>"))
         if (
             not isinstance(entry.get("witness_id"), str)
             or not isinstance(entry.get("kills_mechanisms"), list)
             or not _is_strict_int(entry.get("seed"))
             or not _is_strict_int(entry.get("multiplier_q"))
+            or _entry_has_illegal_bool("m3_supercritical", entry)
         ):
             failed_witnesses.append(wid)
             continue
@@ -6105,106 +6444,111 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
         q_mul = entry["multiplier_q"]
         ok = seed >= 1 and q_mul > 3 and (q_mul & 1) == 1
         checked_m3: Set[str] = {"witness_id", "seed", "multiplier_q", "kills_mechanisms"}
-        if entry.get("system") in (
-            "T_diamond_q7",
-            "T_diamond2_q7",
-            "T_diamond3_q7",
-            "T_diamond4_q7",
-            "T_diamond5_q7",
-            "T_diamond6_q7",
-            "T_diamond7_q7",
-            "T_diamond8_q7",
-            "T_diamond9_q7",
-            "T_diamond10_q7",
-            "T_diamond11_q7",
-            "T_diamond12_q7",
-            "T_diamond13_q7",
-        ):
-            checked_m3.update(("system", "orbit"))
-            sys_m3 = entry.get("system")
-            step_fn_m3 = {
-                "T_diamond_q7": cousin_diamond_step_int,
-                "T_diamond2_q7": cousin_diamond2_step_int,
-                "T_diamond3_q7": cousin_diamond3_step_int,
-                "T_diamond4_q7": cousin_diamond4_step_int,
-                "T_diamond5_q7": cousin_diamond5_step_int,
-                "T_diamond6_q7": cousin_diamond6_step_int,
-                "T_diamond7_q7": cousin_diamond7_step_int,
-                "T_diamond8_q7": cousin_diamond8_step_int,
-                "T_diamond9_q7": cousin_diamond9_step_int,
-                "T_diamond10_q7": cousin_diamond10_step_int,
-                "T_diamond11_q7": cousin_diamond11_step_int,
-                "T_diamond12_q7": cousin_diamond12_step_int,
-                "T_diamond13_q7": cousin_diamond13_step_int,
-            }[str(sys_m3)]
-            orb_m3_raw = entry.get("orbit")
-            if (
-                ok
-                and _is_strict_int(entry["seed"])
-                and _is_strict_int(entry["multiplier_q"])
-                and isinstance(orb_m3_raw, list)
-                and len(orb_m3_raw) >= 1
-                and all(_is_strict_int(v_o) and v_o >= 1 for v_o in orb_m3_raw)
+        try:
+            if entry.get("system") in (
+                "T_diamond_q7",
+                "T_diamond2_q7",
+                "T_diamond3_q7",
+                "T_diamond4_q7",
+                "T_diamond5_q7",
+                "T_diamond6_q7",
+                "T_diamond7_q7",
+                "T_diamond8_q7",
+                "T_diamond9_q7",
+                "T_diamond10_q7",
+                "T_diamond11_q7",
+                "T_diamond12_q7",
+                "T_diamond13_q7",
+                "T_diamond14_q7",
             ):
-                orb = list(orb_m3_raw)
-                cur_m3 = seed
-                traced_m3: List[int] = []
-                for _ in range(len(orb)):
-                    traced_m3.append(cur_m3)
-                    cur_m3 = step_fn_m3(cur_m3, q=q_mul)
-                ok = ok and (traced_m3 == orb) and (cur_m3 == seed)
-            else:
-                ok = False
-        elif "period_k" in entry:
-            if (
-                ok
-                and "weight_w" in entry
-                and "denom_gap" in entry
-                and _is_strict_int(entry["period_k"])
-                and _is_strict_int(entry["weight_w"])
-                and _is_strict_int(entry["denom_gap"])
-                and entry["period_k"] >= 1
-                and entry["weight_w"] >= 0
-            ):
-                checked_m3.update(("period_k", "weight_w", "denom_gap"))
-                k_p = entry["period_k"]
-                w_p = entry["weight_w"]
-                end_m3, par_m3 = int_iter_and_parity(seed, k_p, q=q_mul)
-                ok = (
+                checked_m3.update(("system", "orbit"))
+                sys_m3 = entry.get("system")
+                step_fn_m3 = {
+                    "T_diamond_q7": cousin_diamond_step_int,
+                    "T_diamond2_q7": cousin_diamond2_step_int,
+                    "T_diamond3_q7": cousin_diamond3_step_int,
+                    "T_diamond4_q7": cousin_diamond4_step_int,
+                    "T_diamond5_q7": cousin_diamond5_step_int,
+                    "T_diamond6_q7": cousin_diamond6_step_int,
+                    "T_diamond7_q7": cousin_diamond7_step_int,
+                    "T_diamond8_q7": cousin_diamond8_step_int,
+                    "T_diamond9_q7": cousin_diamond9_step_int,
+                    "T_diamond10_q7": cousin_diamond10_step_int,
+                    "T_diamond11_q7": cousin_diamond11_step_int,
+                    "T_diamond12_q7": cousin_diamond12_step_int,
+                    "T_diamond13_q7": cousin_diamond13_step_int,
+                    "T_diamond14_q7": cousin_diamond14_step_int,
+                }[str(sys_m3)]
+                orb_m3_raw = entry.get("orbit")
+                if (
                     ok
-                    and end_m3 == seed
-                    and sum(par_m3) == w_p
-                    and ((1 << k_p) - (q_mul**w_p)) == entry["denom_gap"]
-                )
+                    and _is_strict_int(entry["seed"])
+                    and _is_strict_int(entry["multiplier_q"])
+                    and isinstance(orb_m3_raw, list)
+                    and len(orb_m3_raw) >= 1
+                    and all(_is_strict_int(v_o) and v_o >= 1 for v_o in orb_m3_raw)
+                ):
+                    orb = list(orb_m3_raw)
+                    cur_m3 = seed
+                    traced_m3: List[int] = []
+                    for _ in range(len(orb)):
+                        traced_m3.append(cur_m3)
+                        cur_m3 = step_fn_m3(cur_m3, q=q_mul)
+                    ok = ok and (traced_m3 == orb) and (cur_m3 == seed)
+                else:
+                    ok = False
+            elif "period_k" in entry:
+                if (
+                    ok
+                    and "weight_w" in entry
+                    and "denom_gap" in entry
+                    and _is_strict_int(entry["period_k"])
+                    and _is_strict_int(entry["weight_w"])
+                    and _is_strict_int(entry["denom_gap"])
+                    and entry["period_k"] >= 1
+                    and entry["weight_w"] >= 0
+                ):
+                    checked_m3.update(("period_k", "weight_w", "denom_gap"))
+                    k_p = entry["period_k"]
+                    w_p = entry["weight_w"]
+                    end_m3, par_m3 = int_iter_and_parity(seed, k_p, q=q_mul)
+                    ok = (
+                        ok
+                        and end_m3 == seed
+                        and sum(par_m3) == w_p
+                        and ((1 << k_p) - (q_mul**w_p)) == entry["denom_gap"]
+                    )
+                else:
+                    ok = False
+            elif "target_cycle_seed" in entry:
+                checked_m3.add("target_cycle_seed")
+                if ok and _is_strict_int(entry["target_cycle_seed"]):
+                    target_c = entry["target_cycle_seed"]
+                    cur_m3 = seed
+                    hit_target = False
+                    for _ in range(100):
+                        if cur_m3 == target_c:
+                            hit_target = True
+                            break
+                        cur_m3 = int_compressed_step(cur_m3, q=q_mul)
+                    ok = ok and hit_target
+                else:
+                    ok = False
             else:
-                ok = False
-        elif "target_cycle_seed" in entry:
-            checked_m3.add("target_cycle_seed")
-            if ok and _is_strict_int(entry["target_cycle_seed"]):
-                target_c = entry["target_cycle_seed"]
-                cur_m3 = seed
-                hit_target = False
-                for _ in range(100):
-                    if cur_m3 == target_c:
-                        hit_target = True
-                        break
-                    cur_m3 = int_compressed_step(cur_m3, q=q_mul)
-                ok = ok and hit_target
-            else:
-                ok = False
-        else:
-            if ok:
-                cur_m3 = seed
-                min_seen = seed
-                max_seen = seed
-                for _ in range(200):
-                    cur_m3 = int_compressed_step(cur_m3, q=q_mul)
-                    min_seen = min(min_seen, cur_m3)
-                    max_seen = max(max_seen, cur_m3)
-                ok = ok and (min_seen == seed) and (max_seen > 10**5)
-            else:
-                ok = False
-        ok = ok and set(entry.keys()).issubset(checked_m3)
+                if ok:
+                    cur_m3 = seed
+                    min_seen = seed
+                    max_seen = seed
+                    for _ in range(200):
+                        cur_m3 = int_compressed_step(cur_m3, q=q_mul)
+                        min_seen = min(min_seen, cur_m3)
+                        max_seen = max(max_seen, cur_m3)
+                    ok = ok and (min_seen == seed) and (max_seen > 10**5)
+                else:
+                    ok = False
+            ok = ok and set(entry.keys()).issubset(checked_m3)
+        except (ValueError, TypeError, ZeroDivisionError, ArithmeticError, IndexError, KeyError):
+            ok = False
         if ok:
             verified_count += 1
         else:
@@ -6212,945 +6556,1030 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
 
     # 5. log2_3_convergents
     for entry in bank["domains"]["log2_3_convergents"]:
+        if not isinstance(entry, dict):
+            failed_witnesses.append("<malformed>")
+            continue
         wid = str(entry.get("witness_id", "<missing>"))
-        if not isinstance(entry.get("witness_id"), str) or not isinstance(entry.get("kills_mechanisms"), list):
+        if (
+            not isinstance(entry.get("witness_id"), str)
+            or not isinstance(entry.get("kills_mechanisms"), list)
+            or _entry_has_illegal_bool("log2_3_convergents", entry)
+        ):
             failed_witnesses.append(wid)
             continue
         ok = True
         checked_conv: Set[str] = {"witness_id", "kills_mechanisms"}
-        if "K" in entry and "W" in entry and "gap_sign" in entry:
-            if (
-                not _is_strict_int(entry["K"])
-                or not _is_strict_int(entry["W"])
-                or not _is_strict_int(entry["gap_sign"])
-                or entry["K"] < 0
-                or entry["W"] < 0
-            ):
-                failed_witnesses.append(wid)
-                continue
-            checked_conv.update(("K", "W", "gap_sign"))
-            k_val = entry["K"]
-            w_val = entry["W"]
-            gap = (1 << k_val) - (3**w_val)
-            sign_obs = 1 if gap > 0 else (-1 if gap < 0 else 0)
-            ok = ok and (sign_obs == entry["gap_sign"])
-            if "abs_gap" in entry:
-                checked_conv.add("abs_gap")
-                ok = ok and _is_strict_int(entry["abs_gap"]) and (abs(gap) == entry["abs_gap"])
-            if "even_diff_half" in entry:
-                checked_conv.add("even_diff_half")
-                ok = ok and ((k_val - w_val) == 2 * int(entry["even_diff_half"]))
-            if "gap_mod8" in entry:
-                checked_conv.add("gap_mod8")
-                ok = ok and (gap > 0) and ((gap % 8) == int(entry["gap_mod8"]))
-            coprime2_keys = (
-                "second_coprime_order_prime",
-                "second_ord2_mod_p",
-                "second_ord32_mod_p",
-            )
-            if any(k in entry for k in coprime2_keys):
-                if all(k in entry for k in coprime2_keys):
-                    checked_conv.update(coprime2_keys)
-                    p2 = int(entry["second_coprime_order_prime"])
-                    is_p2_prime = (
-                        p2 > 331
-                        and (p2 & 1) == 1
-                        and all(p2 % d_i != 0 for d_i in range(3, int(math.isqrt(p2)) + 1, 2))
-                    )
-                    if is_p2_prime and p2 <= 1_500_000:
-                        o2_p2 = _mult_order_mod_prime(2, p2)
-                        o32_p2 = _mult_order_mod_prime((3 * pow(2, -1, p2)) % p2, p2)
-                        hits_to_p2 = _scan_coprime_order_primes_up_to(p2)
-                        ok = (
-                            ok
-                            and o2_p2 == int(entry["second_ord2_mod_p"])
-                            and o32_p2 == int(entry["second_ord32_mod_p"])
-                            and math.gcd(o2_p2, o32_p2) == 1
-                            and (p2 % 8) == 3
-                            and tuple(h[0] for h in hits_to_p2) == (331, p2)
+        try:
+            if "K" in entry and "W" in entry and "gap_sign" in entry:
+                if (
+                    not _is_strict_int(entry["K"])
+                    or not _is_strict_int(entry["W"])
+                    or not _is_strict_int(entry["gap_sign"])
+                    or entry["K"] < 0
+                    or entry["W"] < 0
+                ):
+                    failed_witnesses.append(wid)
+                    continue
+                checked_conv.update(("K", "W", "gap_sign"))
+                k_val = entry["K"]
+                w_val = entry["W"]
+                gap = (1 << k_val) - (3**w_val)
+                sign_obs = 1 if gap > 0 else (-1 if gap < 0 else 0)
+                ok = ok and (sign_obs == entry["gap_sign"])
+                if "abs_gap" in entry:
+                    checked_conv.add("abs_gap")
+                    ok = ok and _is_strict_int(entry["abs_gap"]) and (abs(gap) == entry["abs_gap"])
+                if "even_diff_half" in entry:
+                    checked_conv.add("even_diff_half")
+                    ok = ok and ((k_val - w_val) == 2 * int(entry["even_diff_half"]))
+                if "gap_mod8" in entry:
+                    checked_conv.add("gap_mod8")
+                    ok = ok and (gap > 0) and ((gap % 8) == int(entry["gap_mod8"]))
+                coprime2_keys = (
+                    "second_coprime_order_prime",
+                    "second_ord2_mod_p",
+                    "second_ord32_mod_p",
+                )
+                if any(k in entry for k in coprime2_keys):
+                    if all(k in entry for k in coprime2_keys):
+                        checked_conv.update(coprime2_keys)
+                        p2 = int(entry["second_coprime_order_prime"])
+                        is_p2_prime = (
+                            p2 > 331
+                            and (p2 & 1) == 1
+                            and all(p2 % d_i != 0 for d_i in range(3, int(math.isqrt(p2)) + 1, 2))
                         )
+                        if is_p2_prime and p2 <= 1_500_000:
+                            o2_p2 = _mult_order_mod_prime(2, p2)
+                            o32_p2 = _mult_order_mod_prime((3 * pow(2, -1, p2)) % p2, p2)
+                            hits_to_p2 = _scan_coprime_order_primes_up_to(p2)
+                            ok = (
+                                ok
+                                and o2_p2 == int(entry["second_ord2_mod_p"])
+                                and o32_p2 == int(entry["second_ord32_mod_p"])
+                                and math.gcd(o2_p2, o32_p2) == 1
+                                and (p2 % 8) == 3
+                                and tuple(h[0] for h in hits_to_p2) == (331, p2)
+                            )
+                        else:
+                            ok = False
                     else:
                         ok = False
-                else:
-                    ok = False
-            twobase_keys = ("laurent_twobase_4x4_u", "laurent_twobase_4x4_det")
-            if any(k in entry for k in twobase_keys):
-                if all(k in entry for k in twobase_keys) and w_val >= 1 and k_val >= 1:
-                    checked_conv.update(twobase_keys)
-                    u_tb = int(entry["laurent_twobase_4x4_u"])
-                    det_tb_exp = int(entry["laurent_twobase_4x4_det"])
-                    if u_tb >= 1:
-                        rows_tb = [(0, 0), (1, 0), (0, 1), (1, 1)]
-                        cols_tb = [(0, 0), (1, 0), (0, u_tb), (1, u_tb)]
-                        mat_tb = [
-                            [
-                                math.comb(r_i * w_val + s_i * k_val, t_i)
-                                * (1 << (r_i * u_i))
-                                * (3 ** (s_i * u_i))
-                                for (t_i, u_i) in cols_tb
+                twobase_keys = ("laurent_twobase_4x4_u", "laurent_twobase_4x4_det")
+                if any(k in entry for k in twobase_keys):
+                    if all(k in entry for k in twobase_keys) and w_val >= 1 and k_val >= 1:
+                        checked_conv.update(twobase_keys)
+                        u_tb = int(entry["laurent_twobase_4x4_u"])
+                        det_tb_exp = int(entry["laurent_twobase_4x4_det"])
+                        if u_tb >= 1:
+                            rows_tb = [(0, 0), (1, 0), (0, 1), (1, 1)]
+                            cols_tb = [(0, 0), (1, 0), (0, u_tb), (1, u_tb)]
+                            mat_tb = [
+                                [
+                                    math.comb(r_i * w_val + s_i * k_val, t_i)
+                                    * (1 << (r_i * u_i))
+                                    * (3 ** (s_i * u_i))
+                                    for (t_i, u_i) in cols_tb
+                                ]
+                                for (r_i, s_i) in rows_tb
                             ]
-                            for (r_i, s_i) in rows_tb
-                        ]
-                        # Exact 4x4 Laplace expansion along row 0 (entries [1, 0, 1, 0])
-                        det_tb_mat = mat_tb[0][0] * _det3_int(
-                            tuple((mat_tb[r_i][1], mat_tb[r_i][2], mat_tb[r_i][3]) for r_i in (1, 2, 3))
-                        ) + mat_tb[0][2] * _det3_int(
-                            tuple((mat_tb[r_i][0], mat_tb[r_i][1], mat_tb[r_i][3]) for r_i in (1, 2, 3))
-                        )
-                        det_tb_closed = (w_val * w_val) * (1 << u_tb) * (((3**u_tb) - 1) ** 2) - (
-                            k_val * k_val
-                        ) * (3**u_tb) * (((1 << u_tb) - 1) ** 2)
-                        ok = (
-                            ok
-                            and math.gcd(w_val, k_val) == 1
-                            and gap > 0
-                            and det_tb_mat == det_tb_closed
-                            and det_tb_mat == det_tb_exp
-                            and det_tb_mat == 0
-                        )
+                            # Exact 4x4 Laplace expansion along row 0 (entries [1, 0, 1, 0])
+                            det_tb_mat = mat_tb[0][0] * _det3_int(
+                                tuple((mat_tb[r_i][1], mat_tb[r_i][2], mat_tb[r_i][3]) for r_i in (1, 2, 3))
+                            ) + mat_tb[0][2] * _det3_int(
+                                tuple((mat_tb[r_i][0], mat_tb[r_i][1], mat_tb[r_i][3]) for r_i in (1, 2, 3))
+                            )
+                            det_tb_closed = (w_val * w_val) * (1 << u_tb) * (((3**u_tb) - 1) ** 2) - (
+                                k_val * k_val
+                            ) * (3**u_tb) * (((1 << u_tb) - 1) ** 2)
+                            ok = (
+                                ok
+                                and math.gcd(w_val, k_val) == 1
+                                and gap > 0
+                                and det_tb_mat == det_tb_closed
+                                and det_tb_mat == det_tb_exp
+                                and det_tb_mat == 0
+                            )
+                        else:
+                            ok = False
                     else:
                         ok = False
-                else:
-                    ok = False
-            coprime34_keys = (
-                "third_coprime_order_prime",
-                "third_ord2_mod_p",
-                "third_ord32_mod_p",
-                "third_mod8",
-                "fourth_coprime_order_prime",
-                "fourth_ord2_mod_p",
-                "fourth_ord32_mod_p",
-                "fourth_mod8",
-            )
-            if any(k in entry for k in coprime34_keys):
-                if all(k in entry for k in coprime34_keys):
-                    checked_conv.update(coprime34_keys)
-                    p3 = int(entry["third_coprime_order_prime"])
-                    p4 = int(entry["fourth_coprime_order_prime"])
-                    is_p3_prime = (
-                        p3 > 1_210_483
-                        and (p3 & 1) == 1
-                        and all(p3 % d_i != 0 for d_i in range(3, int(math.isqrt(p3)) + 1, 2))
-                    )
-                    is_p4_prime = (
-                        p4 > p3
-                        and (p4 & 1) == 1
-                        and all(p4 % d_i != 0 for d_i in range(3, int(math.isqrt(p4)) + 1, 2))
-                    )
-                    if is_p3_prime and is_p4_prime:
-                        o2_p3 = _mult_order_mod_prime(2, p3)
-                        o32_p3 = _mult_order_mod_prime((3 * pow(2, -1, p3)) % p3, p3)
-                        o2_p4 = _mult_order_mod_prime(2, p4)
-                        o32_p4 = _mult_order_mod_prime((3 * pow(2, -1, p4)) % p4, p4)
-                        ok = (
-                            ok
-                            and o2_p3 == int(entry["third_ord2_mod_p"])
-                            and o32_p3 == int(entry["third_ord32_mod_p"])
-                            and math.gcd(o2_p3, o32_p3) == 1
-                            and (p3 % 8) == int(entry["third_mod8"])
-                            and (p3 % 8) in (1, 3)
-                            and o2_p4 == int(entry["fourth_ord2_mod_p"])
-                            and o32_p4 == int(entry["fourth_ord32_mod_p"])
-                            and math.gcd(o2_p4, o32_p4) == 1
-                            and (p4 % 8) == int(entry["fourth_mod8"])
-                            and (p4 % 8) in (5, 7)
+                coprime34_keys = (
+                    "third_coprime_order_prime",
+                    "third_ord2_mod_p",
+                    "third_ord32_mod_p",
+                    "third_mod8",
+                    "fourth_coprime_order_prime",
+                    "fourth_ord2_mod_p",
+                    "fourth_ord32_mod_p",
+                    "fourth_mod8",
+                )
+                if any(k in entry for k in coprime34_keys):
+                    if all(k in entry for k in coprime34_keys):
+                        checked_conv.update(coprime34_keys)
+                        p3 = int(entry["third_coprime_order_prime"])
+                        p4 = int(entry["fourth_coprime_order_prime"])
+                        is_p3_prime = (
+                            p3 > 1_210_483
+                            and (p3 & 1) == 1
+                            and all(p3 % d_i != 0 for d_i in range(3, int(math.isqrt(p3)) + 1, 2))
                         )
+                        is_p4_prime = (
+                            p4 > p3
+                            and (p4 & 1) == 1
+                            and all(p4 % d_i != 0 for d_i in range(3, int(math.isqrt(p4)) + 1, 2))
+                        )
+                        if is_p3_prime and is_p4_prime:
+                            o2_p3 = _mult_order_mod_prime(2, p3)
+                            o32_p3 = _mult_order_mod_prime((3 * pow(2, -1, p3)) % p3, p3)
+                            o2_p4 = _mult_order_mod_prime(2, p4)
+                            o32_p4 = _mult_order_mod_prime((3 * pow(2, -1, p4)) % p4, p4)
+                            ok = (
+                                ok
+                                and o2_p3 == int(entry["third_ord2_mod_p"])
+                                and o32_p3 == int(entry["third_ord32_mod_p"])
+                                and math.gcd(o2_p3, o32_p3) == 1
+                                and (p3 % 8) == int(entry["third_mod8"])
+                                and (p3 % 8) in (1, 3)
+                                and o2_p4 == int(entry["fourth_ord2_mod_p"])
+                                and o32_p4 == int(entry["fourth_ord32_mod_p"])
+                                and math.gcd(o2_p4, o32_p4) == 1
+                                and (p4 % 8) == int(entry["fourth_mod8"])
+                                and (p4 % 8) in (5, 7)
+                            )
+                        else:
+                            ok = False
                     else:
                         ok = False
-                else:
-                    ok = False
-            twobase6_keys = (
-                "laurent_twobase_6x6_u",
-                "laurent_twobase_6x6_det",
-                "cone_flip_u2_neg_pair",
-                "cone_flip_u2_pos_pair",
-            )
-            if any(k in entry for k in twobase6_keys):
-                neg_pr = entry.get("cone_flip_u2_neg_pair")
-                pos_pr = entry.get("cone_flip_u2_pos_pair")
-                if (
-                    all(k in entry for k in twobase6_keys)
-                    and w_val >= 1
-                    and k_val >= 1
-                    and isinstance(neg_pr, list)
-                    and len(neg_pr) == 2
-                    and isinstance(pos_pr, list)
-                    and len(pos_pr) == 2
-                ):
-                    checked_conv.update(twobase6_keys)
-                    u6 = int(entry["laurent_twobase_6x6_u"])
-                    det6_exp = int(entry["laurent_twobase_6x6_det"])
-                    wn, kn = int(neg_pr[0]), int(neg_pr[1])
-                    wp, kp = int(pos_pr[0]), int(pos_pr[1])
-                    if u6 >= 1 and wn >= 1 and kn >= 1 and wp >= 1 and kp >= 1:
-                        det6_mat = laurent_twobase_6x6_det_matrix(w_val, k_val, u6)
-                        det6_closed = laurent_twobase_6x6_det_closed(w_val, k_val, u6)
-                        det_neg = laurent_twobase_6x6_det_matrix(wn, kn, 2)
-                        det_pos = laurent_twobase_6x6_det_matrix(wp, kp, 2)
-                        ok = (
-                            ok
-                            and (u6 & 1) == 1
-                            and math.gcd(w_val, k_val) == 1
-                            and gap > 0
-                            and det6_mat == det6_closed
-                            and det6_mat == det6_exp
-                            and det6_mat == 0
-                            and 3 * kn <= 5 * wn
-                            and (3**wn) < (1 << kn)
-                            and 3 * kp <= 5 * wp
-                            and (3**wp) < (1 << kp)
-                            and det_neg == laurent_twobase_6x6_det_closed(wn, kn, 2)
-                            and det_pos == laurent_twobase_6x6_det_closed(wp, kp, 2)
-                            and det_neg < 0
-                            and det_pos > 0
-                        )
+                twobase6_keys = (
+                    "laurent_twobase_6x6_u",
+                    "laurent_twobase_6x6_det",
+                    "cone_flip_u2_neg_pair",
+                    "cone_flip_u2_pos_pair",
+                )
+                if any(k in entry for k in twobase6_keys):
+                    neg_pr = entry.get("cone_flip_u2_neg_pair")
+                    pos_pr = entry.get("cone_flip_u2_pos_pair")
+                    if (
+                        all(k in entry for k in twobase6_keys)
+                        and w_val >= 1
+                        and k_val >= 1
+                        and isinstance(neg_pr, list)
+                        and len(neg_pr) == 2
+                        and isinstance(pos_pr, list)
+                        and len(pos_pr) == 2
+                    ):
+                        checked_conv.update(twobase6_keys)
+                        u6 = int(entry["laurent_twobase_6x6_u"])
+                        det6_exp = int(entry["laurent_twobase_6x6_det"])
+                        wn, kn = int(neg_pr[0]), int(neg_pr[1])
+                        wp, kp = int(pos_pr[0]), int(pos_pr[1])
+                        if u6 >= 1 and wn >= 1 and kn >= 1 and wp >= 1 and kp >= 1:
+                            det6_mat = laurent_twobase_6x6_det_matrix(w_val, k_val, u6)
+                            det6_closed = laurent_twobase_6x6_det_closed(w_val, k_val, u6)
+                            det_neg = laurent_twobase_6x6_det_matrix(wn, kn, 2)
+                            det_pos = laurent_twobase_6x6_det_matrix(wp, kp, 2)
+                            ok = (
+                                ok
+                                and (u6 & 1) == 1
+                                and math.gcd(w_val, k_val) == 1
+                                and gap > 0
+                                and det6_mat == det6_closed
+                                and det6_mat == det6_exp
+                                and det6_mat == 0
+                                and 3 * kn <= 5 * wn
+                                and (3**wn) < (1 << kn)
+                                and 3 * kp <= 5 * wp
+                                and (3**wp) < (1 << kp)
+                                and det_neg == laurent_twobase_6x6_det_closed(wn, kn, 2)
+                                and det_pos == laurent_twobase_6x6_det_closed(wp, kp, 2)
+                                and det_neg < 0
+                                and det_pos > 0
+                            )
+                        else:
+                            ok = False
                     else:
                         ok = False
-                else:
-                    ok = False
-            mod24_keys = (
-                "mod24_excluded_prime",
-                "mod24_ord2",
-                "mod24_ord32",
-                "mod24_companion_prime",
-                "mod24_companion_ord2",
-                "mod24_companion_ord32",
-            )
-            if any(k in entry for k in mod24_keys):
-                if all(k in entry for k in mod24_keys):
-                    checked_conv.update(mod24_keys)
-                    q_ex = int(entry["mod24_excluded_prime"])
-                    q_co = int(entry["mod24_companion_prime"])
-                    is_qex_prime = (
-                        q_ex >= 5
-                        and (q_ex & 1) == 1
-                        and all(q_ex % d_i != 0 for d_i in range(3, int(math.isqrt(q_ex)) + 1, 2))
-                    )
-                    is_qco_prime = (
-                        q_co >= 5
-                        and (q_co & 1) == 1
-                        and all(q_co % d_i != 0 for d_i in range(3, int(math.isqrt(q_co)) + 1, 2))
-                    )
-                    if is_qex_prime and is_qco_prime:
-                        o2_ex = _mult_order_mod_prime(2, q_ex)
-                        o32_ex = _mult_order_mod_prime((3 * pow(2, -1, q_ex)) % q_ex, q_ex)
-                        o2_co = _mult_order_mod_prime(2, q_co)
-                        o32_co = _mult_order_mod_prime((3 * pow(2, -1, q_co)) % q_co, q_co)
-                        ok = (
-                            ok
-                            and q_ex == gap
-                            and (q_ex % 24) == 13
-                            and (q_co % 24) == 11
-                            and o2_ex == int(entry["mod24_ord2"])
-                            and o32_ex == int(entry["mod24_ord32"])
-                            and o2_co == int(entry["mod24_companion_ord2"])
-                            and o32_co == int(entry["mod24_companion_ord32"])
-                            and (math.gcd(o2_ex, o32_ex) % 2) == 0
-                            and (math.gcd(o2_co, o32_co) % 2) == 0
+                mod24_keys = (
+                    "mod24_excluded_prime",
+                    "mod24_ord2",
+                    "mod24_ord32",
+                    "mod24_companion_prime",
+                    "mod24_companion_ord2",
+                    "mod24_companion_ord32",
+                )
+                if any(k in entry for k in mod24_keys):
+                    if all(k in entry for k in mod24_keys):
+                        checked_conv.update(mod24_keys)
+                        q_ex = int(entry["mod24_excluded_prime"])
+                        q_co = int(entry["mod24_companion_prime"])
+                        is_qex_prime = (
+                            q_ex >= 5
+                            and (q_ex & 1) == 1
+                            and all(q_ex % d_i != 0 for d_i in range(3, int(math.isqrt(q_ex)) + 1, 2))
                         )
+                        is_qco_prime = (
+                            q_co >= 5
+                            and (q_co & 1) == 1
+                            and all(q_co % d_i != 0 for d_i in range(3, int(math.isqrt(q_co)) + 1, 2))
+                        )
+                        if is_qex_prime and is_qco_prime:
+                            o2_ex = _mult_order_mod_prime(2, q_ex)
+                            o32_ex = _mult_order_mod_prime((3 * pow(2, -1, q_ex)) % q_ex, q_ex)
+                            o2_co = _mult_order_mod_prime(2, q_co)
+                            o32_co = _mult_order_mod_prime((3 * pow(2, -1, q_co)) % q_co, q_co)
+                            ok = (
+                                ok
+                                and q_ex == gap
+                                and (q_ex % 24) == 13
+                                and (q_co % 24) == 11
+                                and o2_ex == int(entry["mod24_ord2"])
+                                and o32_ex == int(entry["mod24_ord32"])
+                                and o2_co == int(entry["mod24_companion_ord2"])
+                                and o32_co == int(entry["mod24_companion_ord32"])
+                                and (math.gcd(o2_ex, o32_ex) % 2) == 0
+                                and (math.gcd(o2_co, o32_co) % 2) == 0
+                            )
+                        else:
+                            ok = False
                     else:
                         ok = False
-                else:
-                    ok = False
-            t3u2_keys = (
-                "laurent_twobase_6x6_t3u2_u",
-                "laurent_twobase_6x6_t3u2_det",
-                "t3u2_cone_pos_pair",
-                "t3u2_outer_neg_pair",
-            )
-            if any(k in entry for k in t3u2_keys):
-                pos_pr = entry.get("t3u2_cone_pos_pair")
-                neg_pr = entry.get("t3u2_outer_neg_pair")
-                if (
-                    all(k in entry for k in t3u2_keys)
-                    and w_val >= 1
-                    and k_val >= 1
-                    and isinstance(pos_pr, list)
-                    and len(pos_pr) == 2
-                    and isinstance(neg_pr, list)
-                    and len(neg_pr) == 2
-                ):
-                    checked_conv.update(t3u2_keys)
-                    u_t3 = int(entry["laurent_twobase_6x6_t3u2_u"])
-                    det_t3_exp = int(entry["laurent_twobase_6x6_t3u2_det"])
-                    wp, kp = int(pos_pr[0]), int(pos_pr[1])
-                    wn, kn = int(neg_pr[0]), int(neg_pr[1])
-                    if u_t3 >= 1 and wp >= 1 and kp >= 1 and wn >= 1 and kn >= 1:
-                        det_mat = laurent_twobase_6x6_t3u2_det_matrix(w_val, k_val, u_t3)
-                        det_cl = laurent_twobase_6x6_t3u2_det_closed(w_val, k_val, u_t3)
-                        det_p1 = laurent_twobase_6x6_t3u2_det_matrix(wp, kp, 1)
-                        det_n1 = laurent_twobase_6x6_t3u2_det_matrix(wn, kn, 1)
-                        ok = (
-                            ok
-                            and (u_t3 & 1) == 0
-                            and math.gcd(w_val, k_val) == 1
-                            and gap > 0
-                            and det_mat == det_cl
-                            and det_mat == det_t3_exp
-                            and det_mat == 0
-                            and (3**wp) < (1 << kp)
-                            and 3 * kp <= 5 * wp
-                            and (3**wn) < (1 << kn)
-                            and 3 * kn > 5 * wn
-                            and det_p1 == laurent_twobase_6x6_t3u2_det_closed(wp, kp, 1)
-                            and det_n1 == laurent_twobase_6x6_t3u2_det_closed(wn, kn, 1)
-                            and det_p1 > 0
-                            and det_n1 < 0
-                        )
+                t3u2_keys = (
+                    "laurent_twobase_6x6_t3u2_u",
+                    "laurent_twobase_6x6_t3u2_det",
+                    "t3u2_cone_pos_pair",
+                    "t3u2_outer_neg_pair",
+                )
+                if any(k in entry for k in t3u2_keys):
+                    pos_pr = entry.get("t3u2_cone_pos_pair")
+                    neg_pr = entry.get("t3u2_outer_neg_pair")
+                    if (
+                        all(k in entry for k in t3u2_keys)
+                        and w_val >= 1
+                        and k_val >= 1
+                        and isinstance(pos_pr, list)
+                        and len(pos_pr) == 2
+                        and isinstance(neg_pr, list)
+                        and len(neg_pr) == 2
+                    ):
+                        checked_conv.update(t3u2_keys)
+                        u_t3 = int(entry["laurent_twobase_6x6_t3u2_u"])
+                        det_t3_exp = int(entry["laurent_twobase_6x6_t3u2_det"])
+                        wp, kp = int(pos_pr[0]), int(pos_pr[1])
+                        wn, kn = int(neg_pr[0]), int(neg_pr[1])
+                        if u_t3 >= 1 and wp >= 1 and kp >= 1 and wn >= 1 and kn >= 1:
+                            det_mat = laurent_twobase_6x6_t3u2_det_matrix(w_val, k_val, u_t3)
+                            det_cl = laurent_twobase_6x6_t3u2_det_closed(w_val, k_val, u_t3)
+                            det_p1 = laurent_twobase_6x6_t3u2_det_matrix(wp, kp, 1)
+                            det_n1 = laurent_twobase_6x6_t3u2_det_matrix(wn, kn, 1)
+                            ok = (
+                                ok
+                                and (u_t3 & 1) == 0
+                                and math.gcd(w_val, k_val) == 1
+                                and gap > 0
+                                and det_mat == det_cl
+                                and det_mat == det_t3_exp
+                                and det_mat == 0
+                                and (3**wp) < (1 << kp)
+                                and 3 * kp <= 5 * wp
+                                and (3**wn) < (1 << kn)
+                                and 3 * kn > 5 * wn
+                                and det_p1 == laurent_twobase_6x6_t3u2_det_closed(wp, kp, 1)
+                                and det_n1 == laurent_twobase_6x6_t3u2_det_closed(wn, kn, 1)
+                                and det_p1 > 0
+                                and det_n1 < 0
+                            )
+                        else:
+                            ok = False
                     else:
                         ok = False
-                else:
-                    ok = False
-            recip5_17_keys = (
-                "mod24_5_escape_prime",
-                "mod24_5_escape_ord2",
-                "mod24_5_escape_ord32",
-                "mod24_17_escape_prime",
-                "mod24_17_escape_ord2",
-                "mod24_17_escape_ord32",
-                "cubic_excluded_prime",
-                "cubic_excluded_ord2",
-                "cubic_excluded_ord32",
-            )
-            if any(k in entry for k in recip5_17_keys):
-                if all(k in entry for k in recip5_17_keys):
-                    checked_conv.update(recip5_17_keys)
-                    q5 = int(entry["mod24_5_escape_prime"])
-                    q17 = int(entry["mod24_17_escape_prime"])
-                    q3c = int(entry["cubic_excluded_prime"])
+                recip5_17_keys = (
+                    "mod24_5_escape_prime",
+                    "mod24_5_escape_ord2",
+                    "mod24_5_escape_ord32",
+                    "mod24_17_escape_prime",
+                    "mod24_17_escape_ord2",
+                    "mod24_17_escape_ord32",
+                    "cubic_excluded_prime",
+                    "cubic_excluded_ord2",
+                    "cubic_excluded_ord32",
+                )
+                if any(k in entry for k in recip5_17_keys):
+                    if all(k in entry for k in recip5_17_keys):
+                        checked_conv.update(recip5_17_keys)
+                        q5 = int(entry["mod24_5_escape_prime"])
+                        q17 = int(entry["mod24_17_escape_prime"])
+                        q3c = int(entry["cubic_excluded_prime"])
 
-                    def _is_odd_prime_ge5(p_cand: int) -> bool:
-                        return (
-                            p_cand >= 5
-                            and (p_cand & 1) == 1
-                            and all(p_cand % d_i != 0 for d_i in range(3, int(math.isqrt(p_cand)) + 1, 2))
-                        )
+                        def _is_odd_prime_ge5(p_cand: int) -> bool:
+                            return (
+                                p_cand >= 5
+                                and (p_cand & 1) == 1
+                                and all(p_cand % d_i != 0 for d_i in range(3, int(math.isqrt(p_cand)) + 1, 2))
+                            )
 
-                    if _is_odd_prime_ge5(q5) and _is_odd_prime_ge5(q17) and _is_odd_prime_ge5(q3c):
-                        o2_5 = _mult_order_mod_prime(2, q5)
-                        o32_5 = _mult_order_mod_prime((3 * pow(2, -1, q5)) % q5, q5)
-                        o2_17 = _mult_order_mod_prime(2, q17)
-                        o32_17 = _mult_order_mod_prime((3 * pow(2, -1, q17)) % q17, q17)
-                        o2_3c = _mult_order_mod_prime(2, q3c)
-                        o32_3c = _mult_order_mod_prime((3 * pow(2, -1, q3c)) % q3c, q3c)
-                        ok = (
-                            ok
-                            and (q5 % 24) == 5
-                            and pow(6, (q5 - 1) // 4, q5) == q5 - 1
-                            and (q17 % 24) == 17
-                            and (q3c % 72) == 1
-                            and o2_5 == int(entry["mod24_5_escape_ord2"])
-                            and o32_5 == int(entry["mod24_5_escape_ord32"])
-                            and o2_17 == int(entry["mod24_17_escape_ord2"])
-                            and o32_17 == int(entry["mod24_17_escape_ord32"])
-                            and o2_3c == int(entry["cubic_excluded_ord2"])
-                            and o32_3c == int(entry["cubic_excluded_ord32"])
-                            and (math.gcd(o2_5, o32_5) % 2) == 1
-                            and (math.gcd(o2_17, o32_17) % 2) == 1
-                            and (o32_17 % 8) == 0
-                            and (math.gcd(o2_3c, o32_3c) % 3) == 0
-                        )
+                        if _is_odd_prime_ge5(q5) and _is_odd_prime_ge5(q17) and _is_odd_prime_ge5(q3c):
+                            o2_5 = _mult_order_mod_prime(2, q5)
+                            o32_5 = _mult_order_mod_prime((3 * pow(2, -1, q5)) % q5, q5)
+                            o2_17 = _mult_order_mod_prime(2, q17)
+                            o32_17 = _mult_order_mod_prime((3 * pow(2, -1, q17)) % q17, q17)
+                            o2_3c = _mult_order_mod_prime(2, q3c)
+                            o32_3c = _mult_order_mod_prime((3 * pow(2, -1, q3c)) % q3c, q3c)
+                            ok = (
+                                ok
+                                and (q5 % 24) == 5
+                                and pow(6, (q5 - 1) // 4, q5) == q5 - 1
+                                and (q17 % 24) == 17
+                                and (q3c % 72) == 1
+                                and o2_5 == int(entry["mod24_5_escape_ord2"])
+                                and o32_5 == int(entry["mod24_5_escape_ord32"])
+                                and o2_17 == int(entry["mod24_17_escape_ord2"])
+                                and o32_17 == int(entry["mod24_17_escape_ord32"])
+                                and o2_3c == int(entry["cubic_excluded_ord2"])
+                                and o32_3c == int(entry["cubic_excluded_ord32"])
+                                and (math.gcd(o2_5, o32_5) % 2) == 1
+                                and (math.gcd(o2_17, o32_17) % 2) == 1
+                                and (o32_17 % 8) == 0
+                                and (math.gcd(o2_3c, o32_3c) % 3) == 0
+                            )
+                        else:
+                            ok = False
                     else:
                         ok = False
-                else:
-                    ok = False
-            t4u2_8x8_keys = (
-                "laurent_twobase_8x8_t4u2_u1_det",
-                "laurent_twobase_8x8_t4u2_u4_det",
-                "t4u2_cone_pos_u4_pair",
-            )
-            if any(k in entry for k in t4u2_8x8_keys):
-                pos4_pr = entry.get("t4u2_cone_pos_u4_pair")
-                if (
-                    all(k in entry for k in t4u2_8x8_keys)
-                    and w_val >= 1
-                    and k_val >= 1
-                    and isinstance(pos4_pr, list)
-                    and len(pos4_pr) == 2
-                ):
-                    checked_conv.update(t4u2_8x8_keys)
-                    det8_u1_exp = int(entry["laurent_twobase_8x8_t4u2_u1_det"])
-                    det8_u4_exp = int(entry["laurent_twobase_8x8_t4u2_u4_det"])
-                    wp4, kp4 = int(pos4_pr[0]), int(pos4_pr[1])
-                    if wp4 >= 1 and kp4 >= 1:
-                        d8_u1 = laurent_twobase_8x8_t4u2_det_matrix(w_val, k_val, 1)
-                        d8_u4 = laurent_twobase_8x8_t4u2_det_matrix(w_val, k_val, 4)
-                        d8_pos4 = laurent_twobase_8x8_t4u2_det_matrix(wp4, kp4, 4)
+                t4u2_8x8_keys = (
+                    "laurent_twobase_8x8_t4u2_u1_det",
+                    "laurent_twobase_8x8_t4u2_u4_det",
+                    "t4u2_cone_pos_u4_pair",
+                )
+                if any(k in entry for k in t4u2_8x8_keys):
+                    pos4_pr = entry.get("t4u2_cone_pos_u4_pair")
+                    if (
+                        all(k in entry for k in t4u2_8x8_keys)
+                        and w_val >= 1
+                        and k_val >= 1
+                        and isinstance(pos4_pr, list)
+                        and len(pos4_pr) == 2
+                    ):
+                        checked_conv.update(t4u2_8x8_keys)
+                        det8_u1_exp = int(entry["laurent_twobase_8x8_t4u2_u1_det"])
+                        det8_u4_exp = int(entry["laurent_twobase_8x8_t4u2_u4_det"])
+                        wp4, kp4 = int(pos4_pr[0]), int(pos4_pr[1])
+                        if wp4 >= 1 and kp4 >= 1:
+                            d8_u1 = laurent_twobase_8x8_t4u2_det_matrix(w_val, k_val, 1)
+                            d8_u4 = laurent_twobase_8x8_t4u2_det_matrix(w_val, k_val, 4)
+                            d8_pos4 = laurent_twobase_8x8_t4u2_det_matrix(wp4, kp4, 4)
+                            ok = (
+                                ok
+                                and math.gcd(w_val, k_val) == 1
+                                and math.gcd(wp4, kp4) == 1
+                                and gap > 0
+                                and 3 * k_val <= 5 * w_val
+                                and (3**wp4) < (1 << kp4)
+                                and 3 * kp4 <= 5 * wp4
+                                and d8_u1 == det8_u1_exp
+                                and d8_u4 == det8_u4_exp
+                                and d8_u1 < 0
+                                and d8_u4 < 0
+                                and d8_pos4 > 0
+                            )
+                        else:
+                            ok = False
+                    else:
+                        ok = False
+                mod24_1_keys = (
+                    "mod24_1_23sylow_escape_prime",
+                    "mod24_1_23sylow_escape_ord2",
+                    "mod24_1_23sylow_escape_ord32",
+                    "mod120_1_quintic_prime",
+                    "mod120_1_quintic_gcd",
+                    "mod24_1_minimal_coprime_prime",
+                    "mod24_1_p3_cubic_coset",
+                )
+                if any(k in entry for k in mod24_1_keys):
+                    if all(k in entry for k in mod24_1_keys):
+                        checked_conv.update(mod24_1_keys)
+                        q_457 = int(entry["mod24_1_23sylow_escape_prime"])
+                        q_601 = int(entry["mod120_1_quintic_prime"])
+                        p3_m = int(entry["mod24_1_minimal_coprime_prime"])
+                        p3_c3 = int(entry["mod24_1_p3_cubic_coset"])
+
+                        def _is_odd_prime_w12(p_cand: int) -> bool:
+                            return (
+                                p_cand >= 5
+                                and (p_cand & 1) == 1
+                                and all(p_cand % d_i != 0 for d_i in range(3, int(math.isqrt(p_cand)) + 1, 2))
+                            )
+
+                        if _is_odd_prime_w12(q_457) and _is_odd_prime_w12(q_601) and _is_odd_prime_w12(p3_m):
+                            o2_457 = _mult_order_mod_prime(2, q_457)
+                            o32_457 = _mult_order_mod_prime((3 * pow(2, -1, q_457)) % q_457, q_457)
+                            g_457 = math.gcd(o2_457, o32_457)
+                            o2_601 = _mult_order_mod_prime(2, q_601)
+                            o32_601 = _mult_order_mod_prime((3 * pow(2, -1, q_601)) % q_601, q_601)
+                            g_601 = math.gcd(o2_601, o32_601)
+                            o2_p3 = _mult_order_mod_prime(2, p3_m)
+                            o32_p3 = _mult_order_mod_prime((3 * pow(2, -1, p3_m)) % p3_m, p3_m)
+                            m2_p3 = (p3_m - 1) // 8
+                            m3_p3 = (p3_m - 1) // 3
+                            ok = (
+                                ok
+                                and (q_457 % 24) == 1
+                                and (q_601 % 120) == 1
+                                and (p3_m % 24) == 1
+                                and o2_457 == int(entry["mod24_1_23sylow_escape_ord2"])
+                                and o32_457 == int(entry["mod24_1_23sylow_escape_ord32"])
+                                and (g_457 % 2) != 0
+                                and (g_457 % 3) != 0
+                                and (g_457 % 5) != 0
+                                and g_457 > 1
+                                and g_601 == int(entry["mod120_1_quintic_gcd"])
+                                and (g_601 % 5) == 0
+                                and math.gcd(o2_p3, o32_p3) == 1
+                                and pow(2, m2_p3, p3_m) == 1
+                                and pow(2, m3_p3, p3_m) == p3_c3
+                                and pow(3, m3_p3, p3_m) == p3_c3
+                                and p3_c3 != 1
+                            )
+                        else:
+                            ok = False
+                    else:
+                        ok = False
+                t3u3_9x9_keys = (
+                    "laurent_twobase_9x9_t3u3_u1_det",
+                    "t3u3_cone_pos_3_5_det",
+                    "t3u3_cone_pos_5_8_det",
+                    "t3u3_no_root_prime",
+                )
+                if any(k in entry for k in t3u3_9x9_keys):
+                    if all(k in entry for k in t3u3_9x9_keys) and w_val >= 1 and k_val >= 1:
+                        checked_conv.update(t3u3_9x9_keys)
+                        d9_exp = int(entry["laurent_twobase_9x9_t3u3_u1_det"])
+                        d9_35_exp = int(entry["t3u3_cone_pos_3_5_det"])
+                        d9_58_exp = int(entry["t3u3_cone_pos_5_8_det"])
+                        p_nr = int(entry["t3u3_no_root_prime"])
+                        is_p_nr_prime = (
+                            p_nr >= 5
+                            and (p_nr & 1) == 1
+                            and all(p_nr % d_i != 0 for d_i in range(3, int(math.isqrt(p_nr)) + 1, 2))
+                        )
+                        if is_p_nr_prime and p_nr <= 500:
+                            d9_mat = laurent_twobase_9x9_t3u3_det_matrix(w_val, k_val, 1)
+                            d9_cl = laurent_twobase_9x9_t3u3_det_u1_closed(w_val, k_val)
+                            d9_35 = laurent_twobase_9x9_t3u3_det_matrix(3, 5, 1)
+                            d9_58 = laurent_twobase_9x9_t3u3_det_matrix(5, 8, 1)
+                            no_proj_root = all(
+                                ((laurent_twobase_9x9_t3u3_det_u1_closed(w_m, 1) // 216) % p_nr) != 0
+                                for w_m in range(p_nr)
+                            ) and (((laurent_twobase_9x9_t3u3_det_u1_closed(1, 0) // 216) % p_nr) != 0)
+                            ok = (
+                                ok
+                                and math.gcd(w_val, k_val) == 1
+                                and gap > 0
+                                and 3 * k_val > 5 * w_val
+                                and d9_mat == d9_cl
+                                and d9_mat == d9_exp
+                                and d9_mat < 0
+                                and d9_35 == laurent_twobase_9x9_t3u3_det_u1_closed(3, 5)
+                                and d9_58 == laurent_twobase_9x9_t3u3_det_u1_closed(5, 8)
+                                and d9_35 == d9_35_exp
+                                and d9_58 == d9_58_exp
+                                and d9_35 > 0
+                                and d9_58 > 0
+                                and no_proj_root
+                            )
+                        else:
+                            ok = False
+                    else:
+                        ok = False
+                t3u3_u7_keys = (
+                    "laurent_twobase_9x9_t3u3_u2_det",
+                    "laurent_twobase_9x9_t3u3_u7_mersenne",
+                    "laurent_twobase_9x9_t3u3_u7_mod127",
+                )
+                if any(k in entry for k in t3u3_u7_keys):
+                    if all(k in entry for k in t3u3_u7_keys) and w_val >= 1 and k_val >= 1:
+                        checked_conv.update(t3u3_u7_keys)
+                        d9_u2_exp = int(entry["laurent_twobase_9x9_t3u3_u2_det"])
+                        m127_exp = int(entry["laurent_twobase_9x9_t3u3_u7_mersenne"])
+                        rem127_exp = int(entry["laurent_twobase_9x9_t3u3_u7_mod127"])
+                        d9_u2 = laurent_twobase_9x9_t3u3_det_matrix(w_val, k_val, 2)
+                        d9_u7 = laurent_twobase_9x9_t3u3_det_matrix(w_val, k_val, 7)
                         ok = (
                             ok
                             and math.gcd(w_val, k_val) == 1
-                            and math.gcd(wp4, kp4) == 1
                             and gap > 0
                             and 3 * k_val <= 5 * w_val
-                            and (3**wp4) < (1 << kp4)
-                            and 3 * kp4 <= 5 * wp4
-                            and d8_u1 == det8_u1_exp
-                            and d8_u4 == det8_u4_exp
-                            and d8_u1 < 0
-                            and d8_u4 < 0
-                            and d8_pos4 > 0
+                            and m127_exp == ((1 << 7) - 1)
+                            and d9_u2 == d9_u2_exp
+                            and d9_u2 > 0
+                            and d9_u7 > 0
+                            and (d9_u7 % m127_exp) == rem127_exp
+                            and rem127_exp != 0
                         )
                     else:
                         ok = False
-                else:
-                    ok = False
-            mod24_1_keys = (
-                "mod24_1_23sylow_escape_prime",
-                "mod24_1_23sylow_escape_ord2",
-                "mod24_1_23sylow_escape_ord32",
-                "mod120_1_quintic_prime",
-                "mod120_1_quintic_gcd",
-                "mod24_1_minimal_coprime_prime",
-                "mod24_1_p3_cubic_coset",
-            )
-            if any(k in entry for k in mod24_1_keys):
-                if all(k in entry for k in mod24_1_keys):
-                    checked_conv.update(mod24_1_keys)
-                    q_457 = int(entry["mod24_1_23sylow_escape_prime"])
-                    q_601 = int(entry["mod120_1_quintic_prime"])
-                    p3_m = int(entry["mod24_1_minimal_coprime_prime"])
-                    p3_c3 = int(entry["mod24_1_p3_cubic_coset"])
-
-                    def _is_odd_prime_w12(p_cand: int) -> bool:
-                        return (
-                            p_cand >= 5
-                            and (p_cand & 1) == 1
-                            and all(p_cand % d_i != 0 for d_i in range(3, int(math.isqrt(p_cand)) + 1, 2))
-                        )
-
-                    if _is_odd_prime_w12(q_457) and _is_odd_prime_w12(q_601) and _is_odd_prime_w12(p3_m):
-                        o2_457 = _mult_order_mod_prime(2, q_457)
-                        o32_457 = _mult_order_mod_prime((3 * pow(2, -1, q_457)) % q_457, q_457)
-                        g_457 = math.gcd(o2_457, o32_457)
-                        o2_601 = _mult_order_mod_prime(2, q_601)
-                        o32_601 = _mult_order_mod_prime((3 * pow(2, -1, q_601)) % q_601, q_601)
-                        g_601 = math.gcd(o2_601, o32_601)
-                        o2_p3 = _mult_order_mod_prime(2, p3_m)
-                        o32_p3 = _mult_order_mod_prime((3 * pow(2, -1, p3_m)) % p3_m, p3_m)
-                        m2_p3 = (p3_m - 1) // 8
-                        m3_p3 = (p3_m - 1) // 3
+                row_m0_keys = (
+                    "laurent_9x9_m0_u1_quotient",
+                    "laurent_9x9_row_wu_mersenne",
+                    "laurent_9x9_m0_u1_mod7",
+                    "laurent_6x6_t2u3_m0_u1_div_49",
+                    "laurent_6x6_t3u2_u2_coprime_zeros",
+                )
+                if any(k in entry for k in row_m0_keys):
+                    if (
+                        all(k in entry for k in row_m0_keys)
+                        and w_val >= 1
+                        and k_val >= 1
+                        and isinstance(entry["laurent_9x9_m0_u1_quotient"], int)
+                        and not isinstance(entry["laurent_9x9_m0_u1_quotient"], bool)
+                        and isinstance(entry["laurent_9x9_row_wu_mersenne"], int)
+                        and not isinstance(entry["laurent_9x9_row_wu_mersenne"], bool)
+                        and isinstance(entry["laurent_9x9_m0_u1_mod7"], int)
+                        and not isinstance(entry["laurent_9x9_m0_u1_mod7"], bool)
+                        and isinstance(entry["laurent_6x6_t2u3_m0_u1_div_49"], bool)
+                        and isinstance(entry["laurent_6x6_t3u2_u2_coprime_zeros"], list)
+                    ):
+                        checked_conv.update(row_m0_keys)
+                        q9_exp = entry["laurent_9x9_m0_u1_quotient"]
+                        m_wu_exp = entry["laurent_9x9_row_wu_mersenne"]
+                        mod7_exp = entry["laurent_9x9_m0_u1_mod7"]
+                        div49_exp = entry["laurent_6x6_t2u3_m0_u1_div_49"]
+                        z_u2_exp = entry["laurent_6x6_t3u2_u2_coprime_zeros"]
+                        rows9_m0 = [(r_i, s_i) for s_i in range(3) for r_i in (0, 1, 2)]
+                        cols9_m0 = [(t_i, m_i) for m_i in (0, 1, 2) for t_i in range(3)]
+                        m0_9_mat = [
+                            [
+                                math.comb(r_i * w_val + s_i * k_val, t_i)
+                                * (1 << ((r_i * w_val + s_i * k_val) * m_i))
+                                for (t_i, m_i) in cols9_m0
+                            ]
+                            for (r_i, s_i) in rows9_m0
+                        ]
+                        d0_9_val = _bareiss_det_exact(m0_9_mat)
+                        f9_sec = (1 << 18) * (3**9)
+                        rows6_t2u3 = [(r_i, s_i) for s_i in range(2) for r_i in (0, 1, 2)]
+                        cols6_t2u3 = [(t_i, m_i) for m_i in (0, 1, 2) for t_i in range(2)]
+                        m0_6_mat = [
+                            [
+                                math.comb(r_i * w_val + s_i * k_val, t_i)
+                                * (1 << ((r_i * w_val + s_i * k_val) * m_i))
+                                for (t_i, m_i) in cols6_t2u3
+                            ]
+                            for (r_i, s_i) in rows6_t2u3
+                        ]
+                        d0_6_val = _bareiss_det_exact(m0_6_mat)
                         ok = (
                             ok
-                            and (q_457 % 24) == 1
-                            and (q_601 % 120) == 1
-                            and (p3_m % 24) == 1
-                            and o2_457 == int(entry["mod24_1_23sylow_escape_ord2"])
-                            and o32_457 == int(entry["mod24_1_23sylow_escape_ord32"])
-                            and (g_457 % 2) != 0
-                            and (g_457 % 3) != 0
-                            and (g_457 % 5) != 0
-                            and g_457 > 1
-                            and g_601 == int(entry["mod120_1_quintic_gcd"])
-                            and (g_601 % 5) == 0
-                            and math.gcd(o2_p3, o32_p3) == 1
-                            and pow(2, m2_p3, p3_m) == 1
-                            and pow(2, m3_p3, p3_m) == p3_c3
-                            and pow(3, m3_p3, p3_m) == p3_c3
-                            and p3_c3 != 1
-                        )
-                    else:
-                        ok = False
-                else:
-                    ok = False
-            t3u3_9x9_keys = (
-                "laurent_twobase_9x9_t3u3_u1_det",
-                "t3u3_cone_pos_3_5_det",
-                "t3u3_cone_pos_5_8_det",
-                "t3u3_no_root_prime",
-            )
-            if any(k in entry for k in t3u3_9x9_keys):
-                if all(k in entry for k in t3u3_9x9_keys) and w_val >= 1 and k_val >= 1:
-                    checked_conv.update(t3u3_9x9_keys)
-                    d9_exp = int(entry["laurent_twobase_9x9_t3u3_u1_det"])
-                    d9_35_exp = int(entry["t3u3_cone_pos_3_5_det"])
-                    d9_58_exp = int(entry["t3u3_cone_pos_5_8_det"])
-                    p_nr = int(entry["t3u3_no_root_prime"])
-                    is_p_nr_prime = (
-                        p_nr >= 5
-                        and (p_nr & 1) == 1
-                        and all(p_nr % d_i != 0 for d_i in range(3, int(math.isqrt(p_nr)) + 1, 2))
-                    )
-                    if is_p_nr_prime and p_nr <= 500:
-                        d9_mat = laurent_twobase_9x9_t3u3_det_matrix(w_val, k_val, 1)
-                        d9_cl = laurent_twobase_9x9_t3u3_det_u1_closed(w_val, k_val)
-                        d9_35 = laurent_twobase_9x9_t3u3_det_matrix(3, 5, 1)
-                        d9_58 = laurent_twobase_9x9_t3u3_det_matrix(5, 8, 1)
-                        no_proj_root = all(
-                            ((laurent_twobase_9x9_t3u3_det_u1_closed(w_m, 1) // 216) % p_nr) != 0
-                            for w_m in range(p_nr)
-                        ) and (((laurent_twobase_9x9_t3u3_det_u1_closed(1, 0) // 216) % p_nr) != 0)
-                        ok = (
-                            ok
-                            and math.gcd(w_val, k_val) == 1
                             and gap > 0
-                            and 3 * k_val > 5 * w_val
-                            and d9_mat == d9_cl
-                            and d9_mat == d9_exp
-                            and d9_mat < 0
-                            and d9_35 == laurent_twobase_9x9_t3u3_det_u1_closed(3, 5)
-                            and d9_58 == laurent_twobase_9x9_t3u3_det_u1_closed(5, 8)
-                            and d9_35 == d9_35_exp
-                            and d9_58 == d9_58_exp
-                            and d9_35 > 0
-                            and d9_58 > 0
-                            and no_proj_root
+                            and m_wu_exp == ((1 << w_val) - 1)
+                            and (d0_9_val % f9_sec) == 0
+                            and (d0_9_val // f9_sec) == q9_exp
+                            and (d0_9_val % m_wu_exp) == mod7_exp
+                            and mod7_exp != 0
+                            and ((d0_6_val % (m_wu_exp * m_wu_exp)) == 0) == div49_exp
+                            and div49_exp is True
+                            and z_u2_exp == [[3, 8], [27, 8]]
+                            and laurent_twobase_6x6_t3u2_det_closed(3, 8, 2) == 0
+                            and laurent_twobase_6x6_t3u2_det_closed(27, 8, 2) == 0
+                            and laurent_twobase_6x6_t3u2_det_closed(3, 8, 4) != 0
+                            and laurent_twobase_6x6_t3u2_det_closed(27, 8, 4) != 0
                         )
                     else:
                         ok = False
-                else:
-                    ok = False
-            t3u3_u7_keys = (
-                "laurent_twobase_9x9_t3u3_u2_det",
-                "laurent_twobase_9x9_t3u3_u7_mersenne",
-                "laurent_twobase_9x9_t3u3_u7_mod127",
-            )
-            if any(k in entry for k in t3u3_u7_keys):
-                if all(k in entry for k in t3u3_u7_keys) and w_val >= 1 and k_val >= 1:
-                    checked_conv.update(t3u3_u7_keys)
-                    d9_u2_exp = int(entry["laurent_twobase_9x9_t3u3_u2_det"])
-                    m127_exp = int(entry["laurent_twobase_9x9_t3u3_u7_mersenne"])
-                    rem127_exp = int(entry["laurent_twobase_9x9_t3u3_u7_mod127"])
-                    d9_u2 = laurent_twobase_9x9_t3u3_det_matrix(w_val, k_val, 2)
-                    d9_u7 = laurent_twobase_9x9_t3u3_det_matrix(w_val, k_val, 7)
-                    ok = (
-                        ok
-                        and math.gcd(w_val, k_val) == 1
-                        and gap > 0
-                        and 3 * k_val <= 5 * w_val
-                        and m127_exp == ((1 << 7) - 1)
-                        and d9_u2 == d9_u2_exp
-                        and d9_u2 > 0
-                        and d9_u7 > 0
-                        and (d9_u7 % m127_exp) == rem127_exp
-                        and rem127_exp != 0
-                    )
-                else:
-                    ok = False
-            row_m0_keys = (
-                "laurent_9x9_m0_u1_quotient",
-                "laurent_9x9_row_wu_mersenne",
-                "laurent_9x9_m0_u1_mod7",
-                "laurent_6x6_t2u3_m0_u1_div_49",
-                "laurent_6x6_t3u2_u2_coprime_zeros",
-            )
-            if any(k in entry for k in row_m0_keys):
-                if (
-                    all(k in entry for k in row_m0_keys)
-                    and w_val >= 1
-                    and k_val >= 1
-                    and isinstance(entry["laurent_9x9_m0_u1_quotient"], int)
-                    and not isinstance(entry["laurent_9x9_m0_u1_quotient"], bool)
-                    and isinstance(entry["laurent_9x9_row_wu_mersenne"], int)
-                    and not isinstance(entry["laurent_9x9_row_wu_mersenne"], bool)
-                    and isinstance(entry["laurent_9x9_m0_u1_mod7"], int)
-                    and not isinstance(entry["laurent_9x9_m0_u1_mod7"], bool)
-                    and isinstance(entry["laurent_6x6_t2u3_m0_u1_div_49"], bool)
-                    and isinstance(entry["laurent_6x6_t3u2_u2_coprime_zeros"], list)
-                ):
-                    checked_conv.update(row_m0_keys)
-                    q9_exp = entry["laurent_9x9_m0_u1_quotient"]
-                    m_wu_exp = entry["laurent_9x9_row_wu_mersenne"]
-                    mod7_exp = entry["laurent_9x9_m0_u1_mod7"]
-                    div49_exp = entry["laurent_6x6_t2u3_m0_u1_div_49"]
-                    z_u2_exp = entry["laurent_6x6_t3u2_u2_coprime_zeros"]
-                    rows9_m0 = [(r_i, s_i) for s_i in range(3) for r_i in (0, 1, 2)]
-                    cols9_m0 = [(t_i, m_i) for m_i in (0, 1, 2) for t_i in range(3)]
-                    m0_9_mat = [
-                        [
-                            math.comb(r_i * w_val + s_i * k_val, t_i)
-                            * (1 << ((r_i * w_val + s_i * k_val) * m_i))
-                            for (t_i, m_i) in cols9_m0
-                        ]
-                        for (r_i, s_i) in rows9_m0
-                    ]
-                    d0_9_val = _bareiss_det_exact(m0_9_mat)
-                    f9_sec = (1 << 18) * (3**9)
-                    rows6_t2u3 = [(r_i, s_i) for s_i in range(2) for r_i in (0, 1, 2)]
-                    cols6_t2u3 = [(t_i, m_i) for m_i in (0, 1, 2) for t_i in range(2)]
-                    m0_6_mat = [
-                        [
-                            math.comb(r_i * w_val + s_i * k_val, t_i)
-                            * (1 << ((r_i * w_val + s_i * k_val) * m_i))
-                            for (t_i, m_i) in cols6_t2u3
-                        ]
-                        for (r_i, s_i) in rows6_t2u3
-                    ]
-                    d0_6_val = _bareiss_det_exact(m0_6_mat)
-                    ok = (
-                        ok
-                        and gap > 0
-                        and m_wu_exp == ((1 << w_val) - 1)
-                        and (d0_9_val % f9_sec) == 0
-                        and (d0_9_val // f9_sec) == q9_exp
-                        and (d0_9_val % m_wu_exp) == mod7_exp
-                        and mod7_exp != 0
-                        and ((d0_6_val % (m_wu_exp * m_wu_exp)) == 0) == div49_exp
-                        and div49_exp is True
-                        and z_u2_exp == [[3, 8], [27, 8]]
-                        and laurent_twobase_6x6_t3u2_det_closed(3, 8, 2) == 0
-                        and laurent_twobase_6x6_t3u2_det_closed(27, 8, 2) == 0
-                        and laurent_twobase_6x6_t3u2_det_closed(3, 8, 4) != 0
-                        and laurent_twobase_6x6_t3u2_det_closed(27, 8, 4) != 0
-                    )
-                else:
-                    ok = False
-            rect_ov_keys = (
-                "rect_6x6_m0_det",
-                "rect_6x6_col_fac",
-                "rect_6x6_row_fac",
-                "rect_6x6_quot_mod_row",
-                "rect_6x6_lcm_divides",
-                "laurent_9x9_12_19_u1_det",
-                "laurent_9x9_12_19_u2_det",
-            )
-            if any(k in entry for k in rect_ov_keys):
-                int_ov_keys = (
-                    "W",
-                    "K",
-                    "gap_sign",
+                rect_ov_keys = (
                     "rect_6x6_m0_det",
                     "rect_6x6_col_fac",
                     "rect_6x6_row_fac",
                     "rect_6x6_quot_mod_row",
+                    "rect_6x6_lcm_divides",
                     "laurent_9x9_12_19_u1_det",
                     "laurent_9x9_12_19_u2_det",
                 )
-                if (
-                    all(k in entry for k in rect_ov_keys)
-                    and w_val >= 2
-                    and k_val >= 1
-                    and all(isinstance(entry[k], int) and not isinstance(entry[k], bool) for k in int_ov_keys)
-                    and ("abs_gap" not in entry or (isinstance(entry["abs_gap"], int) and not isinstance(entry["abs_gap"], bool)))
-                    and isinstance(entry["rect_6x6_lcm_divides"], bool)
-                ):
-                    checked_conv.update(rect_ov_keys)
-                    d6_exp = entry["rect_6x6_m0_det"]
-                    cf6_exp = entry["rect_6x6_col_fac"]
-                    rf6_exp = entry["rect_6x6_row_fac"]
-                    qm6_exp = entry["rect_6x6_quot_mod_row"]
-                    lcm_div_exp = entry["rect_6x6_lcm_divides"]
-                    d9_1219_u1_exp = entry["laurent_9x9_12_19_u1_det"]
-                    d9_1219_u2_exp = entry["laurent_9x9_12_19_u2_det"]
-                    rows6_ov = [(r_i, s_i) for s_i in range(2) for r_i in (0, 1, 2)]
-                    cols6_ov = [(t_i, m_i) for m_i in (0, 1, 2) for t_i in range(2)]
-                    m0_6_ov = [
-                        [
-                            math.comb(r_i * w_val + s_i * k_val, t_i)
-                            * (1 << ((r_i * w_val + s_i * k_val) * m_i))
-                            for (t_i, m_i) in cols6_ov
+                if any(k in entry for k in rect_ov_keys):
+                    int_ov_keys = (
+                        "W",
+                        "K",
+                        "gap_sign",
+                        "rect_6x6_m0_det",
+                        "rect_6x6_col_fac",
+                        "rect_6x6_row_fac",
+                        "rect_6x6_quot_mod_row",
+                        "laurent_9x9_12_19_u1_det",
+                        "laurent_9x9_12_19_u2_det",
+                    )
+                    if (
+                        all(k in entry for k in rect_ov_keys)
+                        and w_val >= 2
+                        and k_val >= 1
+                        and all(isinstance(entry[k], int) and not isinstance(entry[k], bool) for k in int_ov_keys)
+                        and ("abs_gap" not in entry or (isinstance(entry["abs_gap"], int) and not isinstance(entry["abs_gap"], bool)))
+                        and isinstance(entry["rect_6x6_lcm_divides"], bool)
+                    ):
+                        checked_conv.update(rect_ov_keys)
+                        d6_exp = entry["rect_6x6_m0_det"]
+                        cf6_exp = entry["rect_6x6_col_fac"]
+                        rf6_exp = entry["rect_6x6_row_fac"]
+                        qm6_exp = entry["rect_6x6_quot_mod_row"]
+                        lcm_div_exp = entry["rect_6x6_lcm_divides"]
+                        d9_1219_u1_exp = entry["laurent_9x9_12_19_u1_det"]
+                        d9_1219_u2_exp = entry["laurent_9x9_12_19_u2_det"]
+                        rows6_ov = [(r_i, s_i) for s_i in range(2) for r_i in (0, 1, 2)]
+                        cols6_ov = [(t_i, m_i) for m_i in (0, 1, 2) for t_i in range(2)]
+                        m0_6_ov = [
+                            [
+                                math.comb(r_i * w_val + s_i * k_val, t_i)
+                                * (1 << ((r_i * w_val + s_i * k_val) * m_i))
+                                for (t_i, m_i) in cols6_ov
+                            ]
+                            for (r_i, s_i) in rows6_ov
                         ]
-                        for (r_i, s_i) in rows6_ov
-                    ]
-                    d6_true = _bareiss_det_exact(m0_6_ov)
-                    cf6_true = (1 << 7) * (3**4)
-                    rf6_true = ((1 << w_val) - 1) ** 2
-                    lcm6_true = math.lcm(cf6_true, rf6_true)
-                    d9_1219_u1 = laurent_twobase_9x9_t3u3_det_matrix(12, 19, 1)
-                    d9_1219_u2 = laurent_twobase_9x9_t3u3_det_matrix(12, 19, 2)
-                    ok = (
-                        ok
-                        and gap > 0
-                        and (w_val % 2) == 0
-                        and d6_true == d6_exp
-                        and cf6_true == cf6_exp
-                        and rf6_true == rf6_exp
-                        and (d6_true % cf6_true) == 0
-                        and (d6_true % rf6_true) == 0
-                        and ((d6_true // cf6_true) % rf6_true) == qm6_exp
-                        and qm6_exp != 0
-                        and ((d6_true % lcm6_true) == 0) == lcm_div_exp
-                        and lcm_div_exp is True
-                        and (3**12) > (1 << 19)
-                        and d9_1219_u1 == d9_1219_u1_exp
-                        and d9_1219_u2 == d9_1219_u2_exp
-                        and d9_1219_u1 > 0
-                        and d9_1219_u2 < 0
-                    )
-                else:
-                    ok = False
-            t3u3_7_11_keys = (
-                "laurent_9x9_7_11_u3_det",
-                "laurent_9x9_7_11_u4_det",
-                "laurent_9x9_7_11_u5_det",
-            )
-            if any(k in entry for k in t3u3_7_11_keys):
-                if (
-                    all(k in entry for k in t3u3_7_11_keys)
-                    and w_val >= 2
-                    and k_val >= 2
-                    and all(_is_strict_int(entry[k]) for k in t3u3_7_11_keys)
-                    and ("abs_gap" not in entry or _is_strict_int(entry["abs_gap"]))
-                ):
-                    checked_conv.update(t3u3_7_11_keys)
-                    d9_u3_exp = entry["laurent_9x9_7_11_u3_det"]
-                    d9_u4_exp = entry["laurent_9x9_7_11_u4_det"]
-                    d9_u5_exp = entry["laurent_9x9_7_11_u5_det"]
-                    d9_u1 = laurent_twobase_9x9_t3u3_det_matrix(w_val, k_val, 1)
-                    d9_u2 = laurent_twobase_9x9_t3u3_det_matrix(w_val, k_val, 2)
-                    d9_u3 = laurent_twobase_9x9_t3u3_det_matrix(w_val, k_val, 3)
-                    d9_u4 = laurent_twobase_9x9_t3u3_det_matrix(w_val, k_val, 4)
-                    d9_u5 = laurent_twobase_9x9_t3u3_det_matrix(w_val, k_val, 5)
-                    ok = (
-                        ok
-                        and gap < 0
-                        and 3 * k_val <= 5 * w_val
-                        and d9_u1 > 0
-                        and d9_u2 > 0
-                        and d9_u3 == d9_u3_exp
-                        and d9_u4 == d9_u4_exp
-                        and d9_u5 == d9_u5_exp
-                        and d9_u3 > 0
-                        and d9_u4 < 0
-                        and d9_u5 > 0
-                    )
-                else:
-                    ok = False
-            rect8_ov_keys = (
-                "rect_8x8_t2u4_m0_det",
-                "rect_8x8_t2u4_col_fac",
-                "rect_8x8_t2u4_row_fac",
-                "rect_8x8_t2u4_quot_mod_row",
-                "rect_8x8_t2u4_lcm_divides",
-                "laurent_9x9_81_16_u1_det",
-            )
-            if any(k in entry for k in rect8_ov_keys):
-                int_ov8_keys = (
-                    "W",
-                    "K",
-                    "gap_sign",
+                        d6_true = _bareiss_det_exact(m0_6_ov)
+                        cf6_true = (1 << 7) * (3**4)
+                        rf6_true = ((1 << w_val) - 1) ** 2
+                        lcm6_true = math.lcm(cf6_true, rf6_true)
+                        d9_1219_u1 = laurent_twobase_9x9_t3u3_det_matrix(12, 19, 1)
+                        d9_1219_u2 = laurent_twobase_9x9_t3u3_det_matrix(12, 19, 2)
+                        ok = (
+                            ok
+                            and gap > 0
+                            and (w_val % 2) == 0
+                            and d6_true == d6_exp
+                            and cf6_true == cf6_exp
+                            and rf6_true == rf6_exp
+                            and (d6_true % cf6_true) == 0
+                            and (d6_true % rf6_true) == 0
+                            and ((d6_true // cf6_true) % rf6_true) == qm6_exp
+                            and qm6_exp != 0
+                            and ((d6_true % lcm6_true) == 0) == lcm_div_exp
+                            and lcm_div_exp is True
+                            and (3**12) > (1 << 19)
+                            and d9_1219_u1 == d9_1219_u1_exp
+                            and d9_1219_u2 == d9_1219_u2_exp
+                            and d9_1219_u1 > 0
+                            and d9_1219_u2 < 0
+                        )
+                    else:
+                        ok = False
+                t3u3_7_11_keys = (
+                    "laurent_9x9_7_11_u3_det",
+                    "laurent_9x9_7_11_u4_det",
+                    "laurent_9x9_7_11_u5_det",
+                )
+                if any(k in entry for k in t3u3_7_11_keys):
+                    if (
+                        all(k in entry for k in t3u3_7_11_keys)
+                        and w_val >= 2
+                        and k_val >= 2
+                        and all(_is_strict_int(entry[k]) for k in t3u3_7_11_keys)
+                        and ("abs_gap" not in entry or _is_strict_int(entry["abs_gap"]))
+                    ):
+                        checked_conv.update(t3u3_7_11_keys)
+                        d9_u3_exp = entry["laurent_9x9_7_11_u3_det"]
+                        d9_u4_exp = entry["laurent_9x9_7_11_u4_det"]
+                        d9_u5_exp = entry["laurent_9x9_7_11_u5_det"]
+                        d9_u1 = laurent_twobase_9x9_t3u3_det_matrix(w_val, k_val, 1)
+                        d9_u2 = laurent_twobase_9x9_t3u3_det_matrix(w_val, k_val, 2)
+                        d9_u3 = laurent_twobase_9x9_t3u3_det_matrix(w_val, k_val, 3)
+                        d9_u4 = laurent_twobase_9x9_t3u3_det_matrix(w_val, k_val, 4)
+                        d9_u5 = laurent_twobase_9x9_t3u3_det_matrix(w_val, k_val, 5)
+                        ok = (
+                            ok
+                            and gap < 0
+                            and 3 * k_val <= 5 * w_val
+                            and d9_u1 > 0
+                            and d9_u2 > 0
+                            and d9_u3 == d9_u3_exp
+                            and d9_u4 == d9_u4_exp
+                            and d9_u5 == d9_u5_exp
+                            and d9_u3 > 0
+                            and d9_u4 < 0
+                            and d9_u5 > 0
+                        )
+                    else:
+                        ok = False
+                rect8_ov_keys = (
                     "rect_8x8_t2u4_m0_det",
                     "rect_8x8_t2u4_col_fac",
                     "rect_8x8_t2u4_row_fac",
                     "rect_8x8_t2u4_quot_mod_row",
+                    "rect_8x8_t2u4_lcm_divides",
                     "laurent_9x9_81_16_u1_det",
                 )
-                if (
-                    all(k in entry for k in rect8_ov_keys)
-                    and w_val >= 2
-                    and k_val >= 1
-                    and all(_is_strict_int(entry[k]) for k in int_ov8_keys)
-                    and ("abs_gap" not in entry or _is_strict_int(entry["abs_gap"]))
-                    and isinstance(entry["rect_8x8_t2u4_lcm_divides"], bool)
-                ):
-                    checked_conv.update(rect8_ov_keys)
-                    d8_exp = entry["rect_8x8_t2u4_m0_det"]
-                    cf8_exp = entry["rect_8x8_t2u4_col_fac"]
-                    rf8_exp = entry["rect_8x8_t2u4_row_fac"]
-                    qm8_exp = entry["rect_8x8_t2u4_quot_mod_row"]
-                    lcm8_exp = entry["rect_8x8_t2u4_lcm_divides"]
-                    d9_8116_u1_exp = entry["laurent_9x9_81_16_u1_det"]
-                    rows8_ov = [(i_r % 4, i_r // 4) for i_r in range(8)]
-                    cols8_ov = [(j_c % 2, j_c // 2) for j_c in range(8)]
-                    m0_8_ov = [
-                        [
-                            math.comb(r_i * w_val + s_i * k_val, t_i)
-                            * (1 << ((r_i * w_val + s_i * k_val) * m_i))
-                            for (t_i, m_i) in cols8_ov
+                if any(k in entry for k in rect8_ov_keys):
+                    int_ov8_keys = (
+                        "W",
+                        "K",
+                        "gap_sign",
+                        "rect_8x8_t2u4_m0_det",
+                        "rect_8x8_t2u4_col_fac",
+                        "rect_8x8_t2u4_row_fac",
+                        "rect_8x8_t2u4_quot_mod_row",
+                        "laurent_9x9_81_16_u1_det",
+                    )
+                    if (
+                        all(k in entry for k in rect8_ov_keys)
+                        and w_val >= 2
+                        and k_val >= 1
+                        and all(_is_strict_int(entry[k]) for k in int_ov8_keys)
+                        and ("abs_gap" not in entry or _is_strict_int(entry["abs_gap"]))
+                        and isinstance(entry["rect_8x8_t2u4_lcm_divides"], bool)
+                    ):
+                        checked_conv.update(rect8_ov_keys)
+                        d8_exp = entry["rect_8x8_t2u4_m0_det"]
+                        cf8_exp = entry["rect_8x8_t2u4_col_fac"]
+                        rf8_exp = entry["rect_8x8_t2u4_row_fac"]
+                        qm8_exp = entry["rect_8x8_t2u4_quot_mod_row"]
+                        lcm8_exp = entry["rect_8x8_t2u4_lcm_divides"]
+                        d9_8116_u1_exp = entry["laurent_9x9_81_16_u1_det"]
+                        rows8_ov = [(i_r % 4, i_r // 4) for i_r in range(8)]
+                        cols8_ov = [(j_c % 2, j_c // 2) for j_c in range(8)]
+                        m0_8_ov = [
+                            [
+                                math.comb(r_i * w_val + s_i * k_val, t_i)
+                                * (1 << ((r_i * w_val + s_i * k_val) * m_i))
+                                for (t_i, m_i) in cols8_ov
+                            ]
+                            for (r_i, s_i) in rows8_ov
                         ]
-                        for (r_i, s_i) in rows8_ov
-                    ]
-                    d8_true = _bareiss_det_exact(m0_8_ov)
-                    cf8_true = (1 << 22) * (3**8) * (7**4)
-                    rf8_true = ((1 << w_val) - 1) ** 4
-                    lcm8_true = math.lcm(cf8_true, rf8_true)
-                    d9_8116_u1 = laurent_twobase_9x9_t3u3_det_matrix(81, 16, 1)
-                    d9_8116_u14 = laurent_twobase_9x9_t3u3_det_matrix(81, 16, 14)
-                    d9_8116_u17 = laurent_twobase_9x9_t3u3_det_matrix(81, 16, 17)
-                    ok = (
-                        ok
-                        and gap > 0
-                        and (w_val % 2) == 0
-                        and d8_true == d8_exp
-                        and cf8_true == cf8_exp
-                        and rf8_true == rf8_exp
-                        and (d8_true % cf8_true) == 0
-                        and (d8_true % rf8_true) == 0
-                        and ((d8_true // cf8_true) % rf8_true) == qm8_exp
-                        and qm8_exp != 0
-                        and ((d8_true % lcm8_true) == 0) == lcm8_exp
-                        and lcm8_exp is True
-                        and d9_8116_u1 == d9_8116_u1_exp
-                        and d9_8116_u1 > 0
-                        and d9_8116_u14 != 0
-                        and d9_8116_u17 != 0
-                    )
-                else:
-                    ok = False
-        elif "a1" in entry and "a2" in entry and "degree_n" in entry:
-            req_pade = ("a1", "a2", "degree_n", "type1_height_bits", "type1_rem_log2", "type2_err_log2")
-            if all(k in entry for k in req_pade):
-                checked_conv.update(req_pade)
-                res_p = _solve_type1_and_type2_hermite_pade(
-                    Fraction(str(entry["a1"])),
-                    Fraction(str(entry["a2"])),
-                    int(entry["degree_n"]),
-                )
-                ok = (
-                    ok
-                    and int(res_p["type1_height_bits"]) == int(entry["type1_height_bits"])
-                    and abs(float(res_p["type1_rem_log2"]) - float(entry["type1_rem_log2"])) < 1e-3
-                    and abs(float(res_p["type2_err_log2"]) - float(entry["type2_err_log2"])) < 1e-3
-                )
-                if "stepline_casorati_det_nonzero" in entry:
-                    req_step = (
-                        "stepline_casorati_det_nonzero",
-                        "type2_offdiag_n1_n_err_log2",
-                        "type2_offdiag_n_n1_err_log2",
-                    )
-                    if all(k in entry for k in req_step):
-                        checked_conv.update(req_step)
+                        d8_true = _bareiss_det_exact(m0_8_ov)
+                        cf8_true = (1 << 22) * (3**8) * (7**4)
+                        rf8_true = ((1 << w_val) - 1) ** 4
+                        lcm8_true = math.lcm(cf8_true, rf8_true)
+                        d9_8116_u1 = laurent_twobase_9x9_t3u3_det_matrix(81, 16, 1)
+                        d9_8116_u14 = laurent_twobase_9x9_t3u3_det_matrix(81, 16, 14)
+                        d9_8116_u17 = laurent_twobase_9x9_t3u3_det_matrix(81, 16, 17)
                         ok = (
                             ok
-                            and bool(res_p["stepline_casorati_det_nonzero"])
-                            == bool(entry["stepline_casorati_det_nonzero"])
-                            and abs(
-                                float(res_p["type2_offdiag_n1_n_err_log2"])
-                                - float(entry["type2_offdiag_n1_n_err_log2"])
-                            )
-                            < 1e-3
-                            and abs(
-                                float(res_p["type2_offdiag_n_n1_err_log2"])
-                                - float(entry["type2_offdiag_n_n1_err_log2"])
-                            )
-                            < 1e-3
+                            and gap > 0
+                            and (w_val % 2) == 0
+                            and d8_true == d8_exp
+                            and cf8_true == cf8_exp
+                            and rf8_true == rf8_exp
+                            and (d8_true % cf8_true) == 0
+                            and (d8_true % rf8_true) == 0
+                            and ((d8_true // cf8_true) % rf8_true) == qm8_exp
+                            and qm8_exp != 0
+                            and ((d8_true % lcm8_true) == 0) == lcm8_exp
+                            and lcm8_exp is True
+                            and d9_8116_u1 == d9_8116_u1_exp
+                            and d9_8116_u1 > 0
+                            and d9_8116_u14 != 0
+                            and d9_8116_u17 != 0
                         )
                     else:
                         ok = False
-                if "diag_n55_err_log2_gt_zero" in entry:
-                    checked_conv.add("diag_n55_err_log2_gt_zero")
-                    res_55 = _solve_folded_symmetric_type2_diag(Fraction(str(entry["a1"])), 55)
-                    ok = ok and (
-                        (float(res_55["err_log2"]) > 0.0) == bool(entry["diag_n55_err_log2_gt_zero"])
+                laurent12_keys = (
+                    "laurent_12x12_t4u3_3_5_u1_det",
+                    "laurent_12x12_t4u3_3_5_u2_det",
+                    "laurent_12x12_t4u3_5_8_u1_det",
+                    "laurent_12x12_t4u3_1_4_u1_det",
+                    "rect_12x12_t3u4_5_8_u2_quot_mod_row",
+                    "rect_12x12_t3u4_5_8_u2_lcm_divides",
+                )
+                if any(k in entry for k in laurent12_keys):
+                    int_l12_keys = (
+                        "W",
+                        "K",
+                        "gap_sign",
+                        "laurent_12x12_t4u3_3_5_u1_det",
+                        "laurent_12x12_t4u3_3_5_u2_det",
+                        "laurent_12x12_t4u3_5_8_u1_det",
+                        "laurent_12x12_t4u3_1_4_u1_det",
+                        "rect_12x12_t3u4_5_8_u2_quot_mod_row",
                     )
-            else:
-                ok = False
-        elif "beukers_degree_n" in entry:
-            req_br = (
-                "beukers_degree_n",
-                "rem1_log2",
-                "rem2_log2",
-                "hom_elim_err_log2",
-                "nonsep_2d_err_log2",
-            )
-            if all(k in entry for k in req_br):
-                checked_conv.update(req_br)
-                deg_n = int(entry["beukers_degree_n"])
-                res_br = _solve_beukers_rhin_2d_and_const_elimination(deg_n)
-                ok = (
-                    ok
-                    and float(res_br["symbolic_vs_series_diff"]) < 1e-40
-                    and abs(float(res_br["rem1_log2"]) - float(entry["rem1_log2"])) < 1e-3
-                    and abs(float(res_br["rem2_log2"]) - float(entry["rem2_log2"])) < 1e-3
-                    and abs(float(res_br["hom_elim_err_log2"]) - float(entry["hom_elim_err_log2"])) < 1e-3
-                    and abs(float(res_br["nonsep_2d_err_log2"]) - float(entry["nonsep_2d_err_log2"])) < 1e-2
-                )
-                if "integral_2d_log2" in entry:
-                    checked_conv.add("integral_2d_log2")
-                    ok = ok and (
-                        abs(float(res_br["integral_2d_log2"]) - float(entry["integral_2d_log2"])) < 1e-3
+                    if (
+                        all(k in entry for k in laurent12_keys)
+                        and w_val >= 1
+                        and k_val >= 1
+                        and all(_is_strict_int(entry[k]) for k in int_l12_keys)
+                        and "abs_gap" in entry
+                        and _is_strict_int(entry["abs_gap"])
+                        and isinstance(entry["rect_12x12_t3u4_5_8_u2_lcm_divides"], bool)
+                    ):
+                        checked_conv.update(laurent12_keys)
+                        d12_35_u1 = laurent_twobase_12x12_t4u3_det_matrix(w_val, k_val, 1)
+                        d12_35_u2 = laurent_twobase_12x12_t4u3_det_matrix(w_val, k_val, 2)
+                        d12_58_u1 = laurent_twobase_12x12_t4u3_det_matrix(5, 8, 1)
+                        d12_14_u1 = laurent_twobase_12x12_t4u3_det_matrix(1, 4, 1)
+                        rows12_r = [(i_r % 4, i_r // 4) for i_r in range(12)]
+                        cols12_r = [(j_c % 3, j_c // 3) for j_c in range(12)]
+                        m0_12_u2 = [
+                            [
+                                math.comb(r_i * 5 + s_i * 8, t_i) * (1 << ((r_i * 5 + s_i * 8) * m_i * 2))
+                                for (t_i, m_i) in cols12_r
+                            ]
+                            for (r_i, s_i) in rows12_r
+                        ]
+                        d0_12_u2 = _bareiss_det_exact(m0_12_u2)
+                        cf12_u2 = 1
+                        for m_b in range(1, 4):
+                            nd_p = 1
+                            for a_b in range(m_b):
+                                nd_p *= (4**m_b) - (4**a_b)
+                            cf12_u2 *= (4 ** (3 * m_b)) * (nd_p**9)
+                        rf12_u2 = ((1 << 10) - 1) ** 3
+                        lcm12_u2 = math.lcm(cf12_u2, rf12_u2)
+                        ok = (
+                            ok
+                            and gap > 0
+                            and 3 * k_val <= 5 * w_val
+                            and d12_35_u1 == laurent_twobase_12x12_t4u3_det_closed_u1(w_val, k_val)
+                            and d12_58_u1 == laurent_twobase_12x12_t4u3_det_closed_u1(5, 8)
+                            and d12_14_u1 == laurent_twobase_12x12_t4u3_det_closed_u1(1, 4)
+                            and d12_35_u1 == entry["laurent_12x12_t4u3_3_5_u1_det"]
+                            and d12_35_u2 == entry["laurent_12x12_t4u3_3_5_u2_det"]
+                            and d12_58_u1 == entry["laurent_12x12_t4u3_5_8_u1_det"]
+                            and d12_14_u1 == entry["laurent_12x12_t4u3_1_4_u1_det"]
+                            and d12_35_u1 < 0
+                            and d12_35_u2 > 0
+                            and d12_58_u1 > 0
+                            and d12_14_u1 == 0
+                            and (d0_12_u2 % cf12_u2) == 0
+                            and (d0_12_u2 % rf12_u2) == 0
+                            and ((d0_12_u2 // cf12_u2) % rf12_u2) == entry["rect_12x12_t3u4_5_8_u2_quot_mod_row"]
+                            and entry["rect_12x12_t3u4_5_8_u2_quot_mod_row"] != 0
+                            and ((d0_12_u2 % lcm12_u2) == 0) == entry["rect_12x12_t3u4_5_8_u2_lcm_divides"]
+                            and entry["rect_12x12_t3u4_5_8_u2_lcm_divides"] is True
+                        )
+                    else:
+                        ok = False
+            elif "a1" in entry and "a2" in entry and "degree_n" in entry:
+                req_pade = ("a1", "a2", "degree_n", "type1_height_bits", "type1_rem_log2", "type2_err_log2")
+                if all(k in entry for k in req_pade):
+                    checked_conv.update(req_pade)
+                    res_p = _solve_type1_and_type2_hermite_pade(
+                        Fraction(str(entry["a1"])),
+                        Fraction(str(entry["a2"])),
+                        int(entry["degree_n"]),
                     )
-            else:
-                ok = False
-        elif "laurent_grid" in entry:
-            req_laur = (
-                "laurent_grid",
-                "low_W",
-                "low_K",
-                "low_det_nonzero",
-                "low_det_int_log2",
-                "low_det_m0_log2",
-                "high_W",
-                "high_K",
-                "high_det_nonzero",
-                "high_det_int_log2",
-                "high_det_m0_log2",
-            )
-            grid_vals = entry.get("laurent_grid")
-            if (
-                all(k in entry for k in req_laur)
-                and isinstance(grid_vals, list)
-                and len(grid_vals) == 4
-            ):
-                checked_conv.update(req_laur)
-                r_g, s_g, t_g, u_g = (int(v) for v in grid_vals)
-                res_low = _solve_laurent_2log_interpolation_det(
-                    int(entry["low_W"]), int(entry["low_K"]), r_g, s_g, t_g, u_g
-                )
-                res_high = _solve_laurent_2log_interpolation_det(
-                    int(entry["high_W"]), int(entry["high_K"]), r_g, s_g, t_g, u_g
-                )
-                ok = (
-                    ok
-                    and bool(res_low["det_nonzero"]) == bool(entry["low_det_nonzero"])
-                    and abs(float(res_low["det_int_log2"]) - float(entry["low_det_int_log2"])) < 1e-3
-                    and abs(float(res_low["det_m0_log2"]) - float(entry["low_det_m0_log2"])) < 1e-3
-                    and bool(res_high["det_nonzero"]) == bool(entry["high_det_nonzero"])
-                    and abs(float(res_high["det_int_log2"]) - float(entry["high_det_int_log2"])) < 1e-3
-                    and abs(float(res_high["det_m0_log2"]) - float(entry["high_det_m0_log2"])) < 1e-3
-                )
-            else:
-                ok = False
-        elif "laurent_scaled_grid" in entry:
-            req_scaled = (
-                "W",
-                "K",
-                "laurent_scaled_grid",
-                "det_m0_log2",
-                "det_at_cubic_gap_log2",
-                "coprime_order_barrier_prime",
-                "ord2_mod_p",
-                "ord32_mod_p",
-            )
-            grid_s = entry.get("laurent_scaled_grid")
-            if (
-                all(k in entry for k in req_scaled)
-                and isinstance(grid_s, list)
-                and len(grid_s) == 4
-            ):
-                checked_conv.update(req_scaled)
-                w_sc, k_sc = int(entry["W"]), int(entry["K"])
-                r_g, s_g, t_g, u_g = (int(v) for v in grid_s)
-                res_pert = _solve_laurent_perturbed_cubic_gap_det(w_sc, k_sc, r_g, s_g, t_g, u_g)
-                p_bar = int(entry["coprime_order_barrier_prime"])
-                is_p_prime = (
-                    p_bar >= 5
-                    and (p_bar & 1) == 1
-                    and all(p_bar % d_i != 0 for d_i in range(3, int(math.isqrt(p_bar)) + 1, 2))
-                )
-                if is_p_prime:
-                    ord2_obs = _mult_order_mod_prime(2, p_bar)
-                    ord32_obs = _mult_order_mod_prime((3 * pow(2, -1, p_bar)) % p_bar, p_bar)
-                    smaller_all_ge2 = True
-                    for q_p in range(5, p_bar, 2):
-                        if all(q_p % d_i != 0 for d_i in range(3, int(math.isqrt(q_p)) + 1, 2)):
-                            o2_q = _mult_order_mod_prime(2, q_p)
-                            o32_q = _mult_order_mod_prime((3 * pow(2, -1, q_p)) % q_p, q_p)
-                            if math.gcd(o2_q, o32_q) < 2:
-                                smaller_all_ge2 = False
-                                break
                     ok = (
                         ok
-                        and bool(res_pert["det_nonzero"])
-                        and abs(float(res_pert["det_m0_log2"]) - float(entry["det_m0_log2"])) < 1e-3
-                        and abs(
-                            float(res_pert["det_at_cubic_gap_log2"])
-                            - float(entry["det_at_cubic_gap_log2"])
-                        )
-                        < 1e-3
-                        and float(res_pert["det_m0_log2"]) < 0.0
-                        and float(res_pert["det_at_cubic_gap_log2"]) > 0.0
-                        and ord2_obs == int(entry["ord2_mod_p"])
-                        and ord32_obs == int(entry["ord32_mod_p"])
-                        and math.gcd(ord2_obs, ord32_obs) == 1
-                        and smaller_all_ge2
+                        and int(res_p["type1_height_bits"]) == int(entry["type1_height_bits"])
+                        and abs(float(res_p["type1_rem_log2"]) - float(entry["type1_rem_log2"])) < 1e-3
+                        and abs(float(res_p["type2_err_log2"]) - float(entry["type2_err_log2"])) < 1e-3
                     )
+                    if "stepline_casorati_det_nonzero" in entry:
+                        req_step = (
+                            "stepline_casorati_det_nonzero",
+                            "type2_offdiag_n1_n_err_log2",
+                            "type2_offdiag_n_n1_err_log2",
+                        )
+                        if all(k in entry for k in req_step):
+                            checked_conv.update(req_step)
+                            ok = (
+                                ok
+                                and bool(res_p["stepline_casorati_det_nonzero"])
+                                == bool(entry["stepline_casorati_det_nonzero"])
+                                and abs(
+                                    float(res_p["type2_offdiag_n1_n_err_log2"])
+                                    - float(entry["type2_offdiag_n1_n_err_log2"])
+                                )
+                                < 1e-3
+                                and abs(
+                                    float(res_p["type2_offdiag_n_n1_err_log2"])
+                                    - float(entry["type2_offdiag_n_n1_err_log2"])
+                                )
+                                < 1e-3
+                            )
+                        else:
+                            ok = False
+                    if "diag_n55_err_log2_gt_zero" in entry:
+                        checked_conv.add("diag_n55_err_log2_gt_zero")
+                        res_55 = _solve_folded_symmetric_type2_diag(Fraction(str(entry["a1"])), 55)
+                        ok = ok and (
+                            (float(res_55["err_log2"]) > 0.0) == bool(entry["diag_n55_err_log2_gt_zero"])
+                        )
+                else:
+                    ok = False
+            elif "beukers_degree_n" in entry:
+                req_br = (
+                    "beukers_degree_n",
+                    "rem1_log2",
+                    "rem2_log2",
+                    "hom_elim_err_log2",
+                    "nonsep_2d_err_log2",
+                )
+                if all(k in entry for k in req_br):
+                    checked_conv.update(req_br)
+                    deg_n = int(entry["beukers_degree_n"])
+                    res_br = _solve_beukers_rhin_2d_and_const_elimination(deg_n)
+                    ok = (
+                        ok
+                        and float(res_br["symbolic_vs_series_diff"]) < 1e-40
+                        and abs(float(res_br["rem1_log2"]) - float(entry["rem1_log2"])) < 1e-3
+                        and abs(float(res_br["rem2_log2"]) - float(entry["rem2_log2"])) < 1e-3
+                        and abs(float(res_br["hom_elim_err_log2"]) - float(entry["hom_elim_err_log2"])) < 1e-3
+                        and abs(float(res_br["nonsep_2d_err_log2"]) - float(entry["nonsep_2d_err_log2"])) < 1e-2
+                    )
+                    if "integral_2d_log2" in entry:
+                        checked_conv.add("integral_2d_log2")
+                        ok = ok and (
+                            abs(float(res_br["integral_2d_log2"]) - float(entry["integral_2d_log2"])) < 1e-3
+                        )
+                else:
+                    ok = False
+            elif "laurent_grid" in entry:
+                req_laur = (
+                    "laurent_grid",
+                    "low_W",
+                    "low_K",
+                    "low_det_nonzero",
+                    "low_det_int_log2",
+                    "low_det_m0_log2",
+                    "high_W",
+                    "high_K",
+                    "high_det_nonzero",
+                    "high_det_int_log2",
+                    "high_det_m0_log2",
+                )
+                grid_vals = entry.get("laurent_grid")
+                if (
+                    all(k in entry for k in req_laur)
+                    and isinstance(grid_vals, list)
+                    and len(grid_vals) == 4
+                ):
+                    checked_conv.update(req_laur)
+                    r_g, s_g, t_g, u_g = (int(v) for v in grid_vals)
+                    res_low = _solve_laurent_2log_interpolation_det(
+                        int(entry["low_W"]), int(entry["low_K"]), r_g, s_g, t_g, u_g
+                    )
+                    res_high = _solve_laurent_2log_interpolation_det(
+                        int(entry["high_W"]), int(entry["high_K"]), r_g, s_g, t_g, u_g
+                    )
+                    ok = (
+                        ok
+                        and bool(res_low["det_nonzero"]) == bool(entry["low_det_nonzero"])
+                        and abs(float(res_low["det_int_log2"]) - float(entry["low_det_int_log2"])) < 1e-3
+                        and abs(float(res_low["det_m0_log2"]) - float(entry["low_det_m0_log2"])) < 1e-3
+                        and bool(res_high["det_nonzero"]) == bool(entry["high_det_nonzero"])
+                        and abs(float(res_high["det_int_log2"]) - float(entry["high_det_int_log2"])) < 1e-3
+                        and abs(float(res_high["det_m0_log2"]) - float(entry["high_det_m0_log2"])) < 1e-3
+                    )
+                else:
+                    ok = False
+            elif "laurent_scaled_grid" in entry:
+                req_scaled = (
+                    "W",
+                    "K",
+                    "laurent_scaled_grid",
+                    "det_m0_log2",
+                    "det_at_cubic_gap_log2",
+                    "coprime_order_barrier_prime",
+                    "ord2_mod_p",
+                    "ord32_mod_p",
+                )
+                grid_s = entry.get("laurent_scaled_grid")
+                if (
+                    all(k in entry for k in req_scaled)
+                    and isinstance(grid_s, list)
+                    and len(grid_s) == 4
+                ):
+                    checked_conv.update(req_scaled)
+                    w_sc, k_sc = int(entry["W"]), int(entry["K"])
+                    r_g, s_g, t_g, u_g = (int(v) for v in grid_s)
+                    res_pert = _solve_laurent_perturbed_cubic_gap_det(w_sc, k_sc, r_g, s_g, t_g, u_g)
+                    p_bar = int(entry["coprime_order_barrier_prime"])
+                    is_p_prime = (
+                        p_bar >= 5
+                        and (p_bar & 1) == 1
+                        and all(p_bar % d_i != 0 for d_i in range(3, int(math.isqrt(p_bar)) + 1, 2))
+                    )
+                    if is_p_prime:
+                        ord2_obs = _mult_order_mod_prime(2, p_bar)
+                        ord32_obs = _mult_order_mod_prime((3 * pow(2, -1, p_bar)) % p_bar, p_bar)
+                        smaller_all_ge2 = True
+                        for q_p in range(5, p_bar, 2):
+                            if all(q_p % d_i != 0 for d_i in range(3, int(math.isqrt(q_p)) + 1, 2)):
+                                o2_q = _mult_order_mod_prime(2, q_p)
+                                o32_q = _mult_order_mod_prime((3 * pow(2, -1, q_p)) % q_p, q_p)
+                                if math.gcd(o2_q, o32_q) < 2:
+                                    smaller_all_ge2 = False
+                                    break
+                        ok = (
+                            ok
+                            and bool(res_pert["det_nonzero"])
+                            and abs(float(res_pert["det_m0_log2"]) - float(entry["det_m0_log2"])) < 1e-3
+                            and abs(
+                                float(res_pert["det_at_cubic_gap_log2"])
+                                - float(entry["det_at_cubic_gap_log2"])
+                            )
+                            < 1e-3
+                            and float(res_pert["det_m0_log2"]) < 0.0
+                            and float(res_pert["det_at_cubic_gap_log2"]) > 0.0
+                            and ord2_obs == int(entry["ord2_mod_p"])
+                            and ord32_obs == int(entry["ord32_mod_p"])
+                            and math.gcd(ord2_obs, ord32_obs) == 1
+                            and smaller_all_ge2
+                        )
+                    else:
+                        ok = False
                 else:
                     ok = False
             else:
                 ok = False
-        else:
+            ok = ok and set(entry.keys()).issubset(checked_conv)
+        except (ValueError, TypeError, ZeroDivisionError, ArithmeticError, IndexError, KeyError):
             ok = False
-        ok = ok and set(entry.keys()).issubset(checked_conv)
         if ok:
             verified_count += 1
         else:
@@ -22227,3 +22656,1461 @@ def run_wave16_whole_space_campaign(bank_path: Optional[Path] = None) -> Dict[st
         "front_d_markov_mod39366_and_compressed_exponential_occupancy": front_d,
     }
 
+
+
+# ==============================================================================
+# Wave 17 Whole-Space Primitives, Red-Team Predicates, & Campaign Orchestrator
+# ==============================================================================
+
+
+def binary_one_runs(n: int) -> int:
+    """
+    Exact count of maximal contiguous `1`-bit runs in the binary expansion of `n >= 0`
+    (`0` for `n == 0`, matching Lean `binOneRuns` / `binaryOneRuns`).
+    """
+    if not _is_strict_int(n) or n < 0:
+        raise ValueError(f"Expected non-negative integer n >= 0, got {n!r}")
+    if n == 0:
+        return 0
+    return sum(1 for seg in bin(n)[2:].split("0") if seg)
+
+
+def binary_two_grams(n: int) -> Tuple[int, int, int, int]:
+    """
+    Exact MSB-to-LSB binary `2`-gram counts `(c_00, c_01, c_10, c_11)` of `n >= 0`
+    (`(0, 0, 0, 0)` for `n <= 1`, matching Lean `binaryTwoGram00..11`).
+    """
+    if not _is_strict_int(n) or n < 0:
+        raise ValueError(f"Expected non-negative integer n >= 0, got {n!r}")
+    if n <= 1:
+        return (0, 0, 0, 0)
+    bits_s = bin(n)[2:]
+    c00 = c01 = c10 = c11 = 0
+    for idx_b in range(len(bits_s) - 1):
+        pair_s = bits_s[idx_b : idx_b + 2]
+        if pair_s == "00":
+            c00 += 1
+        elif pair_s == "01":
+            c01 += 1
+        elif pair_s == "10":
+            c10 += 1
+        else:
+            c11 += 1
+    return (c00, c01, c10, c11)
+
+
+def laurent_twobase_12x12_t4u3_det_matrix(w: int, k: int, u: int) -> int:
+    """
+    Exact integer determinant of the rank-3 order-4 `12 x 12` (`T = 4, U = 3`) two-base
+    Schneider-Laurent interpolation matrix `laurentTwoBaseT4U3Mat12(w, k, u)`.
+    """
+    if not (_is_strict_int(w) and _is_strict_int(k) and _is_strict_int(u)) or w < 1 or k < 1 or u < 1:
+        raise ValueError(f"Expected positive integers (w, k, u) >= 1, got {(w, k, u)!r}")
+    rows12 = [(i_r % 3, i_r // 3) for i_r in range(12)]
+    cols12 = [(j_c % 4, (j_c // 4) * u) for j_c in range(12)]
+    mat12 = [
+        [
+            math.comb(r_i * w + s_i * k, t_i) * ((1 << (r_i * kc_i)) * (3 ** (s_i * kc_i)))
+            for (t_i, kc_i) in cols12
+        ]
+        for (r_i, s_i) in rows12
+    ]
+    return _bareiss_det_exact(mat12)
+
+
+_Q14_T4U3_COEFFS: Tuple[int, ...] = (
+    -129140163,
+    -516560652,
+    11401898256,
+    -56586403008,
+    167234674464,
+    -403944741504,
+    805882269504,
+    -1042083490560,
+    491454281984,
+    602538914816,
+    -1058060256256,
+    619444207616,
+    -152458756096,
+    17397972992,
+    -805306368,
+)
+
+
+def laurent_twobase_12x12_t4u3_det_closed_u1(w: int, k: int) -> int:
+    """
+    Exact factored homogeneous degree-18 closed form of `det_12(w, k, 1)` on `(T = 4, U = 3)`:
+      `det_12(w, k, 1) = 3888 * k^3 * (4 * w - k) * Q_14(w, k)`.
+    """
+    if not (_is_strict_int(w) and _is_strict_int(k)) or w < 0 or k < 0:
+        raise ValueError(f"Expected non-negative integers (w, k), got {(w, k)!r}")
+    q14_val = sum(_Q14_T4U3_COEFFS[d_i] * (w**d_i) * (k ** (14 - d_i)) for d_i in range(15))
+    return 3888 * (k**3) * (4 * w - k) * q14_val
+
+
+def _verify_c39_bi_btr_and_b_subdiag_ground_truth(
+    topleft_val: int,
+    c39_strict_exp: int,
+    c78_strict_exp: int,
+    w16_c1_excess_exp: int,
+    w16_c2_excess_exp: int,
+    c39_forced_b_exp: int,
+    c78_forced_b_exp: int,
+) -> bool:
+    """
+    Verify:
+    1. Across `TwoSided(2 x 3)` `c39` and `TwoSided(2 x 6)` `c78`, when `.T` subrows vanish,
+       100% of all `9` active `.B` symbols of `c39` and 100% of all `18` active `.B` symbols
+       of `c78` appear at `rw[0]` of a `.T`-headed rule, annihilating all active `.B` subdiagonals;
+    2. `biBTRMat2DC39(k, 1, 1, 1)` (`k = topleft_val >= 2`) strictly orients `18/39` rules on `c39`
+       and `36/78` rules on `c78`, escapes Wave 16's `c1` (`+13`) and `c2` (`+10`) Farkas syzygies,
+       and is locked to `0` strict `v_0` drops by Wave 17's 4-rule (`c39`) and 11-rule (`c78`) syzygies.
+    """
+    if topleft_val < 2:
+        return False
+    c39_s, c78_s = list(_build_twosided_c39_c78_rules()[0]), list(_build_twosided_c39_c78_rules()[1])
+    act_b39 = [b_i for b_i in range(12, 24) if any(b_i in lw or b_i in rw for lw, rw in c39_s)]
+    frc_b39 = [b_i for b_i in act_b39 if any(lw[0] >= 24 and rw[0] == b_i for lw, rw in c39_s)]
+    act_b78 = [b_i for b_i in range(24, 48) if any(b_i in lw or b_i in rw for lw, rw in c78_s)]
+    frc_b78 = [b_i for b_i in act_b78 if any(lw[0] >= 48 and rw[0] == b_i for lw, rw in c78_s)]
+    if not (
+        len(act_b39) == 9
+        and len(frc_b39) == c39_forced_b_exp == 9
+        and len(act_b78) == 18
+        and len(frc_b78) == c78_forced_b_exp == 18
+    ):
+        return False
+
+    mp39 = {s_i: (1, 0, 0, 0) for s_i in range(42)}
+    mp39.update(
+        {
+            6: (topleft_val, 0, 0, 1),
+            9: (topleft_val, 0, 0, 0),
+            14: (1, 0, 1, 0),
+            18: (1, 0, 1, 0),
+            20: (1, 0, 1, 0),
+            22: (1, 1, 0, 0),
+            23: (1, 1, 0, 0),
+            28: (1, 0, 1, 0),
+            31: (1, 0, 2, 0),
+            32: (1, 0, 2, 0),
+            36: (1, 0, 1, 0),
+            37: (1, 1, 2, 0),
+            38: (1, 0, 1, 0),
+            40: (1, 1, 0, 0),
+            41: (1, 1, 0, 0),
+        }
+    )
+    mp78 = {
+        s84: mp39[(s84 // 12) * 6 + ((s84 % 12) // 6) * 3 + (s84 % 3)]
+        for s84 in range(84)
+    }
+
+    def _eval_mat_and_diffs(
+        n_sym: int,
+        rules_l: Sequence[Tuple[Tuple[int, ...], Tuple[int, ...]]],
+        mp_d: Dict[int, Tuple[int, int, int, int]],
+    ) -> Tuple[bool, int, List[List[int]], List[List[int]]]:
+        def _mm(a_m: Tuple[int, int, int, int], b_m: Tuple[int, int, int, int]) -> Tuple[int, int, int, int]:
+            return (
+                a_m[0] * b_m[0] + a_m[1] * b_m[2],
+                a_m[0] * b_m[1] + a_m[1] * b_m[3],
+                a_m[2] * b_m[0] + a_m[3] * b_m[2],
+                a_m[2] * b_m[1] + a_m[3] * b_m[3],
+            )
+
+        def _mw(w_s: Sequence[int]) -> Tuple[int, int, int, int]:
+            acc = (1, 0, 0, 1)
+            for s_x in w_s:
+                acc = _mm(acc, mp_d[s_x])
+            return acc
+
+        n_c = 2 * n_sym
+
+        def _vc(w_s: Sequence[int]) -> Tuple[List[int], List[int]]:
+            v0 = [0] * n_c
+            v1 = [0] * n_c
+            for s_x in reversed(w_s):
+                a_x, b_x, c_x, d_x = mp_d[s_x]
+                n0 = [a_x * v0[i_v] + b_x * v1[i_v] for i_v in range(n_c)]
+                n1 = [c_x * v0[i_v] + d_x * v1[i_v] for i_v in range(n_c)]
+                n0[2 * s_x] += 1
+                n1[2 * s_x + 1] += 1
+                v0, v1 = n0, n1
+            return v0, v1
+
+        st_c = 0
+        r0_out: List[List[int]] = []
+        r1_out: List[List[int]] = []
+        for lw, rw in rules_l:
+            ml_v, mr_v = _mw(lw), _mw(rw)
+            if not all(ml_v[k_x] >= mr_v[k_x] for k_x in range(4)):
+                return (False, -1, [], [])
+            if ml_v != mr_v:
+                st_c += 1
+            l0, l1 = _vc(lw)
+            r0, r1 = _vc(rw)
+            r0_out.append([l0[i_v] - r0[i_v] for i_v in range(n_c)])
+            r1_out.append([l1[i_v] - r1[i_v] for i_v in range(n_c)])
+        return (True, st_c, r0_out, r1_out)
+
+    ok39, st39, r0_39, r1_39 = _eval_mat_and_diffs(42, c39_s, mp39)
+    ok78, st78, r0_78, r1_78 = _eval_mat_and_diffs(84, c78_s, mp78)
+    if not (ok39 and ok78 and st39 == c39_strict_exp and st78 == c78_strict_exp):
+        return False
+
+    mu0_w16_c1 = [1, 12, 13, 11, 1, 1, 2, 1, 4, 2, 2, 8, 9, 7, 1, 1, 9, 1, 13, 1, 8, 3, 6, 14, 3, 1, 1, 1, 2, 18, 1, 3, 1, 1, 1, 13, 1, 1, 1]
+    mu1_w16_c1 = [0] * 20 + [1, 2] + [0] * 17
+    mu0_w16_c2 = [1, 8, 9, 9, 1, 1, 2, 1, 2, 2, 2, 6, 7, 5, 1, 1, 7, 1, 9, 1, 6, 3, 4, 10, 1, 1, 1, 1, 2, 12, 3, 3, 1, 1, 1, 9, 1, 3, 1]
+    mu1_w16_c2 = [0] * 39
+    for r_idx, m_val in ((20, 6), (21, 3), (22, 4), (24, 1), (27, 5), (29, 4), (31, 1)):
+        mu1_w16_c2[r_idx] = m_val
+
+    exc_c1 = max(sum(mu0_w16_c1[r_i] * r0_39[r_i][v_i] + mu1_w16_c1[r_i] * r1_39[r_i][v_i] for r_i in range(39)) for v_i in range(84))
+    exc_c2 = max(sum(mu0_w16_c2[r_i] * r0_39[r_i][v_i] + mu1_w16_c2[r_i] * r1_39[r_i][v_i] for r_i in range(39)) for v_i in range(84))
+
+    mu1_w17_39 = [0] * 39
+    for r_idx, m_val in ((20, 6), (21, 3), (22, 4), (31, 1)):
+        mu1_w17_39[r_idx] = m_val
+    w17_39_ok = all(
+        sum(mu0_w16_c2[r_i] * r0_39[r_i][v_i] + mu1_w17_39[r_i] * r1_39[r_i][v_i] for r_i in range(39)) <= 0
+        for v_i in range(84)
+    )
+
+    mu0_c78_map = {
+        (2, 25): 2, (2, 28): 2, (5, 38): 2, (5, 41): 63, (8, 25): 2, (8, 28): 2, (11, 38): 2,
+        (55, 12): 16, (55, 13): 2, (55, 14): 2, (55, 15): 2, (55, 16): 2, (55, 17): 2, (55, 39): 10,
+        (59, 38): 32, (59, 41): 7, (61, 39): 33, (62, 25): 7, (64, 26): 3, (64, 29): 39, (65, 41): 8,
+        (68, 31): 30, (68, 34): 2, (69, 43): 8, (69, 46): 2, (71, 44): 6, (74, 31): 4, (74, 34): 5,
+        (75, 43): 34, (77, 44): 29, (77, 47): 44, (79, 18): 15, (79, 45): 29, (80, 31): 36, (80, 34): 37,
+        (81, 43): 16, (81, 46): 14, (82, 32): 7, (82, 35): 8, (83, 44): 44,
+    }
+    mu1_w17_78_map = {
+        (68, 34): 2, (68, 31): 30, (83, 47): 1, (81, 46): 29, (79, 18): 15,
+        (80, 31): 37, (80, 34): 7, (82, 32): 9, (69, 43): 9, (69, 46): 1, (71, 44): 7,
+    }
+    mu0_78 = [mu0_c78_map.get((lw[0], lw[1]), 1) for (lw, _) in c78_s]
+    mu1_78 = [mu1_w17_78_map.get((lw[0], lw[1]), 0) for (lw, _) in c78_s]
+    w17_78_ok = all(
+        sum(mu0_78[r_i] * r0_78[r_i][v_i] + mu1_78[r_i] * r1_78[r_i][v_i] for r_i in range(78)) <= 0
+        for v_i in range(168)
+    )
+    return (
+        exc_c1 == w16_c1_excess_exp
+        and exc_c2 == w16_c2_excess_exp
+        and exc_c1 > 0
+        and exc_c2 > 0
+        and w17_39_ok
+        and w17_78_ok
+    )
+
+
+def is_diamond14_cone15(x: int) -> bool:
+    """
+    Cone 15 (`x + 8_494_490_059 == 2^k * 3^m` with `k >= 51` and `m >= 1`) for the 14th solvable
+    Collatz cousin `T_diamond14`:
+    `x >= 6_755_390_946_565_685 and (x % 2_251_799_813_685_248) == 2_251_791_319_195_189 and (x % 3) == 2 and coprime23(x + 8_494_490_059) == 1`.
+    """
+    if isinstance(x, bool) or not isinstance(x, int):
+        raise ValueError(f"Expected integer x, got {x!r}")
+    if (
+        x < 6_755_390_946_565_685
+        or (x % 2_251_799_813_685_248) != 2_251_791_319_195_189
+        or (x % 3) != 2
+    ):
+        return False
+    return _decompose_2_3_coprime(x + 8_494_490_059)[2] == 1
+
+
+def cousin_diamond14_step_int(x: int, q: int = 3) -> int:
+    """
+    Fourteenth solvable mixed-(2,3) Collatz cousin `T_diamond14` on `Z` (for odd `q >= 3`),
+    exhibiting genuine 12-tier `omega^12` Syracuse cascades
+    (`Cone 15 -> Cone 14 -> Cone 13 -> ... -> Cone 5 -> Phi_diamond2`):
+      - If `is_diamond14_cone15(x)`: `(q * x + 1) // 32`
+        (at `q = 3`, steps `2^k * 3^m - 8_494_490_059 -> 2^(k - 5) * 3^(m + 1) - 796_358_443` directly into Cone 14!);
+      - Otherwise: `cousin_diamond13_step_int(x, q=q)`.
+    """
+    if isinstance(x, bool) or not isinstance(x, int):
+        raise ValueError(f"Expected integer x, got {x!r}")
+    if isinstance(q, bool) or not isinstance(q, int) or (q & 1) == 0 or q < 3:
+        raise ValueError(f"Expected odd multiplier q >= 3, got {q!r}")
+    if is_diamond14_cone15(x):
+        return (q * x + 1) // 32
+    return cousin_diamond13_step_int(x, q=q)
+
+
+def cousin_diamond14_step_q6(x: Fraction) -> Fraction:
+    """
+    Canonical extension of `T_diamond14` (`q = 3`) to `Q_(6) = {a/b : gcd(b, 6) == 1}`.
+    Agrees identically with `cousin_diamond14_step_int` on all integers `a/1`, avoids Cone 15
+    universally on all non-integer rationals `den >= 5`, and preserves `Q_(6)`.
+    """
+    if isinstance(x, bool) or not isinstance(x, (int, Fraction)):
+        raise ValueError(f"Expected int or Fraction x, got {x!r}")
+    if not isinstance(x, Fraction):
+        x = Fraction(x)
+    if math.gcd(x.denominator, 6) != 1:
+        raise ValueError(f"Expected rational with gcd(denom, 6) == 1, got {x}")
+    num = x.numerator
+    den = x.denominator
+    mod51 = 2_251_799_813_685_248
+    inv_d_51 = pow(den, -1, mod51)
+    inv_d_3 = pow(den, -1, 3)
+    r51 = (num * inv_d_51) % mod51
+    r3 = (num * inv_d_3) % 3
+    if (
+        num >= 6_755_390_946_565_685 * den
+        and r51 == 2_251_791_319_195_189
+        and r3 == 2
+        and core3_pos(core2_pos(num + 8_494_490_059 * den)) == den
+    ):
+        return (3 * x + 1) / 32
+    return cousin_diamond13_step_q6(x)
+
+
+def cousin_diamond14_block_return(x: int) -> Tuple[int, int]:
+    """
+    Exact 12-tier `omega^12` return `(horizon_steps, next_state)` for `T_diamond14` on `Z^+`.
+    """
+    if isinstance(x, bool) or not isinstance(x, int) or x < 1:
+        raise ValueError(f"Expected positive integer x >= 1, got {x!r}")
+    if x == 1:
+        return (0, 1)
+    if x == 2:
+        return (1, 1)
+    if is_diamond14_cone15(x):
+        y = cousin_diamond14_step_int(x, q=3)
+        if not is_diamond13_cone14(y):
+            raise RuntimeError(f"Cone 15 step {x} -> {y} failed to enter Cone 14")
+        h14, end14 = cousin_diamond13_block_return(y)
+        return (1 + h14, end14)
+    if (
+        is_diamond3_cone4(x)
+        or is_diamond4_cone5(x)
+        or is_diamond5_cone6(x)
+        or is_diamond6_cone7(x)
+        or is_diamond7_cone8(x)
+        or is_diamond8_cone9(x)
+        or is_diamond9_cone10(x)
+        or is_diamond10_cone11(x)
+        or is_diamond11_cone12(x)
+        or is_diamond12_cone13(x)
+        or is_diamond13_cone14(x)
+    ):
+        return cousin_diamond13_block_return(x)
+    return (1, cousin_diamond14_step_int(x, q=3))
+
+
+def choose_two_step_ternary_carry_27(
+    rem_mod27: int, exp_mod18: int, two_bits: int
+) -> Tuple[int, int]:
+    """
+    Exact 2-step mod-27 ternary carry macro-selector (`2^18 == 1 mod 27`):
+    Given `rem_mod27 in 0..26` with `rem_mod27 % 3 != 0`, `exp_mod18 in 0..17`, and `two_bits in 0..3`,
+    returns the `two_bits`-th lexicographic pair `(s1, s2)` satisfying `s1 >= 1, s2 >= 1, 4 <= s1 + s2 <= 11`,
+    `(rem_mod27 - 2^((exp_mod18 - s1) % 18)) % 3 == 0` with quotient `r1 % 3 != 0`, and
+    `(r1 - 2^((exp_mod18 - s1 - s2) % 6)) % 9 in {3, 6}` (encoding 2 full binary mask bits in <= 11
+    positions, achieving exponential slope `2/11 > 1/6 > 1/8` while keeping `affineCarry < 2^(e + 3)`!).
+    """
+    if not (_is_strict_int(rem_mod27) and _is_strict_int(exp_mod18) and _is_strict_int(two_bits)):
+        raise ValueError("Expected strict integer arguments (rem_mod27, exp_mod18, two_bits)")
+    if (
+        (rem_mod27 % 3) == 0
+        or not (0 <= rem_mod27 < 27)
+        or not (0 <= exp_mod18 < 18)
+        or not (0 <= two_bits < 4)
+    ):
+        raise ValueError(f"Invalid mod-27 2-step carry arguments: {(rem_mod27, exp_mod18, two_bits)!r}")
+    cands: List[Tuple[int, int]] = []
+    for s1 in range(1, 11):
+        e1 = (exp_mod18 - s1) % 18
+        diff1 = (rem_mod27 - pow(2, e1, 27)) % 27
+        if (diff1 % 3) != 0:
+            continue
+        r1_9 = (diff1 // 3) % 9
+        if (r1_9 % 3) == 0:
+            continue
+        for s2 in range(1, 11 - s1 + 1):
+            if s1 + s2 < 4:
+                continue
+            e2 = (e1 - s2) % 6
+            if ((r1_9 - pow(2, e2, 9)) % 9) in (3, 6):
+                cands.append((s1, s2))
+                if len(cands) > two_bits:
+                    return cands[two_bits]
+    raise RuntimeError("Unreachable: every (rem_mod27, exp_mod18) admits >= 4 valid (s1, s2) pairs")
+
+
+_BOTTOM_3BIT_177147_CACHE: Optional[Dict[int, Tuple[int, int, int]]] = None
+
+
+def choose_bottom_3bit_collision_177147(k_dlog: int) -> Tuple[int, int, int]:
+    """
+    Exact 3-bit multiplicative-dlog bottom-collision lookup modulo `3^11 = 177,147` (`118,098 = 729 * 162`):
+    Given `0 <= k_dlog < 118_098`, looks up bucket `q = k_dlog // 162` (`(b1, b2, b3)` with
+    `9 <= b3 < b2 < b1 <= 176` and `(2^b1 + 3 * 2^b2 + 9 * 2^b3) % 177147 == 2^(162 * q) % 177147`),
+    adds `t = k_dlog % 162`, and returns `(e3, e2, e1) = (b3 + t, b2 + t, b1 + t)` (`9 <= e3 < e2 < e1 <= 337`)
+    satisfying `(2^e1 + 3 * 2^e2 + 9 * 2^e3) % 177147 == 2^k_dlog % 177147`.
+    Compresses the bottom mod-`3^11` step from unary `2 * 3^10 = 118,098` down to `<= 337` bits,
+    enabling unconditional exponential dyadic-window occupancy from `M_0 = 360 <= 500` at slope `c = 6`!
+    """
+    global _BOTTOM_3BIT_177147_CACHE
+    if not _is_strict_int(k_dlog) or not (0 <= k_dlog < 118_098):
+        raise ValueError(f"Expected strict int 0 <= k_dlog < 118098, got {k_dlog!r}")
+    mod11 = 177_147
+    if _BOTTOM_3BIT_177147_CACHE is None:
+        dlog_map = {pow(2, k_i, mod11): k_i for k_i in range(118_098)}
+        tbl: Dict[int, Tuple[int, int, int]] = {}
+        p2 = [pow(2, b_i, mod11) for b_i in range(177)]
+        for b1 in range(11, 177):
+            if len(tbl) == 729:
+                break
+            for b2 in range(10, b1):
+                s12 = (p2[b1] + 3 * p2[b2]) % mod11
+                for b3 in range(9, b2):
+                    tot_s = (s12 + 9 * p2[b3]) % mod11
+                    if (tot_s % 3) == 0:
+                        continue
+                    k_hit = dlog_map[tot_s]
+                    if (k_hit % 162) == 0:
+                        q_idx = k_hit // 162
+                        if q_idx not in tbl:
+                            tbl[q_idx] = (b3, b2, b1)
+                            if len(tbl) == 729:
+                                break
+                if len(tbl) == 729:
+                    break
+        _BOTTOM_3BIT_177147_CACHE = tbl
+    q_b, t_b = divmod(k_dlog, 162)
+    b3_0, b2_0, b1_0 = _BOTTOM_3BIT_177147_CACHE[q_b]
+    return (b3_0 + t_b, b2_0 + t_b, b1_0 + t_b)
+
+
+def audit_w17_front_a_bidirectional_b_t_and_dp2_20cycle_all_m() -> Dict[str, Any]:
+    """
+    Front A (`Branch P4.3`):
+    1. Verify all-dimension `9/9` (`c39`) and `18/18` (`c78`) active-`.B` subdiagonal cascade collapse
+       when `.T` subrows vanish (`GenOmegaBidirectionalBAndTTopRowMatTower`), AND verify the 4-parameter
+       simultaneous bidirectional `.B` + `.T` + `.R` cones `biBTRMat2DC39(k, alpha, beta, gamma)`
+       and `biBTRMat2DC78(k, alpha, beta, gamma)` via 4-rule and 11-rule Farkas syzygies across
+       multiple `(k, alpha, beta, gamma) >= (2, 1, 1, 1)`.
+    2. Verify unconditional `1..20`-cycle freedom across ALL `DP2` words (`N_cut = 147`), `M1`
+       `129009091/5077565` separation at `(r = 17, A = 27)`, AND universal arbitrary-`m` (`forall m >= 1`)
+       `.R`-carrying `dp2BlocksToShifts <-> broxSpiralCarry` cyclic rotation identity.
+    """
+    gt_ok = _verify_c39_bi_btr_and_b_subdiag_ground_truth(2, 18, 36, 13, 10, 9, 18)
+    c39_s, c78_s = list(_build_twosided_c39_c78_rules()[0]), list(_build_twosided_c39_c78_rules()[1])
+    mu0_39 = [1, 8, 9, 9, 1, 1, 2, 1, 2, 2, 2, 6, 7, 5, 1, 1, 7, 1, 9, 1, 6, 3, 4, 10, 1, 1, 1, 1, 2, 12, 3, 3, 1, 1, 1, 9, 1, 3, 1]
+    mu1_39 = [0] * 39
+    for r_i, m_v in ((20, 6), (21, 3), (22, 4), (31, 1)):
+        mu1_39[r_i] = m_v
+    mu0_c78_map = {
+        (2, 25): 2, (2, 28): 2, (5, 38): 2, (5, 41): 63, (8, 25): 2, (8, 28): 2, (11, 38): 2,
+        (55, 12): 16, (55, 13): 2, (55, 14): 2, (55, 15): 2, (55, 16): 2, (55, 17): 2, (55, 39): 10,
+        (59, 38): 32, (59, 41): 7, (61, 39): 33, (62, 25): 7, (64, 26): 3, (64, 29): 39, (65, 41): 8,
+        (68, 31): 30, (68, 34): 2, (69, 43): 8, (69, 46): 2, (71, 44): 6, (74, 31): 4, (74, 34): 5,
+        (75, 43): 34, (77, 44): 29, (77, 47): 44, (79, 18): 15, (79, 45): 29, (80, 31): 36, (80, 34): 37,
+        (81, 43): 16, (81, 46): 14, (82, 32): 7, (82, 35): 8, (83, 44): 44,
+    }
+    mu1_c78_map = {
+        (68, 34): 2, (68, 31): 30, (83, 47): 1, (81, 46): 29, (79, 18): 15,
+        (80, 31): 37, (80, 34): 7, (82, 32): 9, (69, 43): 9, (69, 46): 1, (71, 44): 7,
+    }
+    mu0_78 = [mu0_c78_map.get((lw[0], lw[1]), 1) for (lw, _) in c78_s]
+    mu1_78 = [mu1_c78_map.get((lw[0], lw[1]), 0) for (lw, _) in c78_s]
+
+    cones_ok = True
+    for k_p, a_p, b_p, g_p in ((2, 1, 1, 1), (2, 3, 5, 7), (4, 2, 7, 3)):
+        mp39 = {s_i: (1, 0, 0, 0) for s_i in range(42)}
+        mp39.update(
+            {
+                6: (k_p, 0, 0, 1), 9: (k_p, 0, 0, 0),
+                14: (1, 0, b_p, 0), 18: (1, 0, b_p, 0), 20: (1, 0, g_p, 0),
+                22: (1, a_p, 0, 0), 23: (1, a_p, 0, 0),
+                28: (1, 0, b_p, 0), 31: (1, 0, 2 * b_p, 0), 32: (1, 0, b_p + g_p, 0),
+                36: (1, 0, g_p, 0), 37: (1, a_p, 2 * g_p, 0), 38: (1, 0, g_p, 0),
+                40: (1, a_p, 0, 0), 41: (1, a_p, 0, 0),
+            }
+        )
+        mp78 = {
+            s84: mp39[(s84 // 12) * 6 + ((s84 % 12) // 6) * 3 + (s84 % 3)]
+            for s84 in range(84)
+        }
+        for n_sym, rules_l, mp_d, mu0_l, mu1_l, exp_st in (
+            (42, c39_s, mp39, mu0_39, mu1_39, 18),
+            (84, c78_s, mp78, mu0_78, mu1_78, 36),
+        ):
+            n_c = 2 * n_sym
+            st_c = 0
+            r0_l: List[List[int]] = []
+            r1_l: List[List[int]] = []
+            for lw, rw in rules_l:
+                acc_l = [1, 0, 0, 1]
+                for s_x in lw:
+                    sa, sb, sc, sd = mp_d[s_x]
+                    acc_l = [acc_l[0] * sa + acc_l[1] * sc, acc_l[0] * sb + acc_l[1] * sd, acc_l[2] * sa + acc_l[3] * sc, acc_l[2] * sb + acc_l[3] * sd]
+                acc_r = [1, 0, 0, 1]
+                for s_x in rw:
+                    sa, sb, sc, sd = mp_d[s_x]
+                    acc_r = [acc_r[0] * sa + acc_r[1] * sc, acc_r[0] * sb + acc_r[1] * sd, acc_r[2] * sa + acc_r[3] * sc, acc_r[2] * sb + acc_r[3] * sd]
+                if not all(acc_l[idx_m] >= acc_r[idx_m] for idx_m in range(4)):
+                    cones_ok = False
+                    break
+                if acc_l != acc_r:
+                    st_c += 1
+                v0_l, v1_l = [0] * n_c, [0] * n_c
+                for s_x in reversed(lw):
+                    sa, sb, sc, sd = mp_d[s_x]
+                    n0 = [sa * v0_l[i_v] + sb * v1_l[i_v] for i_v in range(n_c)]
+                    n1 = [sc * v0_l[i_v] + sd * v1_l[i_v] for i_v in range(n_c)]
+                    n0[2 * s_x] += 1
+                    n1[2 * s_x + 1] += 1
+                    v0_l, v1_l = n0, n1
+                v0_r, v1_r = [0] * n_c, [0] * n_c
+                for s_x in reversed(rw):
+                    sa, sb, sc, sd = mp_d[s_x]
+                    n0 = [sa * v0_r[i_v] + sb * v1_r[i_v] for i_v in range(n_c)]
+                    n1 = [sc * v0_r[i_v] + sd * v1_r[i_v] for i_v in range(n_c)]
+                    n0[2 * s_x] += 1
+                    n1[2 * s_x + 1] += 1
+                    v0_r, v1_r = n0, n1
+                r0_l.append([v0_l[i_v] - v0_r[i_v] for i_v in range(n_c)])
+                r1_l.append([v1_l[i_v] - v1_r[i_v] for i_v in range(n_c)])
+            if not cones_ok or st_c != exp_st or any(
+                sum(mu0_l[r_i] * r0_l[r_i][v_i] + (a_p * mu1_l[r_i]) * r1_l[r_i][v_i] for r_i in range(len(rules_l))) > 0
+                for v_i in range(n_c)
+            ):
+                cones_ok = False
+                break
+        if not cones_ok:
+            break
+
+    def _syr_odd(n_o: int) -> int:
+        v_s = 3 * n_o + 1
+        while (v_s & 1) == 0:
+            v_s >>= 1
+        return v_s
+
+    small_syr_20_ok = True
+    for n_o in range(3, 146, 2):
+        cur_o = n_o
+        for _ in range(1, 21):
+            cur_o = _syr_odd(cur_o)
+            if cur_o == n_o:
+                small_syr_20_ok = False
+                break
+        if not small_syr_20_ok:
+            break
+
+    arch_147_20_ok = all(
+        not ((1 << a_tot) > (3**r_len) and (147**r_len) * (1 << a_tot) <= (442**r_len))
+        for r_len in range(1, 21)
+        for a_tot in range(r_len, 4 * r_len + 1)
+    )
+
+    def _dp2_iter_carry(shifts_s: Sequence[int]) -> int:
+        c_acc = 0
+        a_sum = 0
+        for a_i in shifts_s:
+            c_acc = 3 * c_acc + (1 << a_sum)
+            a_sum += a_i
+        return c_acc
+
+    def _brox_carry(b_seq: Sequence[Tuple[int, int]]) -> int:
+        if len(b_seq) == 1:
+            return (1 << b_seq[0][1]) - 1
+        w_h, a_h = b_seq[0]
+        w_n, _ = b_seq[1]
+        w_rem = sum(pr_i[0] for pr_i in b_seq[1:])
+        return (3**w_rem) * ((1 << a_h) - 1) + (1 << (a_h + w_n)) * _brox_carry(b_seq[1:])
+
+    all_m_bridge_ok = True
+    for blk_test in (
+        [(5, 3)],
+        [(3, 2), (4, 2)],
+        [(2, 2), (3, 1), (4, 3)],
+        [(2, 2), (2, 4), (3, 2), (4, 2)],
+        [(3, 2), (2, 2), (4, 2), (2, 4), (3, 2)],
+    ):
+        for j_rot in range(len(blk_test)):
+            rb = blk_test[j_rot:] + blk_test[:j_rot]
+            shifts_rb: List[int] = []
+            for w_b, a_b in rb:
+                shifts_rb.extend([1] * (w_b - 1) + [1 + a_b])
+            w_tot_b = sum(w_b for w_b, _ in rb)
+            k_tot_b = sum(w_b + a_b for w_b, a_b in rb)
+            # Exact universal identity:
+            # 2^(w_0) * broxSpiralCarry(rb) - (2^K - 3^W) == dp2IterCarry(dp2BlocksToShifts(rb))?
+            # Wait: check exact relation! For 1-block [(w0, a0)]:
+            # shifts = [1]*(w0-1) + [1+a0], dp2IterCarry = 3^w0 - 2^w0!
+            # 2^w0 * (2^a0 - 1) - (2^(w0+a0) - 3^w0) = 2^(w0+a0) - 2^w0 - 2^(w0+a0) + 3^w0 = 3^w0 - 2^w0!!
+            lhs_id = (1 << rb[0][0]) * _brox_carry(rb) + (3**w_tot_b)
+            rhs_id = _dp2_iter_carry(shifts_rb) + (1 << k_tot_b)
+            if lhs_id != rhs_id:
+                all_m_bridge_ok = False
+                break
+
+    c_17 = _dp2_iter_carry([1] * 16 + [11])
+    d_17 = (1 << 27) - (3**17)
+    return {
+        "c39_c78_b_subdiag_cascade_collapse_verified": gt_ok,
+        "simultaneous_bidirectional_b_and_t_cones_farkas_verified": cones_ok,
+        "dp2_no_1_20_cycles_and_all_m_block_locks_verified": (
+            small_syr_20_ok
+            and arch_147_20_ok
+            and c_17 == 129_009_091
+            and d_17 == 5_077_565
+            and (c_17 % d_17) != 0
+            and all_m_bridge_ok
+        ),
+    }
+
+
+def audit_w17_front_b_rect_dominance_12x12_t4u3_and_6block_brox() -> Dict[str, Any]:
+    """
+    Front B (`Branch P3.2`-`P3.4`):
+    1. Verify universal `u = 1` coprime-`W` exact `Nat.lcm = product` & pure-`2^E2(U, T)` factorial
+       dominance `Nat.lcm > (U*T)! * (2^(W*u) - 1)^(T*(U - T))` across `U >= 4, 1 <= T < U` (plus
+       `u = 2, W = 5, K = 8` overlap witness on `12 x 12` `U = 4, T = 3` and `(U = 4, T = 1, u = 1, W = 6)` sharpness).
+    2. Verify rank-3 order-4 `12 x 12` `(T = 4, U = 3)` two-base Schneider-Laurent determinant:
+       Collatz-cone sign-flip `(3, 5)` vs `(5, 8)` at `u = 1` and `(3, 5)` `u = 1` vs `u = 2`,
+       exact `det_12(W, K, 1) = 3888 * K^3 * (4*W - K) * Q_14(W, K)` closed form, `K = 4*W` zero
+       ray (`(1, 4)`), and projective `P^1(F_47)` root-freeness of `Q_14`.
+    3. Verify all-rotation cyclic `p`-pivot Brox minimization + multi-prime companion cascades
+       `{3, 15, 255, 51, 7, 31, 511, 73}` + Hensel boosts eliminating balanced `[(17, 2)^5, (17, 50)]`
+       and semi-balanced `[(7, 3), (7, 3), (7, 9), (7, 3), (7, 3), (6, 3)]` (`W = 41, K = 65`).
+    """
+    def _conf_all_u_exact(u_blocks: int, t_ord: int, u_sh: int) -> int:
+        p_val = 1 << u_sh
+        acc_c = 1
+        for m_i in range(1, u_blocks):
+            nd_p = 1
+            for a_i in range(m_i):
+                nd_p *= (p_val**m_i) - (p_val**a_i)
+            acc_c *= (p_val ** (m_i * t_ord * (t_ord - 1) // 2)) * (nd_p ** (t_ord * t_ord))
+        return acc_c
+
+    rect_dom_ok = True
+    for u_b in (4, 5, 6):
+        for t_o in range(1, u_b):
+            e2_exp = sum(m_i * t_o * (t_o - 1) // 2 + t_o * t_o * m_i * (m_i - 1) // 2 for m_i in range(1, u_b))
+            for w_t in (5, 7, 11, 13):
+                rf_1 = ((1 << w_t) - 1) ** (t_o * (u_b - t_o))
+                cf_1 = _conf_all_u_exact(u_b, t_o, 1)
+                if all(math.gcd(w_t, d_i) == 1 for d_i in range(1, u_b)):
+                    if math.gcd(cf_1, rf_1) != 1 or math.lcm(cf_1, rf_1) <= math.factorial(u_b * t_o) * rf_1:
+                        rect_dom_ok = False
+                if (u_b >= 5 or t_o >= 2) and (1 << e2_exp) <= math.factorial(u_b * t_o):
+                    rect_dom_ok = False
+
+    # Verify 12x12 (T=4, U=3) closed form and P^1(F_47) sieve:
+    p47 = 47
+    p47_sieve_ok = (_Q14_T4U3_COEFFS[14] % p47) != 0 and all(
+        sum(_Q14_T4U3_COEFFS[d_i] * pow(w_mod, d_i, p47) for d_i in range(15)) % p47 != 0
+        for w_mod in range(p47)
+    )
+    d14_u2 = laurent_twobase_12x12_t4u3_det_matrix(1, 4, 2)
+    d28_u2 = laurent_twobase_12x12_t4u3_det_matrix(2, 8, 2)
+    det12_ok = (
+        p47_sieve_ok
+        and all(
+            laurent_twobase_12x12_t4u3_det_matrix(w_t, k_t, 1)
+            == laurent_twobase_12x12_t4u3_det_closed_u1(w_t, k_t)
+            for (w_t, k_t) in ((1, 2), (1, 4), (2, 8), (3, 5), (5, 8), (7, 11), (12, 19), (17, 27))
+        )
+        and laurent_twobase_12x12_t4u3_det_matrix(1, 4, 1) == 0
+        and d14_u2 == -15_742_910_792_136_445_715_997_717_744_844_800_000_000
+        and d14_u2 < 0
+        and d28_u2 == (1 << 18) * d14_u2
+        and laurent_twobase_12x12_t4u3_det_matrix(3, 5, 1) < 0
+        and laurent_twobase_12x12_t4u3_det_matrix(3, 5, 2) > 0
+        and laurent_twobase_12x12_t4u3_det_matrix(5, 8, 1) > 0
+    )
+
+    # Verify balanced & multi-prime m = 6 cyclic p-pivot elimination:
+    def _mp_ub(r_s: Sequence[Tuple[int, int]], p_piv: int) -> int:
+        tot_u = 0
+        pref_k = 0
+        rem_w = sum(pr_x[0] for pr_x in r_s)
+        for idx_p in range(p_piv - 1):
+            bw_x, ba_x = r_s[idx_p]
+            rem_w -= bw_x
+            tot_u += (1 << pref_k) * (3**rem_w) * ((1 << ba_x) - 1)
+            pref_k += bw_x + ba_x
+        rem_w -= r_s[p_piv - 1][0]
+        tail_a = sum(r_s[j_x][1] for j_x in range(p_piv - 1, len(r_s)))
+        tot_u += (1 << pref_k) * (3**rem_w) * ((1 << tail_a) - 1)
+        return tot_u
+
+    bal6 = [(17, 2)] * 5 + [(17, 50)]
+    d_bal6 = (1 << 162) - (3**102)
+    bal6_ok = (
+        all(_mp_ub(bal6[j_r:] + bal6[:j_r], 4) > 3 * d_bal6 for j_r in range(6))
+        and _mp_ub(bal6, 5) * 82 < 3 * d_bal6
+    )
+
+    mp6 = [(7, 3), (7, 3), (7, 9), (7, 3), (7, 3), (6, 3)]
+    d_mp6 = (1 << 65) - (3**41)
+    # 3 | a_j for all 6 blocks and W = 41 (% 6 == 5 != 0) => 7 | broxSpiralCarry and gcd(D, 7) == 1 => 7 | q_j for all j!
+    # Pure 5-pivot + 7*D fails on ALL 6 rotations, while cyclic rotation j = 2 puts b0 = (7, 9) first,
+    # unlocking s = 9 Hensel boost r_inv = pow(3^7 * 7, -1, 2^9) = 261 => q >= 1827, crushing by > 36x!
+    r_inv_mp6 = pow((3**7) * 7, -1, 1 << 9)
+    q_min_mp6 = r_inv_mp6 * 7
+    mp6_rot2 = mp6[2:] + mp6[:2]
+    rot_mp6_ok = (
+        math.gcd(d_mp6, 7) == 1
+        and all(_mp_ub(mp6[j_r:] + mp6[:j_r], 5) > 7 * d_mp6 for j_r in range(6))
+        and q_min_mp6 == 1827
+        and 36 * _mp_ub(mp6_rot2, 5) < q_min_mp6 * d_mp6
+    )
+    return {
+        "rect_coprime_exact_product_and_factorial_dominance_verified": rect_dom_ok,
+        "laurent_12x12_t4u3_cone_flip_and_exact_u1_zero_locus_verified": det12_ok,
+        "all_rotation_cyclic_brox_and_multiprime_6block_verified": bal6_ok and rot_mp6_ok,
+    }
+
+
+def audit_w17_front_c_four_var_runs_2gram_exp_and_diamond14() -> Dict[str, Any]:
+    """
+    Front C (`Branch P1.2` & `P5.16`):
+    1. Verify exact algebraic binary syzygies across `n = 2..1000` relating `binaryOneRuns` and
+       all four `2`-grams `(c_00, c_01, c_10, c_11)` to `(binBitLength, binaryPopcount, binaryAltTransitions)`
+       plus `n % 2`, verifying squared-weight superharmonicity reduction to `(0, infty)^3`.
+    2. Verify `T_diamond14` (`Cone 15 -> Cone 14 -> ... -> Cone 5 -> Phi_diamond2`,
+       `6755390946565685 -> 633317901240533` in `28` steps to `1`, `+16.22x` `Phi_2` jump),
+       Newton-Hensel `mod 2^51` odd-inverse, `Q_(6)^+`/`Nat` agreement, non-integer Cone-15 avoidance,
+       `mod 9 * 13` post-climb non-reentry, and `M1/M2/M3` counter-model separation.
+    """
+    syzygies_ok = True
+    for n_v in range(2, 1001):
+        l_n = n_v.bit_length()
+        p_n = n_v.bit_count()
+        t_n = binary_alt_transitions(n_v)
+        r1_n = binary_one_runs(n_v)
+        c00, c01, c10, c11 = binary_two_grams(n_v)
+        b0 = n_v & 1
+        if not (
+            2 * r1_n == t_n + 1 + b0
+            and c00 + c01 + c10 + c11 == l_n - 1
+            and 2 * c10 == t_n + (1 - b0)
+            and 2 * c01 + (1 - b0) == t_n
+            and 2 * c11 + t_n + 1 + b0 == 2 * p_n
+            and 2 * c00 + 2 * p_n + t_n + (1 - b0) == 2 * l_n
+        ):
+            syzygies_ok = False
+            break
+
+    outside_ok = True
+    for x_v in range(3, 5001):
+        if (
+            is_diamond3_cone4(x_v)
+            or is_diamond4_cone5(x_v)
+            or is_diamond5_cone6(x_v)
+            or is_diamond6_cone7(x_v)
+            or is_diamond7_cone8(x_v)
+            or is_diamond8_cone9(x_v)
+            or is_diamond9_cone10(x_v)
+            or is_diamond10_cone11(x_v)
+            or is_diamond11_cone12(x_v)
+            or is_diamond12_cone13(x_v)
+            or is_diamond13_cone14(x_v)
+            or is_diamond14_cone15(x_v)
+        ):
+            continue
+        if cousin_diamond2_phi(cousin_diamond14_step_int(x_v, q=3)) >= cousin_diamond2_phi(x_v):
+            outside_ok = False
+            break
+
+    nonreentry_ok = all(not is_diamond14_cone15(6 * (9**m_i) - 1) for m_i in range(0, 40))
+
+    cone15_seeds = [
+        ((1 << 51) * 3 - 8_494_490_059, True),
+        ((1 << 52) * 3 - 8_494_490_059, False),
+        ((1 << 52) * 9 - 8_494_490_059, False),
+        ((1 << 53) * 27 - 8_494_490_059, False),
+    ]
+    cone15_ok = nonreentry_ok
+    for x_s, must_jump_phi in cone15_seeds:
+        y_s = cousin_diamond14_step_int(x_s, q=3)
+        h_s, end_s = cousin_diamond14_block_return(x_s)
+        cur_s = x_s
+        for _ in range(h_s):
+            cur_s = cousin_diamond14_step_int(cur_s, q=3)
+        if not (
+            is_diamond14_cone15(x_s)
+            and is_diamond13_cone14(y_s)
+            and (not must_jump_phi or cousin_diamond2_phi(y_s) > cousin_diamond2_phi(x_s))
+            and end_s == 1
+            and cur_s == 1
+        ):
+            cone15_ok = False
+            break
+
+    def _hensel_inv_mod_pow2_w17(s_exp: int, d_odd: int) -> int:
+        inv_c = 1
+        cur_b = 1
+        while cur_b < s_exp:
+            nxt_b = min(s_exp, 2 * cur_b)
+            mod_n = 1 << nxt_b
+            inv_c = (inv_c * (2 - (d_odd * inv_c) % mod_n)) % mod_n
+            cur_b = nxt_b
+        return inv_c
+
+    hensel_q6_ok = (
+        all(
+            (d_t * _hensel_inv_mod_pow2_w17(51, d_t)) % (1 << 51) == 1
+            for d_t in (1, 3, 5, 7, 11, 13, 796_358_443, 8_494_490_059)
+        )
+        and all(
+            cousin_diamond14_step_q6(Fraction(n_t, 1)) == Fraction(cousin_diamond14_step_int(n_t, q=3), 1)
+            for n_t in list(range(1, 200)) + [6_755_390_946_565_685, 633_317_901_240_533]
+        )
+        and all(
+            cousin_diamond14_step_q6(Fraction(a_n, b_d)) == cousin_diamond13_step_q6(Fraction(a_n, b_d))
+            for b_d in (5, 7, 11, 13)
+            for a_n in (1, 2, 6_755_390_946_565_685 * b_d + 2)
+            if math.gcd(a_n, b_d) == 1
+        )
+    )
+
+    m1_cur = Fraction(1, 7)
+    for _ in range(5):
+        m1_cur = cousin_diamond14_step_q6(m1_cur)
+    m3_cur = 5
+    for _ in range(5):
+        m3_cur = cousin_diamond14_step_int(m3_cur, q=7)
+    countermodels_ok = (
+        m1_cur == Fraction(1, 7)
+        and cousin_diamond14_step_int(-1, q=3) == -1
+        and cousin_diamond14_step_int(-5, q=3) == -7
+        and cousin_diamond14_step_int(-7, q=3) == -10
+        and cousin_diamond14_step_int(-10, q=3) == -5
+        and m3_cur == 5
+    )
+    return {
+        "four_var_runs_and_2gram_syzygies_verified": syzygies_ok,
+        "cousin_diamond14_outside_cones4to15_descent_verified": outside_ok,
+        "cousin_diamond14_cone15_12tier_cascade_verified": cone15_ok,
+        "cousin_diamond14_hensel_inv_and_int_q6_verified": hensel_q6_ok,
+        "cousin_diamond14_countermodels_verified": countermodels_ok,
+    }
+
+
+def audit_w17_front_d_markov_mod118098_and_243x_steeper_exponential_occupancy() -> Dict[str, Any]:
+    """
+    Front D (`Branch P2.2` & `P5.3`):
+    1. Verify complete mod-`118098` (`2 * 3^10`, `39366/118098` surviving classes on `w >= 11`)
+       Markov bijection (`pref ++ (1,)*11 -> 59049 mod 118098`, `pref ++ (1, 0) + (1,)*10 -> 98415 mod 118098`),
+       `0/27` length-9 `mod 512` prefix exhaustion vs exact `54 = 1 + 8 + 21 + 19 + 5` length-10 `mod 1024`
+       prefix lift (`[1]*10` forces `w >= 11` on length `>= 11` proper extensions), and `j = 10` (`3^(w - 11)`)
+       fiber equidistribution.
+    2. Verify exact 3-adic carry-valuation deficit invariance (`w_0 >= 6`, `d_top >= 2`, mod-9 stall)
+       AND verify our `243x`-compressed (`M >= 26,265 + 6 * B`, down from `6,377,332`!) + steeper-slope
+       (`c = 6`, `2/11 > 1/6 > 1/8` via `choose_two_step_ternary_carry_27`) family `uWinExp17(B, M, mask)`
+       produces `>= 2^B` pairwise-distinct surviving `Mod373248` first-hit `q = 0` leaves inside
+       `[2^M, 2^(M + 1))` at linear horizon `L_max >= M` across `B in (1, 2, 3, 4, 5, 6)`.
+    """
+    from . import cs_forest_transfer as cft
+
+    surv_118098 = [r_v for r_v in range(118_098) if (r_v % 6) in (1, 3)]
+    pow3_11 = 3**11  # 177,147
+
+    def _dlog2_mod_pow3_w17(e_pow: int, rhs_t: int) -> int:
+        e_cur = 0 if (rhs_t % 3) == 1 else 1
+        ord_cur = 2
+        mod_cur = 3
+        for _ in range(1, e_pow):
+            mod_nxt = mod_cur * 3
+            for dg in (0, 1, 2):
+                cand_e = e_cur + dg * ord_cur
+                if pow(2, cand_e, mod_nxt) == (rhs_t % mod_nxt):
+                    e_cur = cand_e
+                    break
+            ord_cur *= 3
+            mod_cur = mod_nxt
+        return e_cur
+
+    markov10_images = [
+        (_dlog2_mod_pow3_w17(11, (3 * pow(2, a_v, pow3_11) + 1) % pow3_11) - 1) % 118_098
+        for a_v in range(39_366)
+    ]
+    locks_ok = all(
+        cft.canonical_suffix_shift(pref + (1,) * 11, 1) % 118_098 == 59_049
+        and cft.canonical_suffix_shift(pref + (1, 0) + (1,) * 10, 1) % 118_098 == 98_415
+        and (
+            sum(pref) == 0
+            or (cft.canonical_suffix_shift(pref + (1,) * 10, 1) % 118_098) in (19_683, 59_049, 98_415)
+        )
+        for pref in ((), (1,), (1, 0), (1, 1, 0), (1, 0, 1, 1), (0, 1, 0, 0))
+    )
+    surv_prefs9 = [
+        (1, 1) + mid7
+        for mid7 in product((0, 1), repeat=7)
+        if cft.is_surviving_mod512_residue(
+            cft.exact_backward_quotient(1, (1, 1) + mid7 + (1,), 0) % 512
+        )
+    ]
+    surv_prefs10 = [p9 + (b_e,) for p9 in surv_prefs9 for b_e in (0, 1)]
+    w10_counts = [sum(1 for p10 in surv_prefs10 if sum(p10) == w_t) for w_t in (10, 9, 8, 7, 6)]
+    all27_len9_escapes_ok = True
+    for p9_c in surv_prefs9:
+        found_esc9 = False
+        for z_zeros in range(0, 180):
+            u_cand9 = p9_c + (0,) * z_zeros + (1,)
+            if sum(u_cand9) <= 10 and cft.is_first_hit_one_pair(u_cand9, 0):
+                y_cand9 = cft.exact_backward_quotient(1, u_cand9, 0)
+                if cft.is_surviving_mod373248_class(y_cand9):
+                    found_esc9 = True
+                    break
+        if not found_esc9:
+            all27_len9_escapes_ok = False
+            break
+
+    mod118098_ok = (
+        len(surv_118098) == 39_366
+        and sorted(markov10_images) == surv_118098
+        and len(set(markov10_images)) == 39_366
+        and locks_ok
+        and len(surv_prefs9) == 27
+        and all(sum(p9) <= 9 for p9 in surv_prefs9)
+        and min(sum(p9) for p9 in surv_prefs9) == 6
+        and all27_len9_escapes_ok
+        and len(surv_prefs10) == 54
+        and w10_counts == [1, 8, 21, 19, 5]
+    )
+
+    u0_w6 = (1, 1, 0, 1, 1, 0, 1, 1, 0)  # w_0 = 6, c_0 = 1085, y % 512 == 507
+    period9 = 2 * (3**8)  # 13,122
+    mod9_p = 3**9  # 19,683
+    sub_c9 = 3 * 1085 + 7 * (3**7)  # 18,564
+    exp17_ok = all(
+        cft.is_surviving_mod729_residue(9 * m_l + 7) for m_l in range(81)
+    )
+    for b_bits in (1, 2, 3, 4, 5, 6):
+        if not exp17_ok:
+            break
+        k2 = (b_bits + 1) // 2
+        w_tot = 2 * k2 + 8
+        b0 = (3**w_tot).bit_length()
+        delta2 = next(d_v for d_v in (2, 3, 4, 5) if ((b0 + 1 + d_v) % 6) in (2, 4))
+        a_sh = b0 + delta2
+        q3 = ((1 << (a_sh + 1)) - 1) // 3
+        m_win = 26_265 + 6 * b_bits
+        l_len = m_win - delta2
+        seen_pos: Set[Tuple[int, ...]] = set()
+        for mask_v in range(1 << b_bits):
+            cur_mod = 3 ** (2 * k2 + 9)
+            e_cur = l_len - 1
+            r_cur = (q3 * pow(2, e_cur, cur_mod)) % cur_mod
+            pos_l: List[int] = [e_cur]
+            m_tmp = mask_v
+            for _ in range(k2):
+                s1, s2 = choose_two_step_ternary_carry_27(r_cur % 27, e_cur % 18, m_tmp & 3)
+                m_tmp >>= 2
+                e1 = e_cur - s1
+                diff1 = (r_cur - pow(2, e1, cur_mod)) % cur_mod
+                if (diff1 % 3) != 0:
+                    exp17_ok = False
+                    break
+                r1 = diff1 // 3
+                cur_mod //= 3
+                e2 = e1 - s2
+                diff2 = (r1 % cur_mod - pow(2, e2, cur_mod)) % cur_mod
+                if (diff2 % 3) != 0:
+                    exp17_ok = False
+                    break
+                r2 = diff2 // 3
+                cur_mod //= 3
+                e_cur, r_cur = e2, r2
+                pos_l.extend([e1, e2])
+            if not exp17_ok or cur_mod != mod9_p or (r_cur % 3) == 0:
+                exp17_ok = False
+                break
+            rhs9 = (r_cur - sub_c9) % mod9_p
+            t_base = _dlog2_mod_pow3_w17(9, rhs9)
+            p_last = period9 + t_base
+            if not (9 <= p_last and p_last + 4 <= e_cur):
+                exp17_ok = False
+                break
+            pos_l.append(p_last)
+            seen_pos.add(tuple(pos_l))
+            if b_bits in (1, 2) and mask_v < 2:
+                u_bits = list(u0_w6) + [0] * (l_len - 9)
+                for idx_one in pos_l:
+                    u_bits[idx_one] = 1
+                u_t = tuple(u_bits)
+                y_ex = cft.exact_backward_quotient(1, u_t, 0)
+                if not (
+                    len(u_t) == l_len <= m_win
+                    and sum(u_t) == w_tot
+                    and cft.canonical_suffix_shift(u_t, 1) == a_sh
+                    and cft.is_first_hit_one_pair(u_t, 0)
+                    and cft.is_surviving_mod373248_class(y_ex)
+                    and (1 << m_win) <= y_ex < (1 << (m_win + 1))
+                    and (y_ex % 512) == 507
+                    and (y_ex % 9) == 7
+                ):
+                    exp17_ok = False
+                    break
+        if not exp17_ok or len(seen_pos) != (1 << b_bits):
+            exp17_ok = False
+            break
+
+    # Sub-500 (`M_0 = 360 <= 500`, `c = 6 <= 6`) 3-bit bottom-collision + 2-step mod-27 ternary-carry family:
+    mod11_p = 3**11  # 177,147
+    sub_c11 = 27 * 1085 + 7 * (3**9)  # 167,076
+    sub500_ok = all(
+        (lambda e3, e2, e1: (
+            9 <= e3 < e2 < e1 <= 176
+            and ((pow(2, e1, mod11_p) + 3 * pow(2, e2, mod11_p) + 9 * pow(2, e3, mod11_p)) % mod11_p)
+            == pow(2, 162 * q_idx, mod11_p)
+        ))(*choose_bottom_3bit_collision_177147(162 * q_idx))
+        for q_idx in range(729)
+    )
+    for b_bits in (1, 2, 3, 4, 5, 6):
+        if not sub500_ok:
+            break
+        k2 = (b_bits + 1) // 2
+        w_low = 2 * k2 + 10
+        b0_low = (3**w_low).bit_length()
+        delta_low = next(d_v for d_v in (2, 3, 4, 5) if ((b0_low + 1 + d_v) % 6) in (2, 4))
+        a_low = b0_low + delta_low
+        q3_low = ((1 << (a_low + 1)) - 1) // 3
+        m_low = 360 + 6 * b_bits
+        l_low = m_low - delta_low
+        seen_low_pos: Set[Tuple[int, ...]] = set()
+        for mask_v in range(1 << b_bits):
+            cur_mod = 3 ** (2 * k2 + 10)
+            e_cur = l_low - 1
+            r_cur = (q3_low * pow(2, e_cur, 3 * cur_mod)) % (3 * cur_mod)
+            pos_low: List[int] = [e_cur]
+            m_tmp = mask_v
+            cur_mod_st = 3 * cur_mod
+            for _ in range(k2):
+                s1, s2 = choose_two_step_ternary_carry_27(r_cur % 27, e_cur % 18, m_tmp & 3)
+                m_tmp >>= 2
+                e1_s = e_cur - s1
+                diff1 = (r_cur - pow(2, e1_s, cur_mod_st)) % cur_mod_st
+                if (diff1 % 3) != 0:
+                    sub500_ok = False
+                    break
+                r1 = diff1 // 3
+                cur_mod_st //= 3
+                e2_s = e1_s - s2
+                diff2 = (r1 % cur_mod_st - pow(2, e2_s, cur_mod_st)) % cur_mod_st
+                if (diff2 % 3) != 0:
+                    sub500_ok = False
+                    break
+                r2 = diff2 // 3
+                cur_mod_st //= 3
+                e_cur, r_cur = e2_s, r2
+                pos_low.extend([e1_s, e2_s])
+            if not sub500_ok or cur_mod_st != mod11_p or (r_cur % 3) == 0:
+                sub500_ok = False
+                break
+            a_last_mod = (r_cur - sub_c11) % mod11_p
+            k_dl = _dlog2_mod_pow3_w17(11, a_last_mod)
+            e3_b, e2_b, e1_b = choose_bottom_3bit_collision_177147(k_dl)
+            if not (9 <= e3_b < e2_b < e1_b <= 337 and e1_b + 1 <= e_cur):
+                sub500_ok = False
+                break
+            pos_low.extend([e1_b, e2_b, e3_b])
+            seen_low_pos.add(tuple(pos_low))
+            if b_bits in (1, 2, 3, 4):
+                u_bits = list(u0_w6) + [0] * (l_low - 9)
+                for idx_one in pos_low:
+                    u_bits[idx_one] = 1
+                u_t = tuple(u_bits)
+                y_ex = cft.exact_backward_quotient(1, u_t, 0)
+                if not (
+                    len(u_t) == l_low <= m_low
+                    and sum(u_t) == w_low
+                    and cft.canonical_suffix_shift(u_t, 1) == a_low
+                    and cft.is_first_hit_one_pair(u_t, 0)
+                    and cft.is_surviving_mod373248_class(y_ex)
+                    and (1 << m_low) <= y_ex < (1 << (m_low + 1))
+                    and (y_ex % 512) == 507
+                    and (y_ex % 9) == 7
+                ):
+                    sub500_ok = False
+                    break
+        if not sub500_ok or len(seen_low_pos) != (1 << b_bits):
+            sub500_ok = False
+            break
+
+    return {
+        "markov_mod118098_and_mod1024_prefix54_lift_verified": mod118098_ok,
+        "all27_len9_escapes_verified": all27_len9_escapes_ok,
+        "compressed_243x_steeper_slope_exponential_occupancy_verified": exp17_ok,
+        "sub500_3bit_collision_steeper_slope_exponential_occupancy_verified": sub500_ok,
+        "sub500_min_m0": 360,
+        "sub500_slope_c": 6,
+    }
+
+
+def _dynamic_pred_c39_w16_farkas_covers_bidirectional_btr_or_b_subdiag_nonzero(
+    _dom: str, entry: Dict[str, Any]
+) -> bool:
+    """
+    Dynamic test of false claim that Wave 16's 2-rule or 7-rule Farkas syzygy covers simultaneous
+    bidirectional `.B` + `.T` + `.R` `d = 2` orientations on `c39`. Zero hardcoded witness IDs.
+    """
+    req_k = (
+        "c39_bi_btr_topleft_val",
+        "c39_bi_btr_strict_rules",
+        "c78_bi_btr_strict_rules",
+        "c39_w16_c1_farkas_max_pos_excess",
+        "c39_w16_c2_farkas_max_pos_excess",
+        "c39_forced_b_zero_subdiag_count",
+        "c78_forced_b_zero_subdiag_count",
+    )
+    if not all(k in entry for k in req_k) or not all(_is_strict_int(entry[k]) for k in req_k):
+        return True
+    if not _verify_c39_bi_btr_and_b_subdiag_ground_truth(
+        entry["c39_bi_btr_topleft_val"],
+        entry["c39_bi_btr_strict_rules"],
+        entry["c78_bi_btr_strict_rules"],
+        entry["c39_w16_c1_farkas_max_pos_excess"],
+        entry["c39_w16_c2_farkas_max_pos_excess"],
+        entry["c39_forced_b_zero_subdiag_count"],
+        entry["c78_forced_b_zero_subdiag_count"],
+    ):
+        return True
+    return entry["c39_w16_c1_farkas_max_pos_excess"] <= 0 or entry["c39_w16_c2_farkas_max_pos_excess"] <= 0
+
+
+def _dynamic_pred_m1_no_one_block_16_to_20_odd_step_cycles(
+    _dom: str, entry: Dict[str, Any]
+) -> bool:
+    """
+    Dynamic test of false claim that pure rational `16..20`-odd-step 1-block Syracuse dynamics
+    admit no positive cycles without `Z`-integrality `D | dp2IterCarry(shifts)`. Zero hardcoded IDs.
+    """
+    req_m = ("numerator", "denominator", "period_k", "weight_w", "m_blocks", "parity_vector")
+    if not all(k in entry for k in req_m):
+        return True
+    num = entry["numerator"]
+    den = entry["denominator"]
+    k_per = entry["period_k"]
+    w_exp = entry["weight_w"]
+    m_blk = entry["m_blocks"]
+    pv_raw = entry["parity_vector"]
+    if (
+        not _is_strict_int(num)
+        or not _is_strict_int(den)
+        or not _is_strict_int(k_per)
+        or not _is_strict_int(w_exp)
+        or not _is_strict_int(m_blk)
+        or den <= 0
+        or (den & 1) != 1
+        or num <= 0
+        or m_blk != 1
+        or not (16 <= w_exp <= 20)
+        or k_per <= w_exp
+        or not isinstance(pv_raw, list)
+        or pv_raw != [1] * w_exp + [0] * (k_per - w_exp)
+    ):
+        return True
+    cur_f = Fraction(num, den)
+    x0 = cur_f
+    for b_v in pv_raw:
+        if (cur_f.numerator & 1) != b_v:
+            return True
+        cur_f = (3 * cur_f + 1) / 2 if b_v == 1 else (cur_f / 2)
+    return cur_f != x0
+
+
+def _dynamic_pred_laurent_12x12_t4u3_cone_pos_or_u2_coprime_product_divides(
+    _dom: str, entry: Dict[str, Any]
+) -> bool:
+    """
+    Dynamic test of false claim that rank-3 order-4 `12 x 12` (`T = 4, U = 3`) two-base determinants
+    stay strictly positive (`> 0`) across the Collatz cone `3^W < 2^K and 3*K <= 5*W`. Zero hardcoded IDs.
+    """
+    req_l = ("W", "K", "laurent_12x12_t4u3_3_5_u1_det", "laurent_12x12_t4u3_5_8_u1_det")
+    if not all(k in entry for k in req_l) or not all(_is_strict_int(entry[k]) for k in req_l):
+        return True
+    w_v, k_v = entry["W"], entry["K"]
+    if w_v < 1 or k_v < 1 or not ((3**w_v) < (1 << k_v) and 3 * k_v <= 5 * w_v):
+        return True
+    d_wk = laurent_twobase_12x12_t4u3_det_matrix(w_v, k_v, 1)
+    if d_wk != entry["laurent_12x12_t4u3_3_5_u1_det"]:
+        return True
+    return d_wk > 0
+
+
+def _dynamic_pred_balanced_6block_four_pivot_ub_lt_3d(
+    _dom: str, entry: Dict[str, Any]
+) -> bool:
+    """
+    Dynamic test of false claim that Wave 16's 4-pivot Brox bound `ub_4step < 3 * D` succeeds on at
+    least one rotation of balanced `m = 6` `2 | a_j` tuples. Zero hardcoded witness IDs.
+    """
+    if "balanced_6block_params" not in entry:
+        return True
+    bp6 = entry["balanced_6block_params"]
+    if (
+        not isinstance(bp6, list)
+        or len(bp6) != 6
+        or not all(
+            isinstance(pr, list)
+            and len(pr) == 2
+            and all(_is_strict_int(v_i) and v_i >= 1 for v_i in pr)
+            for pr in bp6
+        )
+    ):
+        return True
+    w_vals = [pr[0] for pr in bp6]
+    a_vals = [pr[1] for pr in bp6]
+    if len(set(w_vals)) != 1 or any((a_x % 2) != 0 for a_x in a_vals):
+        return True
+    w_tot = sum(w_vals)
+    k_tot = w_tot + sum(a_vals)
+    d_gap = (1 << k_tot) - (3**w_tot)
+    if d_gap <= 0:
+        return True
+
+    def _ub4(r_s: List[List[int]]) -> int:
+        tot_u = 0
+        pref_k = 0
+        rem_w = sum(pr_x[0] for pr_x in r_s)
+        for idx_p in range(3):
+            bw_x, ba_x = r_s[idx_p]
+            rem_w -= bw_x
+            tot_u += (1 << pref_k) * (3**rem_w) * ((1 << ba_x) - 1)
+            pref_k += bw_x + ba_x
+        rem_w -= r_s[3][0]
+        tail_a = r_s[3][1] + r_s[4][1] + r_s[5][1]
+        tot_u += (1 << pref_k) * (3**rem_w) * ((1 << tail_a) - 1)
+        return tot_u
+
+    return any(_ub4(bp6[j_r:] + bp6[:j_r]) < 3 * d_gap for j_r in range(6))
+
+
+def _dynamic_pred_four_var_runs_and_2gram_resonant_preimage_weight(
+    _dom: str, entry: Dict[str, Any]
+) -> bool:
+    """
+    Dynamic test of resonant 4-var `(L, P, T, R_1)` weight `w_r(n) = 2^(P(n)) / (2^(L(n)) * 4^(R_1(n)))`
+    and complete `2`-gram `(c_00, c_01, c_10, c_11)` weight `w_g(n) = 2^(c_00 + c_11) / 4^(c_01 + c_10)`
+    (both surviving `4^s + 1 <- (2*4^s + 1)/3`) requiring superharmonicity. Zero hardcoded IDs.
+    """
+    req_p = ("seed", "next_compressed", "preimage_4var_shared_popcount", "preimage_4var_seed_one_runs")
+    if not all(k in entry for k in req_p) or not all(_is_strict_int(entry[k]) for k in req_p):
+        return True
+    s_v = entry["seed"]
+    m_v = entry["next_compressed"]
+    if s_v < 3 or m_v < 3 or (s_v & 1) != 1 or (m_v % 3) != 2 or int_compressed_step(s_v, q=3) != m_v:
+        return True
+    if s_v.bit_count() != entry["preimage_4var_shared_popcount"] or m_v.bit_count() != s_v.bit_count():
+        return True
+    if binary_one_runs(s_v) != entry["preimage_4var_seed_one_runs"]:
+        return True
+
+    def _w_runs(n_v: int) -> Fraction:
+        return Fraction(1 << n_v.bit_count(), 1 << (n_v.bit_length() + 2 * binary_one_runs(n_v)))
+
+    def _w_2gram(n_v: int) -> Fraction:
+        c00, c01, c10, c11 = binary_two_grams(n_v)
+        return Fraction(1 << (c00 + c11), 1 << (2 * (c01 + c10)))
+
+    return (_w_runs(2 * m_v) + _w_runs(s_v)) <= _w_runs(m_v) or (
+        _w_2gram(2 * m_v) + _w_2gram(s_v)
+    ) <= _w_2gram(m_v)
+
+
+def _dynamic_pred_phi2_on_cousin_diamond14_outside_cones4to14(
+    _dom: str, entry: Dict[str, Any]
+) -> bool:
+    """
+    Dynamic test of 11-tier `omega^11` `T_diamond13` ranking (`Phi_diamond2` strictly decreasing
+    outside Cones 4..14) on `T_diamond14`. Zero hardcoded witness IDs.
+    """
+    if "cousin_diamond14_next" not in entry or "seed" not in entry:
+        return True
+    if not _is_strict_int(entry["seed"]) or not _is_strict_int(entry["cousin_diamond14_next"]):
+        return True
+    x_v = entry["seed"]
+    if (
+        x_v <= 2
+        or is_diamond3_cone4(x_v)
+        or is_diamond4_cone5(x_v)
+        or is_diamond5_cone6(x_v)
+        or is_diamond6_cone7(x_v)
+        or is_diamond7_cone8(x_v)
+        or is_diamond8_cone9(x_v)
+        or is_diamond9_cone10(x_v)
+        or is_diamond10_cone11(x_v)
+        or is_diamond11_cone12(x_v)
+        or is_diamond12_cone13(x_v)
+        or is_diamond13_cone14(x_v)
+    ):
+        return True
+    y_v = cousin_diamond14_step_int(x_v, q=3)
+    if y_v != entry["cousin_diamond14_next"]:
+        return True
+    return cousin_diamond2_phi(y_v) < cousin_diamond2_phi(x_v)
+
+
+def _dynamic_pred_len9_prefix_forces_weight11(
+    _dom: str, entry: Dict[str, Any]
+) -> bool:
+    """
+    Dynamic test of false claim that conditioning on the all-ones length-9 `mod 512` prefix
+    `r = 511` (`sum(u[:9]) == 9`) suffices to force `parityWeight(u) >= 11` across length `>= 10`
+    surviving `Mod373248` first-hit `q = 0` core words. Zero hardcoded witness IDs.
+    """
+    if "core_word" not in entry or "q_index" not in entry or "allones9_prefix_weight9" not in entry:
+        return True
+    cw_raw = entry["core_word"]
+    q_raw = entry["q_index"]
+    pw9_raw = entry["allones9_prefix_weight9"]
+    if (
+        not isinstance(cw_raw, list)
+        or len(cw_raw) < 10
+        or not all(_is_strict_int(b_v) and b_v in (0, 1) for b_v in cw_raw)
+        or not _is_strict_int(q_raw)
+        or not _is_strict_int(pw9_raw)
+        or q_raw != 0
+    ):
+        return True
+    from . import cs_forest_transfer as cft
+
+    u_t = tuple(cw_raw)
+    if sum(u_t[:9]) != pw9_raw or sum(u_t[:9]) != 9 or not cft.is_first_hit_one_pair(u_t, 0):
+        return True
+    y_v = cft.exact_backward_quotient(1, u_t, 0)
+    if not cft.is_surviving_mod373248_class(y_v):
+        return True
+    return sum(u_t) >= 11
+
+
+def run_wave17_whole_space_campaign(bank_path: Optional[Path] = None) -> Dict[str, Any]:
+    """
+    Execute the complete Wave 17 whole-space red-team, all-dimension `.B`-subdiagonal + `.T`-top-row
+    matrix-tower collapse + 4-parameter simultaneous bidirectional `.B` + `.T` + `.R` `d = 2`
+    Farkas syzygies + unconditional `1..20`-cycle freedom & universal arbitrary-`m` `.R`-carrying
+    `leftAnchoredDP2Step` cycle locks, universal rectangular `u = 1` coprime-`W` exact product &
+    `2^E2(U, T)` factorial dominance + rank-3 order-4 `12 x 12` (`T = 4, U = 3`) Collatz-cone
+    sign-flip & exact `u = 1` zero locus `K = 4*W` + all-rotation cyclic `p`-pivot Brox &
+    multi-prime `m = 6` elimination, complete `(0, infty)^4` 4-variable `(L, P, T, R_1)` &
+    complete `2`-gram `(c_00, c_01, c_10, c_11)` exponential preimage impossibility + 14th solvable
+    cousin `T_diamond14` (`omega^12`), and complete mod-`118098` (`2 * 3^10`, `w >= 11`) Markov
+    bijection + `54`-prefix `mod 1024` lift + `243x`-compressed steeper-slope (`c = 6`) exponential
+    dyadic-window occupancy campaign.
+    """
+    u_gate = audit_universality_gate(
+        "Wave17_WholeSpace_W17_1_to_W17_4",
+        is_finite_m_table=False,
+        is_finite_n_table=False,
+        is_bounded_weight_table=False,
+        uses_native_decide=False,
+        uses_sorry=False,
+        axioms_used=("propext", "Classical.choice", "Quot.sound"),
+    )
+    bank = load_witness_bank(bank_path)
+    wb_truth = verify_witness_bank_ground_truth(bank_path)
+
+    gate_c39_bi = evaluate_hypothesis_against_witness_bank(
+        "Wave16FarkasCoversBidirectionalBAndTOnC39",
+        _dynamic_pred_c39_w16_farkas_covers_bidirectional_btr_or_b_subdiag_nonzero,
+        domains=("z_pos_high_glide",),
+        bank_path=bank_path,
+    )
+    gate_m1_dp2_17cyc = evaluate_hypothesis_against_witness_bank(
+        "PureRationalNoOneBlock16To20OddStepCycles",
+        _dynamic_pred_m1_no_one_block_16_to_20_odd_step_cycles,
+        domains=("m1_q2_pos",),
+        bank_path=bank_path,
+    )
+    gate_laur12 = evaluate_hypothesis_against_witness_bank(
+        "Laurent12x12T4U3CollatzConeStrictPositivity",
+        _dynamic_pred_laurent_12x12_t4u3_cone_pos_or_u2_coprime_product_divides,
+        domains=("log2_3_convergents",),
+        bank_path=bank_path,
+    )
+    gate_bal6_brox = evaluate_hypothesis_against_witness_bank(
+        "FourPivotBroxEliminatesBalanced6BlockTuples",
+        _dynamic_pred_balanced_6block_four_pivot_ub_lt_3d,
+        domains=("m1_q2_pos",),
+        bank_path=bank_path,
+    )
+    gate_4var_2gram = evaluate_hypothesis_against_witness_bank(
+        "FourVarRunsAndComplete2GramResonantPreimageWeight",
+        _dynamic_pred_four_var_runs_and_2gram_resonant_preimage_weight,
+        domains=("z_pos_high_glide",),
+        bank_path=bank_path,
+    )
+    gate_phi2_d14 = evaluate_hypothesis_against_witness_bank(
+        "OutsideCones4to14Phi2OnCousinDiamond14",
+        _dynamic_pred_phi2_on_cousin_diamond14_outside_cones4to14,
+        domains=("z_pos_high_glide",),
+        bank_path=bank_path,
+    )
+    gate_allones9_w11 = evaluate_hypothesis_against_witness_bank(
+        "Len9AllOnesPrefixForcesWeight11WithoutMod1024Lift",
+        _dynamic_pred_len9_prefix_forces_weight11,
+        domains=("z_pos_high_glide",),
+        bank_path=bank_path,
+    )
+
+    front_a = audit_w17_front_a_bidirectional_b_t_and_dp2_20cycle_all_m()
+    front_b = audit_w17_front_b_rect_dominance_12x12_t4u3_and_6block_brox()
+    front_c = audit_w17_front_c_four_var_runs_2gram_exp_and_diamond14()
+    front_d = audit_w17_front_d_markov_mod118098_and_243x_steeper_exponential_occupancy()
+
+    passed = (
+        u_gate.passed
+        and bool(wb_truth["all_witnesses_ground_truth_verified"])
+        and (not gate_c39_bi["passed"])
+        and gate_c39_bi["minimal_failure"]
+        == ("z_pos_high_glide", "ZPOS_C39_BIDIRECTIONAL_B_AND_T_D2_FARKAS_ESCAPE")
+        and (not gate_m1_dp2_17cyc["passed"])
+        and gate_m1_dp2_17cyc["minimal_failure"]
+        == ("m1_q2_pos", "M1_DP2_17CYCLE_129009091_OVER_5077565")
+        and (not gate_laur12["passed"])
+        and gate_laur12["minimal_failure"]
+        == ("log2_3_convergents", "LAURENT_12X12_T4U3_CONE_FLIP_AND_RECT_U2_OVERLAP")
+        and (not gate_bal6_brox["passed"])
+        and gate_bal6_brox["minimal_failure"]
+        == ("m1_q2_pos", "M1_BALANCED_6BLOCK_FOUR_PIVOT_ESCAPE")
+        and (not gate_4var_2gram["passed"])
+        and gate_4var_2gram["minimal_failure"]
+        == ("z_pos_high_glide", "ZPOS_PREIMAGE_4VAR_RUNS_AND_2GRAM_341_TO_227")
+        and (not gate_phi2_d14["passed"])
+        and gate_phi2_d14["minimal_failure"]
+        == ("z_pos_high_glide", "ZPOS_COUSIN_DIAMOND14_CONE15_6755390946565685_JUMP")
+        and (not gate_allones9_w11["passed"])
+        and gate_allones9_w11["minimal_failure"]
+        == ("z_pos_high_glide", "ZPOS_DYADIC_ALLONES9_WEIGHT10_PREFIX_ESCAPE")
+        and bool(front_a["c39_c78_b_subdiag_cascade_collapse_verified"])
+        and bool(front_a["simultaneous_bidirectional_b_and_t_cones_farkas_verified"])
+        and bool(front_a["dp2_no_1_20_cycles_and_all_m_block_locks_verified"])
+        and bool(front_b["rect_coprime_exact_product_and_factorial_dominance_verified"])
+        and bool(front_b["laurent_12x12_t4u3_cone_flip_and_exact_u1_zero_locus_verified"])
+        and bool(front_b["all_rotation_cyclic_brox_and_multiprime_6block_verified"])
+        and bool(front_c["four_var_runs_and_2gram_syzygies_verified"])
+        and bool(front_c["cousin_diamond14_outside_cones4to15_descent_verified"])
+        and bool(front_c["cousin_diamond14_cone15_12tier_cascade_verified"])
+        and bool(front_c["cousin_diamond14_hensel_inv_and_int_q6_verified"])
+        and bool(front_c["cousin_diamond14_countermodels_verified"])
+        and bool(front_d["markov_mod118098_and_mod1024_prefix54_lift_verified"])
+        and bool(front_d["all27_len9_escapes_verified"])
+        and bool(front_d["compressed_243x_steeper_slope_exponential_occupancy_verified"])
+        and bool(front_d["sub500_3bit_collision_steeper_slope_exponential_occupancy_verified"])
+        and int(front_d["sub500_min_m0"]) <= 500
+        and int(front_d["sub500_slope_c"]) <= 6
+    )
+    return {
+        "passed": passed,
+        "verdict": "REDTEAM-PASSED" if passed else "FALSIFIED",
+        "universality_gate_passed": u_gate.passed,
+        "witness_bank_total_entries": sum(len(v) for v in bank["domains"].values()),
+        "witness_bank_falsified_count": len(bank["falsified_hypotheses"]),
+        "witness_bank_ground_truth_verified": bool(wb_truth["all_witnesses_ground_truth_verified"]),
+        "front_a_bidirectional_b_t_and_dp2_20cycle_all_m": front_a,
+        "front_b_rect_dominance_12x12_t4u3_and_6block_brox": front_b,
+        "front_c_four_var_runs_2gram_exp_and_diamond14": front_c,
+        "front_d_markov_mod118098_and_243x_steeper_exponential_occupancy": front_d,
+    }

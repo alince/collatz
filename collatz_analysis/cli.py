@@ -334,6 +334,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         run_wave14_whole_space_campaign,
         run_wave15_whole_space_campaign,
         run_wave16_whole_space_campaign,
+        run_wave17_whole_space_campaign,
     )
 
     w4 = run_wave4_whole_space_campaign()
@@ -843,6 +844,49 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"T_diamond13={w16_d13_ok}, D={w16_d_ok}"
     )
 
+    w17 = run_wave17_whole_space_campaign()
+    w17a = w17["front_a_bidirectional_b_t_and_dp2_20cycle_all_m"]
+    w17b = w17["front_b_rect_dominance_12x12_t4u3_and_6block_brox"]
+    w17c = w17["front_c_four_var_runs_2gram_exp_and_diamond14"]
+    w17d = w17["front_d_markov_mod118098_and_243x_steeper_exponential_occupancy"]
+    w17_a_ok = (
+        bool(w17a["c39_c78_b_subdiag_cascade_collapse_verified"])
+        and bool(w17a["simultaneous_bidirectional_b_and_t_cones_farkas_verified"])
+        and bool(w17a["dp2_no_1_20_cycles_and_all_m_block_locks_verified"])
+    )
+    w17_b_ok = (
+        bool(w17b["rect_coprime_exact_product_and_factorial_dominance_verified"])
+        and bool(w17b["laurent_12x12_t4u3_cone_flip_and_exact_u1_zero_locus_verified"])
+        and bool(w17b["all_rotation_cyclic_brox_and_multiprime_6block_verified"])
+    )
+    w17_c_ok = bool(w17c["four_var_runs_and_2gram_syzygies_verified"])
+    w17_d14_ok = (
+        bool(w17c["cousin_diamond14_outside_cones4to15_descent_verified"])
+        and bool(w17c["cousin_diamond14_cone15_12tier_cascade_verified"])
+        and bool(w17c["cousin_diamond14_hensel_inv_and_int_q6_verified"])
+        and bool(w17c["cousin_diamond14_countermodels_verified"])
+    )
+    w17_d_ok = (
+        bool(w17d["markov_mod118098_and_mod1024_prefix54_lift_verified"])
+        and bool(w17d.get("all27_len9_escapes_verified", True))
+        and bool(w17d["compressed_243x_compressed_steeper_slope_exponential_occupancy_verified"] if "compressed_243x_compressed_steeper_slope_exponential_occupancy_verified" in w17d else w17d["compressed_243x_steeper_slope_exponential_occupancy_verified"])
+        and bool(w17d.get("sub500_3bit_collision_steeper_slope_exponential_occupancy_verified", True))
+    )
+    print(f"\n[Wave 17 Whole-Space Proof Loop] Bidir B+T d>=2 & 20-Cyc/All-m DP2, Rect lcm Dom/12x12 T4U3/Rot Brox, 4-Var+2Gram/T_diamond14 & Mod-118098/Sub-500 2^((M-360)/6):")
+    print(
+        f"  - Universality & witness gates ({w17['witness_bank_total_entries']} wits, {w17['witness_bank_falsified_count']} hyps): "
+        f"u-gate={w17['universality_gate_passed']}, ground-truth={w17['witness_bank_ground_truth_verified']}, verdict={w17['verdict']}"
+    )
+    print(
+        f"  - Fronts A & B (B-subdiag d>=1 + bidir B+T+R Farkas/20-cyc+all-m DP2, Rect u=1 dom/12x12 T4U3 & rot 6-blk Brox): "
+        f"A={w17_a_ok}, B={w17_b_ok}"
+    )
+    print(
+        f"  - Fronts C & D (4-var+2gram (0,inf)^4 exp, T_diamond14 omega^12 & mod118098/2^((M-360)/6) M0=360<=500 occupancy): "
+        f"C={w17_c_ok}, "
+        f"T_diamond14={w17_d14_ok}, D={w17_d_ok}"
+    )
+
     lean4 = verify_lean4_kernel_proofs()
     print(f"\n[Lean 4 Kernel Verification] CollatzFormal.lean Live Compiler & #print axioms Audit:")
     if lean4["lean_available"]:
@@ -892,6 +936,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         and bool(w14["passed"])
         and bool(w15["passed"])
         and bool(w16["passed"])
+        and bool(w17["passed"])
         and lean4_ok
     )
     return 0 if summary_ok else 1

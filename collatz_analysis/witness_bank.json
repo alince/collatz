@@ -728,6 +728,60 @@
         "kills_mechanisms": [
           "claims that conditioning on Wave 15's 8/27 weight-(>= 8) surviving mod-512 prefixes suffices to force parityWeight(u) >= 10 on length >= 10 proper core extensions: all 7 exact-weight-8 surviving length-9 mod-512 prefixes (such as [1,1,1,0,1,1,1,1,1]) admit surviving Mod373248 first-hit q = 0 extensions with parityWeight(u) = 9 < 10, leaving ONLY the unique 1/27 all-ones prefix r = 511 ([1,1,1,1,1,1,1,1,1]) forcing automatic parityWeight(u) >= 10"
         ]
+      },
+      {
+        "witness_id": "ZPOS_C39_BIDIRECTIONAL_B_AND_T_D2_FARKAS_ESCAPE",
+        "seed": 4919,
+        "compressed_steps_to_1": 68,
+        "c39_bi_btr_topleft_val": 2,
+        "c39_bi_btr_strict_rules": 18,
+        "c78_bi_btr_strict_rules": 36,
+        "c39_w16_c1_farkas_max_pos_excess": 13,
+        "c39_w16_c2_farkas_max_pos_excess": 10,
+        "c39_forced_b_zero_subdiag_count": 9,
+        "c78_forced_b_zero_subdiag_count": 18,
+        "kills_mechanisms": [
+          "claims that Wave 16's 2-rule or 7-rule Farkas syzygies cover simultaneous bidirectional .B + .T + .R-boundary-growth mixed zero-diagonal d = 2 orientations on c39, OR that bidirectional .B subdiagonals can stay positive without .T subdiagonal support: biBTRMat2DC39(2, 1, 1, 1) simultaneously activates .B top-row {22, 23}, .B subdiagonal {14, 18, 20}, .T top-row {37, 40, 41}, .T subdiagonal {28, 31, 32, 36, 37, 38} (with 37 bidirectional on a single symbol!), and .R top-left growth {6, 9}, strictly orienting 18/39 rules on c39 and 36/78 rules on c78 while escaping BOTH Wave 16 Farkas syzygies (+13 and +10), yet is locked to 0 strict v_0 drops by 4-rule/11-rule bilinear Farkas syzygies while zero .T subrows collapse all 9 active .B subdiagonals of c39 and all 18 active .B subdiagonals of c78 across all d >= 1"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_PREIMAGE_4VAR_RUNS_AND_2GRAM_341_TO_227",
+        "seed": 227,
+        "next_compressed": 341,
+        "preimage_4var_even_sibling": 682,
+        "preimage_4var_shared_popcount": 5,
+        "preimage_4var_seed_one_runs": 2,
+        "preimage_4var_target_one_runs": 5,
+        "preimage_2gram_seed": [2, 1, 1, 3],
+        "preimage_2gram_target": [0, 4, 4, 0],
+        "preimage_2gram_even_sibling": [0, 4, 5, 0],
+        "kills_mechanisms": [
+          "coupled 4-variable (binBitLength, binaryPopcount, binaryAltTransitions, binaryOneRuns) and complete 2-gram (c_00, c_01, c_10, c_11) two-sided exponential Berg-Meinardus preimage weights (such as w(n) = 2^(P(n)) / (2^(L(n)) * 4^(R_1(n))) and w(n) = 2^(c_00(n) + c_11(n)) / 4^(c_01(n) + c_10(n)), both of which strictly contract on 4^s + 1 <- (2*4^s + 1)/3): at m = 341 <- (682, 227), binaryPopcount stays invariant at 5 while binaryOneRuns drops 5 -> 2 and 2-grams jump [0, 4, 4, 0] -> [2, 1, 1, 3], refuting all (0, infty)^4 bases via squared-superharmonicity reduction to (L, P, T)"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_COUSIN_DIAMOND14_CONE15_6755390946565685_JUMP",
+        "seed": 6755390946565685,
+        "cousin_diamond14_next": 633317901240533,
+        "cousin_diamond14_steps_to_1": 28,
+        "phi_diamond2_seed": 145022842929433482705901431857360068074566,
+        "phi_diamond2_next": 2352022847572674613876595151076570123450802,
+        "kills_mechanisms": [
+          "11-tier omega^11 Cone-14 -> Cone-13 -> ... -> Cone-5 -> Phi_diamond2 rankings on 14th solvable cousin T_diamond14: Cone 15 (x = 2^51 * 3 - 8494490059 = 6755390946565685 -> 633317901240533 via (3x + 1)//32, v_2(3x + 1) = 5) jumps Phi_diamond2 upward 16.22x directly into Cone 14 -> Cone 13 -> ... -> Cone 5, requiring a genuine 12-tier omega^12 cascade"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_DYADIC_ALLONES9_WEIGHT10_PREFIX_ESCAPE",
+        "seed": 6487840627110957342933758367292483113623774926335,
+        "compressed_steps_to_1": 178,
+        "core_word": [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+        "q_index": 0,
+        "survives_mod373248": true,
+        "allones9_prefix_weight9": 9,
+        "allones9_escape_parity_weight": 10,
+        "kills_mechanisms": [
+          "claims that ANY length-9 surviving mod-512 prefix (even the unique all-ones prefix r = 511 = [1,1,1,1,1,1,1,1,1]) forces parityWeight(u) >= 11 on length >= 10 proper core extensions: [1]^9 ++ [0]^155 ++ [1] (length 165 >= 10, shift a = 13) produces a surviving Mod373248 first-hit q = 0 leaf with parityWeight(u) = 10 < 11, proving 0/27 length-9 prefixes force w(u) >= 11 and necessitating the mod-1024 (length-10, 54-prefix) lift where r = 1023 ([1]^10) forces w(u) >= 11 on 100% of length >= 11 extensions"
+        ]
       }
     ],
     "m1_q2_pos": [
@@ -1094,6 +1148,46 @@
         "kills_mechanisms": [
           "proofs of T_diamond13 omega^11 Cone-14 -> Cone-13 -> ... -> Cone-5 convergence omitting Z-discreteness at 0 < x < 211105436174549"
         ]
+      },
+      {
+        "witness_id": "M1_DP2_17CYCLE_129009091_OVER_5077565",
+        "x0": "129009091/5077565",
+        "numerator": 129009091,
+        "denominator": 5077565,
+        "period_k": 27,
+        "weight_w": 17,
+        "m_blocks": 1,
+        "parity_vector": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "kills_mechanisms": [
+          "pure rational / modular 16..20-odd-step 1-block Syracuse cycle exclusion claims omitting Z-integrality D | dp2IterCarry(shifts): at r = 17, A = 27 (2^27 - 3^17 = 5,077,565 > 0), x0 = 129009091/5077565 (~ 25.41 < 147) forms an exact 17-odd-step 1-block cycle in Q_(2)^+, whereas on Z^+ DP2 5077565 does not divide 129009091 and unconditional 1..20-cycle freedom holds across ALL DP2 words"
+        ]
+      },
+      {
+        "witness_id": "M1_BALANCED_6BLOCK_FOUR_PIVOT_ESCAPE",
+        "x0": "6852103994733805011583774842466244596221297407/1778510843498541522071559886560442745662389505",
+        "numerator": 6852103994733805011583774842466244596221297407,
+        "denominator": 1778510843498541522071559886560442745662389505,
+        "period_k": 162,
+        "weight_w": 102,
+        "m_blocks": 6,
+        "balanced_6block_params": [[17, 2], [17, 2], [17, 2], [17, 2], [17, 2], [17, 50]],
+        "balanced_6block_h0": 44709682275083643313232210395882573739158809,
+        "balanced_6block_four_pivot_ub": 43296439182388490082095803420153741461962382208281,
+        "balanced_6block_five_pivot_ub": 43944228522073784691054633379330111325384043801,
+        "kills_mechanisms": [
+          "claims that Wave 16's 4-pivot Brox telescoping bound ub_4step < 3 * D eliminates balanced m = 6 equal-weight 2 | a_j tuples: on [[17, 2], [17, 2], [17, 2], [17, 2], [17, 2], [17, 50]] (W = 102, K = 162, 3^102 < 2^162), ub_4step exceeds 3 * D by >= 11.95x across ALL 6 cyclic rotations, whereas all-rotation cyclic 5-pivot minimization crushes H_0 <= ub_5step < 3 * D by > 82.4x"
+        ]
+      },
+      {
+        "witness_id": "M1_COUSIN_DIAMOND14_1_OVER_7",
+        "x0": "1/7",
+        "numerator": 1,
+        "denominator": 7,
+        "system": "T_diamond14",
+        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "kills_mechanisms": [
+          "proofs of T_diamond14 omega^12 Cone-15 -> Cone-14 -> ... -> Cone-5 convergence omitting Z-discreteness at 0 < x < 6755390946565685"
+        ]
       }
     ],
     "m2_z_neg": [
@@ -1298,6 +1392,16 @@
         "orbit": [5, 18, 9, 32, 10],
         "kills_mechanisms": [
           "T_diamond13 omega^11 Cone-14 -> Cone-13 -> ... -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
+        ]
+      },
+      {
+        "witness_id": "M3_COUSIN_DIAMOND14_7X1_CYCLE5",
+        "seed": 5,
+        "multiplier_q": 7,
+        "system": "T_diamond14_q7",
+        "orbit": [5, 18, 9, 32, 10],
+        "kills_mechanisms": [
+          "T_diamond14 omega^12 Cone-15 -> Cone-14 -> ... -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
         ]
       }
     ],
@@ -1650,6 +1754,23 @@
         "kills_mechanisms": [
           "multiplying general rectangular U > T >= 1 row-side (2^(W*u) - 1)^(T*(U-T)) Vandermonde factors directly by confluentFactorAllU(U, T, u) without Nat.lcm reduction: on 8x8 (T=2, U=4) at (W, K, u) = (2, 5, 1), both col_fac = 66,072,707,334,144 and row_fac = (2^2 - 1)^4 = 81 divide det_8(M_0), yet gcd = 81 causes (det_8(M_0) // col_fac) % 81 == 37 != 0 while Nat.lcm divides identically across all U > T >= 1",
           "resonant zero extrapolations along higher (3^r * c, 2^s * c) rays such as (81*c, 16*c) on rank-3 9x9 (T=3, U=3): (2, 3)-adic Newton-polygon locks cap u <= 17 on (81*c, 16*c), and projective P^1(F_p) sieves for u = 10..17 (p = 43, 29, 59, 37, 83, 109, 47, 13) extend global non-vanishing to u = 1..17, proving cone-free forall u >= 1 non-vanishing outside (81*w', 32*k') and along (81*c, 16*c), (81*c, 8*c), and (27*c, 16*c)"
+        ]
+      },
+      {
+        "witness_id": "LAURENT_12X12_T4U3_CONE_FLIP_AND_RECT_U2_OVERLAP",
+        "W": 3,
+        "K": 5,
+        "gap_sign": 1,
+        "abs_gap": 5,
+        "laurent_12x12_t4u3_3_5_u1_det": -1008815432152374000,
+        "laurent_12x12_t4u3_3_5_u2_det": 177759891811505204469541718468100000000,
+        "laurent_12x12_t4u3_5_8_u1_det": 16919290838092087296,
+        "laurent_12x12_t4u3_1_4_u1_det": 0,
+        "rect_12x12_t3u4_5_8_u2_quot_mod_row": 118955463,
+        "rect_12x12_t3u4_5_8_u2_lcm_divides": true,
+        "kills_mechanisms": [
+          "claims that lifting rank from U = 2 (8x8) to U = 3 (matching 9x9 T=3, U=3!) restores all-u Collatz-cone strict positivity (> 0) or global u = 1 non-vanishing at order T = 4 (12x12): det_12(3, 5, 1) = -1,008,815,432,152,374,000 < 0 flips sign against det_12(5, 8, 1) = +16,919,290,838,092,087,296 > 0 inside 3^W < 2^K and 3*K <= 5*W (and (3, 5) flips > 0 at u = 2!), while det_12(W, K, 1) = 3888 * K^3 * (4*W - K) * Q_14(W, K) vanishes identically along K = 4*W (at coprime (1, 4), 3^1 < 2^4) yet is non-zero across 100% of K != 4*W via P^1(F_47)",
+          "claims that coprimality forall 1 <= d < U, gcd(W, d) = 1 suffices for unreduced confluentFactorAllU(U, T, u) * (2^(W*u) - 1)^(T*(U-T)) divisibility at u >= 2: on rectangular 12x12 (U = 4, T = 3) at prime W = 5, K = 8, u = 2, (2^2 - 1) = 3 divides 2^10 - 1 = 1023 with gcd = 27 and (det_12(M_0) // col_fac) % row_fac == 118,955,463 != 0, whereas u = 1 coprime-W gives exact product and pure 2^E2(U, T) * (2^(W*u) - 1)^(T*(U-T)) dominates (U*T)! * (2^(W*u) - 1)^(T*(U-T))"
         ]
       }
     ]
@@ -2150,6 +2271,42 @@
       "minimal_witness_id": "ZPOS_DYADIC_LEN11_WEIGHT9_HIGH_PREFIX_ESCAPE",
       "secondary_witness_id": "ZPOS_DYADIC_LEN16_WEIGHT8_MED_PREFIX_ESCAPE",
       "failure_diagnosis": "Exact 1 + 7 + 14 + 5 = 27 quadripartition of the 27 surviving length-9 mod-512 prefixes shows ONLY the unique all-ones prefix r = 511 ([1]*9) forces automatic w(u) >= 10 on 100% of length >= 10 proper core extensions, whereas all 7 exact-weight-8 prefixes escape at w(u) = 9 < 10; on w >= 10, complete mod-39366 (2 * 3^9, 13122/39366 surviving classes, pref ++ replicate 10 true % 39366 = 19683) Markov bijectivity and 3^(w - 10) fiber equidistribution hold (`markovShift_mod39366_bijection_and_prefix1_weight10_quadripartition`), AND replacing unary mod-3^(d+13) lifting by digit-by-digit mod-9 ternary carry lifting (3..8 bits per binary branch via 2^6 == 1 mod 9 so affineCarry(u) < 2^L <= 2^M holds elementarily, leaving only a fixed constant 2 * 3^13 = 3,188,646 top step!) compresses the window threshold to linear M >= 6,377,332 + 8 * B and upgrades surviving-leaf occupancy inside [2^M, 2^(M+1)) from polynomial/quasi-polynomial all the way to TRUE EXPONENTIAL >= 2^B (>= 2^((M - 6377332)/8)) at linear horizon L_max >= M (`dyadic_window_compressed_exponential_occupancy`, Wave16WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W17_H1_BIDIRECTIONAL_B_AND_T_D2_CONES_AND_OMEGA11_DIAMOND14_BARRIER",
+      "branch": "P4.3",
+      "statement": "Simultaneous bidirectional .B + .T + .R-boundary-growth mixed zero-diagonal d = 2 orientations (or all-dimension d >= 1 bidirectional-.B + .T-top-row + .R-boundary-growth omega^k matrix towers) reduce TwoSided(2x3) c39 or TwoSided(2x6) c78, Wave 16's 2-rule or 7-rule Farkas syzygies cover bidirectional .B + .T cones, .R-carrying leftAnchoredDP2Step admits 16..20-step cycles or escapes arbitrary-m Brox/Hensel cycle locks, or 11-tier omega^11 rankings orient 14th solvable cousin T_diamond14.",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_C39_BIDIRECTIONAL_B_AND_T_D2_FARKAS_ESCAPE",
+      "secondary_witness_id": "ZPOS_COUSIN_DIAMOND14_CONE15_6755390946565685_JUMP",
+      "failure_diagnosis": "Across ALL d >= 1, zero .T subrows annihilate 100% of all 9 active .B subdiagonals of c39 and 100% of all 18 active .B subdiagonals of c78 via direct rw[0] .T-headed rules, collapsing all GenOmegaBidirectionalBAndTTopRowMatTower towers (`twosided_c39_c78_bidirectional_b_and_t_toprow_impossibility`), while the infinite 4-parameter simultaneous bidirectional .B + .T + .R cones biBTRMat2DC39 k alpha beta gamma (18/39 strict rules on c39, escaping Wave 16's c1/c2 Farkas syzygies by +13 and +10) and biBTRMat2DC78 k alpha beta gamma (36/78 strict rules on c78) admit 0 strict v_0 drops via parameterized 4-rule and 11-rule bilinear Farkas syzygies (`simultaneous_bidirectional_b_and_t_d2_farkas_locks`); on leftAnchoredDP2Step, unconditional 1..20-cycle freedom holds across ALL DP2 words via N_cut = 147 (separating M1 129009091/5077565 at r = 17, A = 27) alongside universal arbitrary-m (forall m >= 1) .R-carrying dp2BlocksToShifts <-> broxSpiralCarry / multiPivotCarryUB / m_block_companion_prime_quotient_cascades / henselOddInvModPow2 cyclic rotation locks (`leftAnchoredDP2_no_1_to_20_cycles_and_all_m_block_locks`); meanwhile T_diamond14 adds Cone-15 /32 jumps (6755390946565685 -> 633317901240533, Phi_2 +16.22x) defeating 11-tier omega^11 rankings (`cousin_diamond14_q6_noninteger_avoids_cone15` [choice-free], `cousin_diamond14_counter_model_separation` [`[]` axioms], Wave17WholeSpaceCore.lean, Wave17WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W17_H2_TWELVE_BY_TWELVE_T4U3_CONE_POSITIVITY_AND_FOUR_PIVOT_6BLOCK_BROX",
+      "branch": "P3.2",
+      "statement": "Lifting rank from U = 2 (8x8) to U = 3 (matching 9x9 T=3, U=3!) restores Collatz-cone strict positivity (> 0) or global u = 1 non-vanishing on order-4 12x12 (T=4, U=3) two-base Schneider-Laurent determinants, coprimality forall 1 <= d < U, gcd(W, d) = 1 suffices for unreduced rectangular row-col product divisibility at u >= 2, or Wave 16's 4-pivot Brox telescoping bound eliminates balanced m = 6 tuples.",
+      "status": "FALSIFIED",
+      "minimal_witness_id": "LAURENT_12X12_T4U3_CONE_FLIP_AND_RECT_U2_OVERLAP",
+      "secondary_witness_id": "M1_BALANCED_6BLOCK_FOUR_PIVOT_ESCAPE",
+      "failure_diagnosis": "Across rectangular grids U >= 4, U > T >= 1, pure 2-adic confluence 2^(E2(U, T)*u) * (2^(W*u) - 1)^(T*(U-T)) divides Nat.lcm, yields joint exponential savings >= 2^(E2*u + (W*u - 1)*T*(U-T)), and strictly dominates (U*T)! * (2^(W*u) - 1)^(T*(U-T)) unconditionally while cancelling (U*T)! from Q * rowFac < colMajorantProd (and at u = 1 under forall 1 <= d < U, gcd(W, d) = 1, Nat.Coprime yields the exact full product across all U > T >= 1, U >= 4, whereas at u = 2, W = 5, K = 8 on 12x12 U=4, T=3 gcd = 27 causes (det_12 // cf) % rf = 118,955,463 != 0, `laurent_rect_coprime_exact_product_and_factorial_dominance`); on rank-3 order-4 12x12 (T=4, U=3), det_12(3, 5, 1) < 0 flips sign against det_12(5, 8, 1) > 0 inside 3^W < 2^K and 3*K <= 5*W (and flips > 0 at u = 2), exact Stirling-echelon factorization det_12(W, K, 1) = 3888 * K^3 * (4*W - K) * Q_14(W, K) + P^1(F_47) sieve proves det_12(W, K, 1) = 0 <-> K = 4*W, and ray-homogeneity det_12(W, 4*W, 2) = W^18 * det_12(1, 4, 2) < 0 proves non-simultaneous (u = 1, u = 2) vanishing across ALL W, K >= 1 (`laurent_12x12_t4u3_cone_flip_and_exact_u1_zero_locus`); on m = 6, all-rotation cyclic minimization + multi-prime companion cascades {3, 7, 15, 31, 51, 73, 255, 511} + Hensel boosts crush balanced [(17, 2)^5, (17, 50)] (escaping 1..4-pivot across all 6 rotations!) by > 82x and convergent (W = 41, K = 65) semi-balanced [(7, 3), (7, 3), (7, 9), (7, 3), (7, 3), (6, 3)] at rotation j = 2 (1827 * D) by > 36x, eliminating both Brox and DP2 cycles (`m_block_all_rotation_cyclic_brox_and_multiprime_elimination`, Wave17WholeSpaceCore.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W17_H3_FOUR_VAR_ONE_RUNS_AND_COMPLETE_2GRAM_EXP_PREIMAGE_WEIGHTS",
+      "branch": "P1.2",
+      "statement": "There exists an eventual (forall M_0 >= 3) positive rational Berg-Meinardus preimage weight w(n) = wNum(n)/wDen(n) (theta <= 1) built either from coupled 4-variable two-sided exponential weights in (binBitLength(n), binaryPopcount(n), binaryAltTransitions(n), binaryOneRuns(n)) for SOME (B_L, B_P, B_T, B_R) in (0, infty)^4 or from complete 2-gram two-sided exponential weights in (binaryTwoGram00(n), binaryTwoGram01(n), binaryTwoGram10(n), binaryTwoGram11(n)) for SOME (B_00, B_01, B_10, B_11) in (0, infty)^4.",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_PREIMAGE_4VAR_RUNS_AND_2GRAM_341_TO_227",
+      "secondary_witness_id": "ZPOS_PREIMAGE_3VAR_POPCOUNT_INVARIANT_ALT_DROP_341_TO_227",
+      "failure_diagnosis": "Exact algebraic binary syzygies holding across ALL n >= 2 prove 2 * binaryOneRuns(n) = T(n) + 1 + (n % 2), c_00 + c_01 + c_10 + c_11 = L(n) - 1, 2 * c_10 = T(n) + (1 - n % 2), 2 * c_01 + (1 - n % 2) = T(n), 2 * c_11 + T(n) + 1 + (n % 2) = 2 * P(n), and 2 * c_00 + 2 * P(n) + T(n) + (1 - n % 2) = 2 * L(n); pairing these exact half-integer syzygies with universal squared-weight superharmonicity preservation (`w_sq(n) = w(n)^2` satisfies x^2 + y^2 <= (x + y)^2 <= theta^2 * z^2) eliminates half-integer exponents without irrational bases and reduces 100% of (B_L, B_P, B_T, B_R) in (0, infty)^4 AND 100% of (B_00, B_01, B_10, B_11) in (0, infty)^4 across ALL M_0 >= 3 directly to Wave 16's 3-variable (L, P, T) theorem (`eventual_four_var_runs_and_complete_2gram_exp_impossibility`, Wave17WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W17_H4_LEN9_PREFIX_WEIGHT11_EXHAUSTION_AND_TERNARY_CARRY_DEFICIT_INVARIANCE",
+      "branch": "P5.3",
+      "statement": "At least one of the 27 surviving length-9 mod-512 prefixes forces parityWeight(u) >= 11 across length >= 10 proper core extensions without lifting to mod 1024, OR naive 1-digit-per-step ternary carry lifting (R_{j+1} = (R_j - 2^(e_j))/3 or intermediate mod-9 division) reduces the bottom 3-adic valuation deficit w_0 + d_top below 6 + 2 = 8.",
+      "status": "FALSIFIED",
+      "minimal_witness_id": "ZPOS_DYADIC_ALLONES9_WEIGHT10_PREFIX_ESCAPE",
+      "secondary_witness_id": "ZPOS_DYADIC_LEN11_WEIGHT9_HIGH_PREFIX_ESCAPE",
+      "failure_diagnosis": "All 27/27 surviving length-9 mod-512 prefixes admit explicit surviving Mod373248 first-hit q = 0 escapes at w(u) <= 10 < 11 (including all-ones r = 511 via [1]^9 ++ [0]^155 ++ [1]), proving 0/27 length-9 mod-512 prefixes force w(u) >= 11, whereas lifting to length-10 mod-1024 yields exact 54 = 1 + 8 + 21 + 19 + 5 surviving prefixes where r = 1023 ([1]^10) forces w(u) >= 11 across 100% of length >= 11 proper extensions alongside complete mod-118098 (2 * 3^10, 39366/118098 surviving classes, pref ++ replicate 11 true % 118098 = 59049) Markov bijectivity and 3^(w - 11) fiber equidistribution (`markovShift_mod118098_bijection_and_mod1024_prefix54_lift`); meanwhile every 1-bit unary ternary carry adds +1 to parityWeight(u) while dividing by 3^1 (strictly preserving s = 1 deficit w_0 + d_top >= 6 + 2 = 8 -> 26,265, with intermediate 9 | (R_j - 2^e) stalling mod 3 at step j + 1, `ternary_carry_deficit_invariance_and_mod9_stall_barrier` [choice-free], `dyadic_window_243x_compressed_steeper_slope_exponential_occupancy`), whereas replacing the s = 1 unary bottom step by 3-bit (s = 3) multiplicative-dlog collision lifting modulo 3^11 = 177,147 (`bottom3BitBucket177147` + `uWinExp17Low`) + 2-step Mod-27 ternary-carry macro-selection proves unconditional sub-500-threshold (M_0 = 360 <= 500, 17,714x smaller than 6,377,332!), steeper-slope (c = 6 <= 6) exponential occupancy >= 2^B (>= 2^((M - 360)/6)) for ALL M >= 360 + 6 * B (M >= 366) at linear horizon L_max >= M (`dyadic_window_sub500_3bit_collision_steeper_slope_exponential_occupancy`, Wave17WholeSpace.lean, zero custom axioms)."
     }
   ]
 }
