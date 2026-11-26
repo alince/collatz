@@ -8785,5 +8785,921 @@ class TestWave17WholeSpaceCampaign(unittest.TestCase):
         self.assertIn("C=False, T_diamond14=False, D=False", buf_fail.getvalue())
 
 
+class TestWave18WholeSpaceCampaign(unittest.TestCase):
+    """Wave 18 whole-space red-team, Lean 4 kernel, edge-case, and CLI gate tests."""
+
+    def test_wave18_exports_witness_bank_and_campaign(self) -> None:
+        import collatz_analysis
+        from collatz_analysis import (
+            audit_w18_front_a_dual_bt_3d_block_nilp_and_dp2_25cycle_infinite_m,
+            audit_w18_front_b_rect_general_u_lcm_12x12_multiu_and_all_m_brox,
+            audit_w18_front_c_complete_3gram_debruijn_exp_and_diamond15,
+            audit_w18_front_d_markov_mod354294_and_sub250_slope5_exponential_occupancy,
+            binary_three_grams,
+            choose_bottom_4bit_collision_531441,
+            choose_four_step_ternary_carry_243,
+            cousin_diamond15_block_return,
+            cousin_diamond15_step_int,
+            cousin_diamond15_step_q6,
+            generate_full_proof_suite_report,
+            is_diamond15_cone16,
+            load_witness_bank,
+            run_wave18_whole_space_campaign,
+            verify_witness_bank_ground_truth,
+        )
+
+        w18_exports = (
+            "audit_w18_front_a_dual_bt_3d_block_nilp_and_dp2_25cycle_infinite_m",
+            "audit_w18_front_b_rect_general_u_lcm_12x12_multiu_and_all_m_brox",
+            "audit_w18_front_c_complete_3gram_debruijn_exp_and_diamond15",
+            "audit_w18_front_d_markov_mod354294_and_sub250_slope5_exponential_occupancy",
+            "binary_three_grams",
+            "choose_bottom_4bit_collision_531441",
+            "choose_four_step_ternary_carry_243",
+            "cousin_diamond15_block_return",
+            "cousin_diamond15_step_int",
+            "cousin_diamond15_step_q6",
+            "is_diamond15_cone16",
+            "run_wave18_whole_space_campaign",
+        )
+        for sym in w18_exports:
+            self.assertIn(sym, collatz_analysis.__all__)
+            self.assertTrue(callable(getattr(collatz_analysis, sym)))
+
+        bank = load_witness_bank()
+        self.assertGreaterEqual(len(bank["domains"]["z_pos_high_glide"]), 64)
+        self.assertGreaterEqual(len(bank["domains"]["m1_q2_pos"]), 34)
+        self.assertGreaterEqual(len(bank["domains"]["m2_z_neg"]), 4)
+        self.assertGreaterEqual(len(bank["domains"]["m3_supercritical"]), 18)
+        self.assertGreaterEqual(len(bank["domains"]["log2_3_convergents"]), 27)
+        total_wits = sum(len(v) for v in bank["domains"].values())
+        self.assertGreaterEqual(total_wits, 147)
+        self.assertGreaterEqual(len(bank["falsified_hypotheses"]), 64)
+
+        hyp_ids = {h["hypothesis_id"] for h in bank["falsified_hypotheses"]}
+        for hid in (
+            "W18_H1_DUAL_B_TOPROW_T_SUBDIAG_AND_3D_BLOCK_NILPOTENT_CONES_AND_OMEGA12_DIAMOND15_BARRIER",
+            "W18_H2_UNREDUCED_ODD_U_RECT_PRODUCT_12X12_U2_CONE_POSITIVITY_AND_FIVE_PIVOT_7BLOCK_BROX",
+            "W18_H3_COMPLETE_3GRAM_AND_FIVE_VAR_DEBRUIJN_EXP_PREIMAGE_WEIGHTS",
+            "W18_H4_LEN10_PREFIX_WEIGHT12_EXHAUSTION_AND_MOD81_SPAN14_STALL",
+        ):
+            self.assertIn(hid, hyp_ids)
+
+        truth = verify_witness_bank_ground_truth()
+        self.assertTrue(truth["all_witnesses_ground_truth_verified"])
+        self.assertGreaterEqual(truth["verified_witness_count"], 147)
+        self.assertEqual(truth["failed_witness_ids"], ())
+
+        w18 = run_wave18_whole_space_campaign()
+        self.assertTrue(w18["passed"])
+        self.assertEqual(w18["verdict"], "REDTEAM-PASSED")
+        self.assertTrue(w18["universality_gate_passed"])
+        self.assertGreaterEqual(w18["witness_bank_total_entries"], 147)
+        self.assertGreaterEqual(w18["witness_bank_falsified_count"], 64)
+
+        fa = audit_w18_front_a_dual_bt_3d_block_nilp_and_dp2_25cycle_infinite_m()
+        self.assertTrue(fa["c39_c78_dual_bt_cascade_and_3d_block_nilp_gt_verified"])
+        self.assertTrue(fa["simultaneous_3d_block_nilpotent_cones_farkas_verified"])
+        self.assertTrue(fa["dp2_no_1_25_cycles_and_infinite_m_block_exclusions_verified"])
+
+        fb = audit_w18_front_b_rect_general_u_lcm_12x12_multiu_and_all_m_brox()
+        self.assertTrue(fb["rect_general_u_coprime_iff_and_primitive_lcm_verified"])
+        self.assertTrue(fb["laurent_12x12_t4u3_u2_to_5_nonvanishing_and_2adic_congr_verified"])
+        self.assertTrue(fb["all_m_parametric_brox_and_7block_elimination_verified"])
+
+        fc = audit_w18_front_c_complete_3gram_debruijn_exp_and_diamond15()
+        self.assertTrue(fc["three_gram_debruijn_syzygies_and_4_cardinal_families_verified"])
+        self.assertTrue(fc["cousin_diamond15_outside_cones4to16_descent_verified"])
+        self.assertTrue(fc["cousin_diamond15_cone16_13tier_cascade_verified"])
+        self.assertTrue(fc["cousin_diamond15_hensel_inv_and_int_q6_verified"])
+        self.assertTrue(fc["cousin_diamond15_countermodels_verified"])
+
+        fd = audit_w18_front_d_markov_mod354294_and_sub250_slope5_exponential_occupancy()
+        self.assertTrue(fd["markov_mod354294_and_mod2048_prefix108_lift_verified"])
+        self.assertTrue(fd["all54_len10_escapes_verified"])
+        self.assertTrue(fd["mod81_span14_stall_verified"])
+        self.assertTrue(fd["sub250_4bit_collision_slope5_exponential_occupancy_verified"])
+        self.assertLessEqual(fd["sub250_min_m0"], 250)
+        self.assertEqual(fd["sub250_min_m0"], 210)
+        self.assertLessEqual(fd["sub250_slope_c"], 5)
+        self.assertEqual(fd["sub250_slope_c"], 5)
+
+        # Sanity-check imported callables directly
+        self.assertEqual(binary_three_grams(3), (0, 0, 0, 0, 0, 0, 0, 0))
+        self.assertEqual(binary_three_grams(4), (0, 0, 0, 0, 1, 0, 0, 0))
+        self.assertTrue(is_diamond15_cone16(54_043_172_876_472_461))
+        self.assertEqual(cousin_diamond15_step_int(54_043_172_876_472_461), 20_266_189_828_677_173)
+        self.assertEqual(cousin_diamond15_block_return(54_043_172_876_472_461), (30, 1))
+        self.assertEqual(cousin_diamond15_step_q6(1), 2)
+        self.assertEqual(len(choose_four_step_ternary_carry_243(1, 0, 0)), 4)
+        self.assertEqual(len(choose_bottom_4bit_collision_531441(0)), 4)
+
+        suite_rep = generate_full_proof_suite_report()
+        self.assertIn("wave18_whole_space_campaign", suite_rep)
+        self.assertTrue(suite_rep["wave18_whole_space_campaign"]["passed"])
+
+    def test_wave18_edge_cases_error_paths_and_witness_corruption(self) -> None:
+        import copy
+        from fractions import Fraction
+        import json
+        import math
+        import tempfile
+        from collatz_analysis.cs_cegar_redteam import (
+            _dynamic_pred_balanced_7block_five_pivot_ub_lt_3d,
+            _dynamic_pred_c39_w17_farkas_covers_3d_block_nilp_cones,
+            _dynamic_pred_laurent_12x12_u_ge2_cone_pos_or_odd_u3_unreduced_coprime,
+            _dynamic_pred_len10_prefix_forces_weight12,
+            _dynamic_pred_m1_no_one_block_21_to_25_odd_step_cycles,
+            _dynamic_pred_phi2_on_cousin_diamond15_outside_cones4to15,
+            _dynamic_pred_three_gram_and_5var_debruijn_preimage_weight,
+            binary_alt_transitions,
+            binary_one_runs,
+            binary_three_grams,
+            binary_two_grams,
+            choose_bottom_4bit_collision_531441,
+            choose_four_step_ternary_carry_243,
+            cousin_diamond2_phi,
+            cousin_diamond14_step_q6,
+            cousin_diamond15_block_return,
+            cousin_diamond15_step_int,
+            cousin_diamond15_step_q6,
+            evaluate_hypothesis_against_witness_bank,
+            is_diamond14_cone15,
+            is_diamond15_cone16,
+            laurent_twobase_12x12_t4u3_det_matrix,
+            load_witness_bank,
+            verify_witness_bank_ground_truth,
+        )
+
+        # 1. Binary 3-gram De Bruijn vertex-flow syzygies, boundary cases (0..129), & error paths
+        for small_n in (0, 1, 2, 3):
+            self.assertEqual(binary_three_grams(small_n), (0, 0, 0, 0, 0, 0, 0, 0))
+        self.assertEqual(binary_three_grams(4), (0, 0, 0, 0, 1, 0, 0, 0))
+        self.assertEqual(binary_three_grams(5), (0, 0, 0, 0, 0, 1, 0, 0))
+        self.assertEqual(binary_three_grams(6), (0, 0, 0, 0, 0, 0, 1, 0))
+        self.assertEqual(binary_three_grams(7), (0, 0, 0, 0, 0, 0, 0, 1))
+        for n_chk in range(4, 130):
+            l_c = n_chk.bit_length()
+            p_c = n_chk.bit_count()
+            t_c = binary_alt_transitions(n_chk)
+            c00, c01, _, c11 = binary_two_grams(n_chk)
+            g000, g001, g010, g011, g100, g101, g110, g111 = binary_three_grams(n_chk)
+            r4 = n_chk & 3
+            b0 = n_chk & 1
+            s2 = (n_chk >> (l_c - 2)) & 1
+            i0 = 1 if r4 == 0 else 0
+            i1 = 1 if r4 == 1 else 0
+            i3 = 1 if r4 == 3 else 0
+            self.assertEqual(g000 + g001 + g010 + g011 + g100 + g101 + g110 + g111 + 2, l_c)
+            self.assertEqual(g100, g001 + i0)
+            self.assertEqual(g001 + g101, c01)
+            self.assertEqual(g000 + g001 + i0, c00)
+            self.assertEqual(g011 + g111 + s2, c11)
+            self.assertEqual(g110 + g111 + i3, c11)
+            self.assertEqual(g010 + g011 + i1, c01)
+            e000 = b0 + 2 - 2 * i0
+            e100 = 2 * i0
+            e101 = b0
+            e011 = (1 - b0) + 2 - 2 * s2
+            e110 = (1 - b0) + 2 - 2 * i3
+            e010 = 2 * b0 + 2 * s2 - 2 * i1
+            self.assertLessEqual(e000, 3)
+            self.assertLessEqual(e100, 2)
+            self.assertLessEqual(e101, 1)
+            self.assertLessEqual(e011, 3)
+            self.assertLessEqual(e110, 3)
+            self.assertLessEqual(e010, 4)
+            self.assertEqual(2 * g000 + (2 * p_c + t_c + 2 * g001 + 3), 2 * l_c + e000)
+            self.assertEqual(2 * g100, 2 * g001 + e100)
+            self.assertEqual(2 * g101 + (2 * g001 + 1), t_c + e101)
+            self.assertEqual(2 * g011 + (t_c + 2 * g111 + 4), 2 * p_c + e011)
+            self.assertEqual(2 * g110 + (t_c + 2 * g111 + 4), 2 * p_c + e110)
+            self.assertEqual(2 * g010 + 2 * p_c, 2 * t_c + 2 * g111 + e010)
+        # Verify pure 3-gram separation on 535 -> 803 (identical L, P, T, R_1 and 2-grams, distinct 3-grams)
+        self.assertEqual(
+            (535 .bit_length(), 535 .bit_count(), binary_alt_transitions(535), binary_one_runs(535)),
+            (803 .bit_length(), 803 .bit_count(), binary_alt_transitions(803), binary_one_runs(803)),
+        )
+        self.assertEqual(binary_two_grams(535), binary_two_grams(803))
+        self.assertNotEqual(binary_three_grams(535), binary_three_grams(803))
+        for bad_n in (-1, -5, True, False, 1.5, "4"):
+            with self.assertRaises(ValueError):
+                binary_three_grams(bad_n)  # type: ignore[arg-type]
+
+        # 2. Exhaustive spec & error-path checks on choose_four_step_ternary_carry_243 & choose_bottom_4bit_collision_531441
+        for r243 in [v for v in range(243) if v % 3 != 0]:
+            for e162 in (0, 1, 53, 81, 161):
+                quads_16 = [choose_four_step_ternary_carry_243(r243, e162, fb) for fb in range(16)]
+                self.assertEqual(len(set(quads_16)), 16)
+                for s1, s2, s3, s4 in quads_16:
+                    self.assertTrue(all(si >= 1 for si in (s1, s2, s3, s4)))
+                    self.assertGreaterEqual(s1 + s2 + s3 + s4, 8)
+                    self.assertLessEqual(s1 + s2 + s3 + s4, 18)
+                    e1_m = (e162 - s1) % 162
+                    d1_m = (r243 - pow(2, e1_m, 243)) % 243
+                    self.assertEqual(d1_m % 3, 0)
+                    r1_81 = (d1_m // 3) % 81
+                    self.assertNotEqual(r1_81 % 3, 0)
+                    e2_m = (e1_m - s2) % 54
+                    d2_m = (r1_81 - pow(2, e2_m, 81)) % 81
+                    self.assertEqual(d2_m % 3, 0)
+                    r2_27 = (d2_m // 3) % 27
+                    self.assertNotEqual(r2_27 % 3, 0)
+                    e3_m = (e2_m - s3) % 18
+                    d3_m = (r2_27 - pow(2, e3_m, 27)) % 27
+                    self.assertEqual(d3_m % 3, 0)
+                    r3_9 = (d3_m // 3) % 9
+                    self.assertNotEqual(r3_9 % 3, 0)
+                    e4_m = (e3_m - s4) % 6
+                    self.assertIn((r3_9 - pow(2, e4_m, 9)) % 9, (3, 6))
+        for bad_r243 in (-1, 0, 3, 9, 81, 243, True, False, "1"):
+            with self.assertRaises(ValueError):
+                choose_four_step_ternary_carry_243(bad_r243, 0, 0)  # type: ignore[arg-type]
+        for bad_e162 in (-1, 162, True, False, 1.5):
+            with self.assertRaises(ValueError):
+                choose_four_step_ternary_carry_243(1, bad_e162, 0)  # type: ignore[arg-type]
+        for bad_fb in (-1, 16, True, False, "0"):
+            with self.assertRaises(ValueError):
+                choose_four_step_ternary_carry_243(1, 0, bad_fb)  # type: ignore[arg-type]
+
+        for k_chk in (0, 1, 80, 81, 162, 354_293):
+            e4_b, e3_b, e2_b, e1_b = choose_bottom_4bit_collision_531441(k_chk)
+            self.assertGreaterEqual(e4_b, 9)
+            self.assertLess(e4_b, e3_b)
+            self.assertLess(e3_b, e2_b)
+            self.assertLess(e2_b, e1_b)
+            self.assertLessEqual(e1_b, 181)
+            self.assertEqual(
+                (
+                    pow(2, e1_b, 531_441)
+                    + 3 * pow(2, e2_b, 531_441)
+                    + 9 * pow(2, e3_b, 531_441)
+                    + 27 * pow(2, e4_b, 531_441)
+                )
+                % 531_441,
+                pow(2, k_chk, 531_441),
+            )
+        for bad_k531 in (-1, 354_294, True, False, "1"):
+            with self.assertRaises(ValueError):
+                choose_bottom_4bit_collision_531441(bad_k531)  # type: ignore[arg-type]
+
+        # 3. Boundary & 13-tier /8 cascade checks for T_diamond15 and Cone 16
+        self.assertFalse(is_diamond15_cone16(18_014_375_857_508_493))
+        self.assertFalse(is_diamond15_cone16(54_043_172_876_472_460))
+        self.assertTrue(is_diamond15_cone16(54_043_172_876_472_461))  # 2^54 * 3 - 22651973491 (minimal Cone 16)
+        self.assertFalse(is_diamond15_cone16((1 << 54) * 15 - 22_651_973_491))  # coprime23 == 5 != 1
+        self.assertFalse(is_diamond15_cone16((1 << 54) * 5 - 22_651_973_491))  # x % 3 == 0 != 2
+        y_c15 = cousin_diamond15_step_int(54_043_172_876_472_461)
+        self.assertEqual(y_c15, 20_266_189_828_677_173)
+        self.assertTrue(is_diamond14_cone15(y_c15))
+        self.assertGreater(cousin_diamond2_phi(y_c15), cousin_diamond2_phi(54_043_172_876_472_461))
+        self.assertEqual(cousin_diamond15_step_int(20_266_189_828_677_173), 1_899_955_296_438_485)
+        self.assertEqual(cousin_diamond15_block_return(54_043_172_876_472_461), (30, 1))
+        self.assertEqual(cousin_diamond15_block_return(108_086_368_404_918_413), (26, 1))
+        self.assertEqual(cousin_diamond15_block_return(1), (0, 1))
+        self.assertEqual(cousin_diamond15_block_return(2), (1, 1))
+        self.assertEqual(cousin_diamond15_block_return(3), (1, 5))
+        self.assertEqual(cousin_diamond15_step_int(-1), -1)
+        self.assertEqual(cousin_diamond15_step_int(-5), -7)
+        cyc_7x1 = [5]
+        for _ in range(5):
+            cyc_7x1.append(cousin_diamond15_step_int(cyc_7x1[-1], q=7))
+        self.assertEqual(cyc_7x1, [5, 18, 9, 32, 10, 5])
+
+        # Non-integer Q_(6)^+ rationals ALWAYS bypass Cone 16
+        cyc_1_7 = [Fraction(1, 7)]
+        for _ in range(5):
+            cyc_1_7.append(cousin_diamond15_step_q6(cyc_1_7[-1]))
+        self.assertEqual(cyc_1_7[5], Fraction(1, 7))
+        for den in (5, 7, 11, 13):
+            for num in (
+                1,
+                19,
+                54_043_172_876_472_461,
+                108_086_368_404_918_413,
+                54_043_172_876_472_461 * den + 2,
+            ):
+                f_q6 = Fraction(num, den)
+                if f_q6.denominator > 1:
+                    self.assertEqual(
+                        cousin_diamond15_step_q6(f_q6),
+                        cousin_diamond14_step_q6(f_q6),
+                    )
+        for n_int in (1, 2, 3, 27, 54_043_172_876_472_461, 108_086_368_404_918_413):
+            self.assertEqual(
+                cousin_diamond15_step_q6(Fraction(n_int, 1)),
+                Fraction(cousin_diamond15_step_int(n_int), 1),
+            )
+
+        # Error-path validation across T_diamond15 primitives (including strict bool rejection)
+        for bad_x in (True, False, 2.5, "54043172876472461"):
+            with self.assertRaises(ValueError):
+                is_diamond15_cone16(bad_x)  # type: ignore[arg-type]
+            with self.assertRaises(ValueError):
+                cousin_diamond15_step_int(bad_x)  # type: ignore[arg-type]
+            with self.assertRaises(ValueError):
+                cousin_diamond15_step_q6(bad_x)  # type: ignore[arg-type]
+        for bad_mul in (1, 2, 4, -3, True):
+            with self.assertRaises(ValueError):
+                cousin_diamond15_step_int(7, q=bad_mul)  # type: ignore[arg-type]
+        for bad_pos in (0, -1, True):
+            with self.assertRaises(ValueError):
+                cousin_diamond15_block_return(bad_pos)  # type: ignore[arg-type]
+        for bad_frac in (Fraction(1, 2), Fraction(1, 3), Fraction(5, 6)):
+            with self.assertRaises(ValueError):
+                cousin_diamond15_step_q6(bad_frac)
+
+        # 4. Synthetic witness-bank check across ALL 7 Wave 18 dynamic predicates (proving zero hardcoded IDs)
+        base_bank = load_witness_bank()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            synth_bank = copy.deepcopy(base_bank)
+            synth_bank["falsified_hypotheses"] = []
+            # s=2 on F_neg111: n_s = 653 * (1024^2 - 1) // 1023 = 669325, Wait: use pure 3-gram s=535*4^3+... or 535 -> 803:
+            # Find another pure 3-gram invariant step (535*64+21 = 34261 -> (3*34261+1)//2 = 51392? Let's check:
+            # 1303 * (2048^2 - 1) // 2047? No, let's check (535 << 4) + ...: in binary, 535 = 1000010111_2 -> 803 = 1100100011_2!
+            # Appending '01' x 2? Better: 10000010111_2 = 1047 -> (3*1047+1)//2 = 1571 = 11000100011_2!
+            # Check 1047 (10000010111, L=11, c00=4, c01=2, c10=2, c11=2, c000=3, c001=1, c111=1)
+            # vs 1571 (11000100011, L=11, c00=4, c01=2, c10=2, c11=2, c000=2, c001=2, c111=0) — 1571 % 3 == 2!
+            self.assertEqual(binary_two_grams(1047), binary_two_grams(1571))
+            self.assertEqual(1571 % 3, 2)
+            self.assertEqual((3 * 1047 + 1) // 2, 1571)
+            synth_bank["domains"]["z_pos_high_glide"] = [
+                {
+                    "witness_id": "SYNTH_C39_3D_NILP_K9_ESCAPE",
+                    "seed": 4919,
+                    "c39_3d_block_nilp_topleft_val": 9,
+                    "c39_3d_block_nilp_strict_rules": 37,
+                    "c78_3d_block_nilp_strict_rules": 74,
+                    "c39_dual_bt_d2_strict_rules": 26,
+                    "c39_w17_row1_farkas_max_pos_excess": 10,
+                    "c39_w17_row2_farkas_max_pos_excess": 10,
+                    "c39_forced_t_unit_topleft_count": 12,
+                    "c78_forced_t_unit_topleft_count": 24,
+                    "kills_mechanisms": ["c39_3d_nilp"],
+                },
+                {
+                    "witness_id": "SYNTH_3GRAM_PURE_1047_TO_1571",
+                    "seed": 1047,
+                    "next_compressed": 1571,
+                    "preimage_3gram_even_sibling": 3142,
+                    "kills_mechanisms": ["3gram_debruijn"],
+                },
+                {
+                    "witness_id": "SYNTH_D15_CONE16_K60_M1",
+                    "seed": 3 * (1 << 60) - 22_651_973_491,
+                    "cousin_diamond15_next": (9 * (1 << 60) - 3 * 22_651_973_491 + 1) // 8,
+                    "kills_mechanisms": ["phi2_on_diamond15"],
+                },
+                {
+                    "witness_id": "SYNTH_ALLONES10_LEN22_W11",
+                    "core_word": [1] * 10 + [0] * 11 + [1],
+                    "q_index": 0,
+                    "allones10_prefix_weight10": 10,
+                    "kills_mechanisms": ["allones10_w12"],
+                },
+            ]
+            synth_bank["domains"]["m1_q2_pos"] = [
+                {
+                    "witness_id": "SYNTH_M1_23STEP_ONE_BLOCK_CYCLE",
+                    "numerator": (3**23) - (2**23),
+                    "denominator": (2**37) - (3**23),
+                    "period_k": 37,
+                    "weight_w": 23,
+                    "m_blocks": 1,
+                    "parity_vector": [1] * 23 + [0] * 14,
+                    "kills_mechanisms": ["m1_23cyc"],
+                },
+                {
+                    "witness_id": "SYNTH_BALANCED_7BLOCK_34_2X6_128",
+                    "balanced_7block_params": [[34, 2]] * 6 + [[34, 128]],
+                    "kills_mechanisms": ["bal7_brox"],
+                },
+            ]
+            synth_bank["domains"]["log2_3_convergents"] = [
+                {
+                    "witness_id": "SYNTH_LAURENT_12X12_T4U3_5_8_U5_SYNTH",
+                    "W": 5,
+                    "K": 8,
+                    "laurent_12x12_t4u3_5_8_u2_det": laurent_twobase_12x12_t4u3_det_matrix(5, 8, 2),
+                    "laurent_12x12_t4u3_5_8_u5_det": laurent_twobase_12x12_t4u3_det_matrix(5, 8, 5),
+                    "rect_12x12_t3u4_5_8_u3_gcd": 343,
+                    "kills_mechanisms": ["laur12_u5"],
+                }
+            ]
+            synth_p = Path(tmpdir) / "synth_w18.json"
+            synth_p.write_text(json.dumps(synth_bank), encoding="utf-8")
+
+            g1 = evaluate_hypothesis_against_witness_bank(
+                "SynthC39Nilp3D", _dynamic_pred_c39_w17_farkas_covers_3d_block_nilp_cones,
+                domains=("z_pos_high_glide",), bank_path=synth_p,
+            )
+            self.assertEqual(g1["minimal_failure"], ("z_pos_high_glide", "SYNTH_C39_3D_NILP_K9_ESCAPE"))
+            g2 = evaluate_hypothesis_against_witness_bank(
+                "Synth3Gram", _dynamic_pred_three_gram_and_5var_debruijn_preimage_weight,
+                domains=("z_pos_high_glide",), bank_path=synth_p,
+            )
+            self.assertEqual(g2["minimal_failure"], ("z_pos_high_glide", "SYNTH_3GRAM_PURE_1047_TO_1571"))
+            g3 = evaluate_hypothesis_against_witness_bank(
+                "SynthD15", _dynamic_pred_phi2_on_cousin_diamond15_outside_cones4to15,
+                domains=("z_pos_high_glide",), bank_path=synth_p,
+            )
+            self.assertEqual(g3["minimal_failure"], ("z_pos_high_glide", "SYNTH_D15_CONE16_K60_M1"))
+            g4 = evaluate_hypothesis_against_witness_bank(
+                "SynthAllOnes10W12", _dynamic_pred_len10_prefix_forces_weight12,
+                domains=("z_pos_high_glide",), bank_path=synth_p,
+            )
+            self.assertEqual(g4["minimal_failure"], ("z_pos_high_glide", "SYNTH_ALLONES10_LEN22_W11"))
+            g5 = evaluate_hypothesis_against_witness_bank(
+                "SynthM123Cyc", _dynamic_pred_m1_no_one_block_21_to_25_odd_step_cycles,
+                domains=("m1_q2_pos",), bank_path=synth_p,
+            )
+            self.assertEqual(g5["minimal_failure"], ("m1_q2_pos", "SYNTH_M1_23STEP_ONE_BLOCK_CYCLE"))
+            g6 = evaluate_hypothesis_against_witness_bank(
+                "SynthBal7Brox", _dynamic_pred_balanced_7block_five_pivot_ub_lt_3d,
+                domains=("m1_q2_pos",), bank_path=synth_p,
+            )
+            self.assertEqual(g6["minimal_failure"], ("m1_q2_pos", "SYNTH_BALANCED_7BLOCK_34_2X6_128"))
+            g7 = evaluate_hypothesis_against_witness_bank(
+                "SynthLaur12U5", _dynamic_pred_laurent_12x12_u_ge2_cone_pos_or_odd_u3_unreduced_coprime,
+                domains=("log2_3_convergents",), bank_path=synth_p,
+            )
+            self.assertEqual(g7["minimal_failure"], ("log2_3_convergents", "SYNTH_LAURENT_12X12_T4U3_5_8_U5_SYNTH"))
+
+            # 5. Verify primary ground-truth corruption detection across ALL 9 new Wave 18 witnesses
+            corruptions = [
+                ("z_pos_high_glide", "ZPOS_C39_3D_BLOCK_NILP_AND_DUAL_BT_ESCAPE", "c39_3d_block_nilp_strict_rules", 36),
+                ("z_pos_high_glide", "ZPOS_PREIMAGE_3GRAM_PURE_535_TO_803", "preimage_3gram_even_sibling", 1604),
+                ("z_pos_high_glide", "ZPOS_COUSIN_DIAMOND15_CONE16_54043172876472461_JUMP", "cousin_diamond15_steps_to_1", 29),
+                ("z_pos_high_glide", "ZPOS_DYADIC_ALLONES10_WEIGHT11_PREFIX_ESCAPE", "allones10_escape_parity_weight", 12),
+                ("m1_q2_pos", "M1_DP2_22CYCLE_31376865305_OVER_2978678759", "weight_w", 21),
+                ("m1_q2_pos", "M1_BALANCED_7BLOCK_FIVE_PIVOT_ESCAPE", "balanced_7block_h0", 999),
+                ("m1_q2_pos", "M1_COUSIN_DIAMOND15_1_OVER_7", "orbit", ["1/7", "5/7", "11/7", "20/7", "3/7"]),
+                ("m3_supercritical", "M3_COUSIN_DIAMOND15_7X1_CYCLE5", "orbit", [5, 18, 9, 32, 11]),
+                ("log2_3_convergents", "LAURENT_12X12_T4U3_5_8_U5_FLIP_AND_RECT_ODD_U3_OVERLAP", "rect_12x12_t3u4_5_8_u3_gcd", 49),
+            ]
+            bad_b = copy.deepcopy(base_bank)
+            for dom, wid, field, bad_val in corruptions:
+                for item in bad_b["domains"][dom]:
+                    if item["witness_id"] == wid:
+                        item[field] = bad_val
+            bad_p = Path(tmpdir) / "corrupt_w18_all9.json"
+            bad_p.write_text(json.dumps(bad_b), encoding="utf-8")
+            chk = verify_witness_bank_ground_truth(bad_p)
+            self.assertFalse(chk["all_witnesses_ground_truth_verified"])
+            for _, wid, _, _ in corruptions:
+                self.assertIn(wid, chk["failed_witness_ids"], f"Missed corruption on {wid}")
+
+            # 6. Verify subtle secondary-field corruptions on Wave 18 witnesses
+            subtle_corruptions = [
+                ("z_pos_high_glide", "ZPOS_C39_3D_BLOCK_NILP_AND_DUAL_BT_ESCAPE", "c78_forced_t_unit_topleft_count", 23),
+                ("z_pos_high_glide", "ZPOS_PREIMAGE_3GRAM_PURE_535_TO_803", "preimage_3gram_target", [1, 1, 1, 1, 1, 1, 1, 1]),
+                ("z_pos_high_glide", "ZPOS_COUSIN_DIAMOND15_CONE16_54043172876472461_JUMP", "cousin_diamond15_next", 20_266_189_828_677_171),
+                ("z_pos_high_glide", "ZPOS_DYADIC_ALLONES10_WEIGHT11_PREFIX_ESCAPE", "allones10_prefix_weight10", 9),
+                ("m1_q2_pos", "M1_BALANCED_7BLOCK_FIVE_PIVOT_ESCAPE", "balanced_7block_six_pivot_ub", 123),
+                ("log2_3_convergents", "LAURENT_12X12_T4U3_5_8_U5_FLIP_AND_RECT_ODD_U3_OVERLAP", "rect_12x12_t3u4_5_8_u3_quot_mod_row", 0),
+            ]
+            bad_b2 = copy.deepcopy(base_bank)
+            for dom, wid, field, bad_val in subtle_corruptions:
+                for item in bad_b2["domains"][dom]:
+                    if item["witness_id"] == wid:
+                        item[field] = bad_val
+            bad_p2 = Path(tmpdir) / "corrupt_w18_subtle.json"
+            bad_p2.write_text(json.dumps(bad_b2), encoding="utf-8")
+            chk2 = verify_witness_bank_ground_truth(bad_p2)
+            self.assertFalse(chk2["all_witnesses_ground_truth_verified"])
+            for _, wid, _, _ in subtle_corruptions:
+                self.assertIn(wid, chk2["failed_witness_ids"], f"Missed subtle corruption on {wid}")
+
+            # 7. Verify bool-masquerading-as-int and partial-schema omissions are rejected
+            type_and_schema_corruptions = [
+                (
+                    "z_pos_high_glide",
+                    "ZPOS_C39_3D_BLOCK_NILP_AND_DUAL_BT_ESCAPE",
+                    {"c39_3d_block_nilp_topleft_val": True},
+                    (),
+                ),
+                (
+                    "z_pos_high_glide",
+                    "ZPOS_PREIMAGE_3GRAM_PURE_535_TO_803",
+                    {"preimage_3gram_even_sibling": False},
+                    (),
+                ),
+                (
+                    "m1_q2_pos",
+                    "M1_BALANCED_7BLOCK_FIVE_PIVOT_ESCAPE",
+                    {},
+                    ("balanced_7block_six_pivot_ub",),
+                ),
+                (
+                    "z_pos_high_glide",
+                    "ZPOS_DYADIC_ALLONES10_WEIGHT11_PREFIX_ESCAPE",
+                    {},
+                    ("allones10_escape_parity_weight",),
+                ),
+                (
+                    "log2_3_convergents",
+                    "LAURENT_12X12_T4U3_5_8_U5_FLIP_AND_RECT_ODD_U3_OVERLAP",
+                    {"rect_12x12_t3u4_5_8_u3_prim_lcm_divides": 1},
+                    (),
+                ),
+            ]
+            bad_b3 = copy.deepcopy(base_bank)
+            for dom, wid, updates, drop_keys in type_and_schema_corruptions:
+                for item in bad_b3["domains"][dom]:
+                    if item["witness_id"] == wid:
+                        item.update(updates)
+                        for dk in drop_keys:
+                            item.pop(dk, None)
+            bad_p3 = Path(tmpdir) / "corrupt_w18_types_and_partial.json"
+            bad_p3.write_text(json.dumps(bad_b3), encoding="utf-8")
+            chk3 = verify_witness_bank_ground_truth(bad_p3)
+            self.assertFalse(chk3["all_witnesses_ground_truth_verified"])
+            for _, wid, _, _ in type_and_schema_corruptions:
+                self.assertIn(wid, chk3["failed_witness_ids"], f"Missed type/schema corruption on {wid}")
+
+            # 8. Verify boundary/malformed-type corruptions return False cleanly without uncaught exceptions
+            boundary_batches = (
+                [
+                    ("z_pos_high_glide", "ZPOS_DYADIC_ALLONES10_WEIGHT11_PREFIX_ESCAPE", {"core_word": []}),
+                    ("z_pos_high_glide", "ZPOS_PREIMAGE_3GRAM_PURE_535_TO_803", {"seed": "535"}),
+                    ("m1_q2_pos", "M1_COUSIN_DIAMOND15_1_OVER_7", {"denominator": 0}),
+                    ("m1_q2_pos", "M1_BALANCED_7BLOCK_FIVE_PIVOT_ESCAPE", {"x0": 17}),
+                    ("log2_3_convergents", "LAURENT_12X12_T4U3_5_8_U5_FLIP_AND_RECT_ODD_U3_OVERLAP", {"K": -1}),
+                ],
+                [
+                    ("z_pos_high_glide", "ZPOS_DYADIC_ALLONES10_WEIGHT11_PREFIX_ESCAPE", {"q_index": -1}),
+                    ("m1_q2_pos", "M1_COUSIN_DIAMOND15_1_OVER_7", {"x0": "1/3", "numerator": 1, "denominator": 3}),
+                    ("m1_q2_pos", "M1_DP2_22CYCLE_31376865305_OVER_2978678759", {"parity_vector": "bad"}),
+                    ("m3_supercritical", "M3_COUSIN_DIAMOND15_7X1_CYCLE5", {"multiplier_q": 2}),
+                ],
+                [
+                    ("m1_q2_pos", "M1_COUSIN_DIAMOND15_1_OVER_7", {"orbit": ["1/0"]}),
+                    (
+                        "m1_q2_pos",
+                        "M1_BALANCED_7BLOCK_FIVE_PIVOT_ESCAPE",
+                        {"balanced_7block_params": [[17, True]] + [[17, 2]] * 5 + [[17, 58]]},
+                    ),
+                ],
+            )
+            for idx_bc, batch_bc in enumerate(boundary_batches):
+                bad_bc = copy.deepcopy(base_bank)
+                for dom, wid, updates in batch_bc:
+                    for item in bad_bc["domains"][dom]:
+                        if item["witness_id"] == wid:
+                            item.update(updates)
+                bad_p_bc = Path(tmpdir) / f"corrupt_w18_boundary_{idx_bc}.json"
+                bad_p_bc.write_text(json.dumps(bad_bc), encoding="utf-8")
+                chk_bc = verify_witness_bank_ground_truth(bad_p_bc)
+                self.assertFalse(chk_bc["all_witnesses_ground_truth_verified"])
+                for _, wid, updates in batch_bc:
+                    self.assertIn(wid, chk_bc["failed_witness_ids"], f"Missing failed ID {wid} on {updates}")
+
+            # 9. Dynamic predicate positive checks
+            self.assertTrue(
+                _dynamic_pred_len10_prefix_forces_weight12(
+                    "z_pos_high_glide",
+                    {"core_word": [1] * 12, "q_index": 0, "allones10_prefix_weight10": 10},
+                )
+            )
+            self.assertTrue(
+                _dynamic_pred_balanced_7block_five_pivot_ub_lt_3d(
+                    "m1_q2_pos",
+                    {"balanced_7block_params": [[17, 2]] * 6 + [[17, 10]]},
+                )
+            )
+
+        # 10. Concrete BigInt leaf check at sub-250 M = 215 <= 250 (B = 1) and M = 230 <= 250 (B = 4, 16 leaves!)
+        for b_bits, m_low in ((1, 215), (4, 230)):
+            self.assertLessEqual(m_low, 250)
+            self.assertEqual(m_low, 210 + 5 * b_bits)
+            k4 = (b_bits + 3) // 4
+            w_low = 4 * k4 + 11
+            b0_low = (3**w_low).bit_length()
+            delta3_low = next(d_v for d_v in (3, 4, 5, 6) if ((b0_low + 1 + d_v) % 6) in (2, 4))
+            a_low = b0_low + delta3_low
+            q3_low = ((1 << (a_low + 1)) - 1) // 3
+            l_low = m_low - delta3_low
+            leaves_w18 = set()
+            for mask_low in range(1 << b_bits):
+                cur_mod = 3 ** (4 * k4 + 12)
+                e_cur = l_low - 1
+                r_cur = (q3_low * pow(2, e_cur, cur_mod)) % cur_mod
+                s1_l, s2_l, s3_l, s4_l = choose_four_step_ternary_carry_243(
+                    r_cur % 243, e_cur % 162, mask_low & 15
+                )
+                top_pos = []
+                for s_st in (s1_l, s2_l, s3_l, s4_l):
+                    e_cur -= s_st
+                    r_cur = ((r_cur - pow(2, e_cur, cur_mod)) % cur_mod) // 3
+                    cur_mod //= 3
+                    top_pos.append(e_cur)
+                self.assertEqual(cur_mod, 3**12)
+                rhs12_l = (r_cur - (81 * 1085 + 7 * (3**10))) % (3**12)
+                k_dl_l = 0 if (rhs12_l % 3) == 1 else 1
+                ord_l, mod_l = 2, 3
+                for _ in range(1, 12):
+                    mod_nl = mod_l * 3
+                    for dg_l in (0, 1, 2):
+                        if pow(2, k_dl_l + dg_l * ord_l, mod_nl) == (rhs12_l % mod_nl):
+                            k_dl_l += dg_l * ord_l
+                            break
+                    ord_l, mod_l = ord_l * 3, mod_nl
+                eb4, eb3, eb2, eb1 = choose_bottom_4bit_collision_531441(k_dl_l)
+                self.assertLessEqual(eb1 + 1, e_cur)
+                c_low = (
+                    (3**9) * 1085
+                    + (3**8) * (1 << eb4)
+                    + (3**7) * (1 << eb3)
+                    + (3**6) * (1 << eb2)
+                    + (3**5) * (1 << eb1)
+                    + (3**4) * (1 << top_pos[3])
+                    + (3**3) * (1 << top_pos[2])
+                    + (3**2) * (1 << top_pos[1])
+                    + 3 * (1 << top_pos[0])
+                    + (1 << (l_low - 1))
+                )
+                num_low = (1 << (l_low + a_low)) - c_low
+                self.assertEqual(num_low % (3**w_low), 0)
+                y_low = num_low // (3**w_low)
+                self.assertGreaterEqual(y_low, 1 << m_low)
+                self.assertLess(y_low, 1 << (m_low + 1))
+                self.assertEqual(y_low % 512, 507)
+                self.assertEqual(y_low % 9, 7)
+                leaves_w18.add(y_low)
+            self.assertEqual(len(leaves_w18), 1 << b_bits)
+        self.assertEqual(math.gcd((1 << 65) - (3**41), 7), 1)
+        self.assertEqual((pow((3**6) * 7, -1, 1 << 6) * 7), 105)
+
+        # 11. Regression checks on true all-m family [(17, 2)^(m - 1), (17, 8*m + 2)] (vs invalid 6*m + 16 at m >= 8),
+        #     d_a = 3, d_mult = 7 family [(11, 3)^(m - 1), (11, 6*m + 3)], and 12x12 (2, 3)-adic / K=4W uniqueness:
+        self.assertLess((1 << (25 * 8 + 14)) - (3 ** (17 * 8)), 0)
+        for m_chk in range(2, 20):
+            d_17 = (1 << (27 * m_chk)) - (3 ** (17 * m_chk))
+            self.assertGreater(d_17, 0)
+            if m_chk <= 17:
+                self.assertGreater(2 * (3 ** (17 * m_chk)), 1 << (27 * m_chk))
+            ub_17 = 6 * (3 ** ((m_chk - 1) * 17)) + (1 << ((m_chk - 2) * 19)) * (3**17) * (
+                (1 << (8 * m_chk + 4)) - 1
+            )
+            self.assertLess(15 * ub_17, 3 * d_17)
+            if (m_chk % 6) != 0:
+                d_11 = (1 << (20 * m_chk)) - (3 ** (11 * m_chk))
+                self.assertEqual(math.gcd(7, d_11), 1)
+                ub_11 = 14 * (3 ** ((m_chk - 1) * 11)) + (1 << ((m_chk - 2) * 14)) * (3**11) * (
+                    (1 << (6 * m_chk + 6)) - 1
+                )
+                self.assertLess(ub_11, 7 * d_11)
+        for u_ray in range(1, 10):
+            d_ray = laurent_twobase_12x12_t4u3_det_matrix(1, 4, u_ray)
+            self.assertEqual(d_ray == 0, u_ray == 1)
+
+    def test_wave18_lean4_zero_custom_axioms_docstring_and_pii_audit(self) -> None:
+        import re
+        from collatz_analysis.formal_proofs import (
+            ALLOWED_LEAN4_FOUNDATIONAL_AXIOMS,
+            verify_lean4_kernel_proofs,
+        )
+
+        pkg_dir = Path(__file__).resolve().parent.parent
+        res = verify_lean4_kernel_proofs()
+        self.assertTrue(res["pure_kernel_verified"])
+        self.assertTrue(res["zero_sorry_verified"])
+        self.assertTrue(res["zero_warnings_verified"])
+        self.assertGreaterEqual(len(res["lean_files"]), 75)
+        self.assertGreaterEqual(res["theorems_audited"], 2495)
+        self.assertGreaterEqual(res["axiom_free_theorem_count"], 624)
+        self.assertTrue(any(Path(p).name == "Wave18WholeSpaceCore.lean" for p in res["lean_files"]))
+        self.assertTrue(any(Path(p).name == "Wave18WholeSpace.lean" for p in res["lean_files"]))
+
+        ax_map = res["axioms_by_theorem"]
+        w18_theorems = (
+            "twosided_c39_c78_dual_b_toprow_and_t_subdiag_impossibility",
+            "simultaneous_d3_block_nilpotent_btr_farkas_locks",
+            "leftAnchoredDP2_no_1_to_25_cycles_and_infinite_m_block_exclusions",
+            "laurent_rect_general_u_coprime_iff_and_primitive_lcm_law",
+            "laurent_12x12_t4u3_u2_to_5_nonvanishing_and_2adic_zero_horizon",
+            "m_block_all_m_parametric_pivot_brox_and_7block_elimination",
+            "binary_three_gram_debruijn_syzygies",
+            "eventual_five_var_and_complete_3gram_exp_impossibility",
+            "cousin_diamond15_q6_noninteger_avoids_cone16",
+            "cousin_diamond15_hensel_inv_and_nat_int_q6_agreement",
+            "cousin_diamond15_outside_cones4to16_descent_and_mod16_nonreentry",
+            "cousin_diamond15_cones4to16_exact_return",
+            "cousin_diamond15_global_convergence",
+            "cousin_diamond15_thirteen_tier_cascade_and_laurent_impossibility",
+            "cousin_diamond15_counter_model_separation",
+            "markovShift_mod354294_bijection_and_mod2048_prefix108_lift",
+            "mod81_span14_stall_and_mod243_four_step_macro_cert",
+            "dyadic_window_sub250_4bit_collision_slope5_exponential_occupancy",
+        )
+        for thm in w18_theorems:
+            self.assertIn(thm, ax_map)
+            self.assertTrue(
+                set(ax_map[thm]).issubset(ALLOWED_LEAN4_FOUNDATIONAL_AXIOMS),
+                f"Unexpected custom axiom in {thm}: {ax_map[thm]}",
+            )
+
+        self.assertEqual(
+            ax_map["cousin_diamond15_counter_model_separation"],
+            [],
+            "Expected [] axioms on cousin_diamond15_counter_model_separation",
+        )
+        for cf_thm in (
+            "binary_three_gram_debruijn_syzygies",
+            "cousin_diamond15_q6_noninteger_avoids_cone16",
+            "mod81_span14_stall_and_mod243_four_step_macro_cert",
+        ):
+            self.assertNotIn(
+                "Classical.choice",
+                ax_map[cf_thm],
+                f"Expected choice-free proof on {cf_thm}: {ax_map[cf_thm]}",
+            )
+
+        # Verify zero shell-escape control-byte corruption & zero duplicate imports in Wave 18 Lean modules
+        for w18_mod in ("Wave18WholeSpaceCore.lean", "Wave18WholeSpace.lean"):
+            mod_path = pkg_dir / "CollatzFormal" / w18_mod
+            raw_bytes = mod_path.read_bytes()
+            bad_ctrl = [b for b in set(raw_bytes) if b < 32 and b not in (10, 13)]
+            self.assertEqual(bad_ctrl, [], f"Control-byte corruption in {w18_mod}: {bad_ctrl}")
+            import_lines = [
+                ln.strip()
+                for ln in mod_path.read_text(encoding="utf-8").splitlines()
+                if ln.strip().startswith("import ")
+            ]
+            self.assertEqual(
+                len(import_lines),
+                len(set(import_lines)),
+                f"Duplicate import lines in {w18_mod}: {import_lines}",
+            )
+
+        w18_src = (
+            (pkg_dir / "CollatzFormal/Wave18WholeSpaceCore.lean").read_text(encoding="utf-8")
+            + "\n"
+            + (pkg_dir / "CollatzFormal/Wave18WholeSpace.lean").read_text(encoding="utf-8")
+        )
+        self.assertIsNone(re.search(r"->\s*True\s*:=", w18_src))
+        self.assertIsNone(re.search(r"fun\s+(?:_\s+)+=>\s*trivial\b", w18_src))
+        single_doc_pat = re.compile(
+            r"(?:set_option[^\n]+\n\s*)*/--((?:(?!-/).)*?)-/\s*(?:set_option[^\n]+\n\s*)*(private\s+)?theorem\s+([A-Za-z0-9_']+)\b",
+            flags=re.S,
+        )
+        doc_matches = single_doc_pat.findall(w18_src)
+        public_doc_matches = [m for m in doc_matches if not m[1].strip()]
+        self.assertEqual(len(public_doc_matches), 18)
+        for doc, priv_kw, thm_name in doc_matches:
+            if priv_kw.strip():
+                self.assertNotIn("Theorem ", doc, f"Public Theorem docstring attached to private {thm_name}")
+            else:
+                self.assertIn(thm_name, ax_map, f"Unaudited theorem docstring on {thm_name}")
+                m_hdr = re.search(r"Theorem\s+[A-Za-z0-9.']+\s*\(`([A-Za-z0-9_']+)`", doc)
+                self.assertIsNotNone(m_hdr, f"Missing Theorem (`name`) header on {thm_name}")
+                assert m_hdr is not None
+                self.assertEqual(m_hdr.group(1), thm_name, f"Mismatched docstring header on {thm_name}")
+                if "`[]` axioms" in doc:
+                    self.assertEqual(ax_map[thm_name], [], f"False []-axiom docstring on {thm_name}")
+                if "choice-free" in doc:
+                    self.assertNotIn("Classical.choice", ax_map[thm_name], f"False choice-free docstring on {thm_name}")
+
+        axfree_claim_pats = (
+            re.compile(r"`([A-Za-z0-9_']+)`\s*\(`\[\]`\s*axioms", flags=re.I),
+            re.compile(r"`([A-Za-z0-9_']+)`\s*\[\s*`\[\]`\s*axioms\s*\]", flags=re.I),
+            re.compile(r"`([A-Za-z0-9_']+)`\s*,\s*`\[\]`\s*axioms", flags=re.I),
+        )
+        choice_free_claim_pats = (
+            re.compile(r"`([A-Za-z0-9_']+)`\s*\(\s*choice-free\b", flags=re.I),
+            re.compile(r"`([A-Za-z0-9_']+)`\s*\[\s*choice-free\b", flags=re.I),
+            re.compile(r"`([A-Za-z0-9_']+)`\s*,\s*choice-free\b", flags=re.I),
+        )
+        for doc_rel in (
+            "CollatzFormal/Wave18WholeSpaceCore.lean",
+            "CollatzFormal/Wave18WholeSpace.lean",
+            "PROOF_SPACE_LEDGER.md",
+            "MATHEMATICAL_FINDINGS.md",
+            "README.md",
+            "witness_bank.json",
+        ):
+            doc_txt = (pkg_dir / doc_rel).read_text(encoding="utf-8")
+            for pat in axfree_claim_pats:
+                for thm_ref in pat.findall(doc_txt):
+                    self.assertEqual(
+                        ax_map.get(thm_ref),
+                        [],
+                        f"False []-axiom claim in {doc_rel} on {thm_ref}: {ax_map.get(thm_ref)}",
+                    )
+            for pat in choice_free_claim_pats:
+                for thm_ref in pat.findall(doc_txt):
+                    self.assertIn(thm_ref, ax_map, f"Unknown choice-free theorem ref {thm_ref} in {doc_rel}")
+                    self.assertNotIn(
+                        "Classical.choice",
+                        ax_map[thm_ref],
+                        f"False choice-free claim in {doc_rel} on {thm_ref}: {ax_map[thm_ref]}",
+                    )
+        self.assertNotIn("(`[]` Axioms)", w18_src)
+
+        # Verify all Wave-18 Lean declaration identifiers cited in docs/JSON actually exist in CollatzFormal/*.lean
+        lean_decl_pat = re.compile(
+            r"^(?:private\s+|protected\s+|noncomputable\s+)*(?:theorem|lemma|def|abbrev|structure|inductive|class)\s+([A-Za-z0-9_']+)",
+            flags=re.M,
+        )
+        all_lean_decls = {
+            m_d.group(1)
+            for lf in (pkg_dir / "CollatzFormal").glob("*.lean")
+            for m_d in lean_decl_pat.finditer(lf.read_text(encoding="utf-8"))
+        }
+        self.assertIn("dualBTRSubMat2DC39", all_lean_decls)
+        self.assertIn("laurentTrop3Mat12", all_lean_decls)
+        for doc_rel in ("PROOF_SPACE_LEDGER.md", "MATHEMATICAL_FINDINGS.md", "README.md", "witness_bank.json"):
+            doc_t = (pkg_dir / doc_rel).read_text(encoding="utf-8")
+            for tick in set(re.findall(r"`([A-Za-z_][A-Za-z0-9_']*)`", doc_t)):
+                if any(
+                    kw in tick
+                    for kw in ("Mat2DC", "Mat3DC", "Mat12", "MatTower", "diamond15", "354294", "dualBT")
+                ):
+                    self.assertIn(tick, all_lean_decls, f"Dangling Lean identifier {tick!r} in {doc_rel}")
+
+        # Repo-wide zero-PII / machine-path hygiene scan across tracked source & docs
+        forbidden_tokens = (
+            "Us" + "ers" + "\\",
+            "Us" + "ers/",
+            "/" + "home" + "/",
+            "C:" + "\\",
+            "C:" + "/",
+        )
+        for path in sorted(pkg_dir.rglob("*")):
+            if ".lake" in path.parts or "__pycache__" in path.parts or path.is_dir():
+                continue
+            if path.suffix in {".py", ".lean", ".md", ".json", ".c"}:
+                txt = path.read_text(encoding="utf-8")
+                for tok in forbidden_tokens:
+                    self.assertNotIn(tok, txt, f"Forbidden path token {tok!r} in {path.name}")
+
+    def test_cli_summary_includes_wave18_loop_and_exit_gate(self) -> None:
+        import contextlib
+        import io
+        from unittest import mock
+        from collatz_analysis.cli import main as cli_main
+
+        buf_sum = io.StringIO()
+        with contextlib.redirect_stdout(buf_sum):
+            rc_sum = cli_main(["--summary", "--dp-depth", "50"])
+        self.assertEqual(rc_sum, 0)
+        out = buf_sum.getvalue()
+        self.assertIn("[Wave 18 Whole-Space Proof Loop]", out)
+        self.assertIn("A=True, B=True", out)
+        self.assertIn("C=True, T_diamond15=True, D=True", out)
+        self.assertLess(
+            out.index("[Wave 17 Whole-Space Proof Loop]"),
+            out.index("[Wave 18 Whole-Space Proof Loop]"),
+        )
+        self.assertLess(
+            out.index("[Wave 18 Whole-Space Proof Loop]"),
+            out.index("[Lean 4 Kernel Verification]"),
+        )
+
+        failed_w18 = {
+            "passed": False,
+            "verdict": "FALSIFIED",
+            "universality_gate_passed": True,
+            "witness_bank_total_entries": 147,
+            "witness_bank_falsified_count": 64,
+            "witness_bank_ground_truth_verified": True,
+            "front_a_dual_bt_3d_block_nilp_and_dp2_25cycle_infinite_m": {
+                "c39_c78_dual_bt_cascade_and_3d_block_nilp_gt_verified": True,
+                "simultaneous_3d_block_nilpotent_cones_farkas_verified": False,
+                "dp2_no_1_25_cycles_and_infinite_m_block_exclusions_verified": True,
+            },
+            "front_b_rect_general_u_lcm_12x12_multiu_and_all_m_brox": {
+                "rect_general_u_coprime_iff_and_primitive_lcm_verified": True,
+                "laurent_12x12_t4u3_u2_to_5_nonvanishing_and_2adic_congr_verified": False,
+                "all_m_parametric_brox_and_7block_elimination_verified": True,
+            },
+            "front_c_complete_3gram_debruijn_exp_and_diamond15": {
+                "three_gram_debruijn_syzygies_and_4_cardinal_families_verified": False,
+                "cousin_diamond15_outside_cones4to16_descent_verified": True,
+                "cousin_diamond15_cone16_13tier_cascade_verified": False,
+                "cousin_diamond15_hensel_inv_and_int_q6_verified": True,
+                "cousin_diamond15_countermodels_verified": True,
+            },
+            "front_d_markov_mod354294_and_sub250_slope5_exponential_occupancy": {
+                "markov_mod354294_and_mod2048_prefix108_lift_verified": False,
+                "all54_len10_escapes_verified": True,
+                "mod81_span14_stall_verified": True,
+                "sub250_4bit_collision_slope5_exponential_occupancy_verified": True,
+            },
+        }
+        buf_fail = io.StringIO()
+        with mock.patch(
+            "collatz_analysis.cs_cegar_redteam.run_wave18_whole_space_campaign",
+            return_value=failed_w18,
+        ), mock.patch(
+            "collatz_analysis.cli.verify_lean4_kernel_proofs",
+            return_value={"lean_available": False, "static_hygiene_clean": True},
+        ), contextlib.redirect_stdout(buf_fail):
+            rc_fail = cli_main(["--summary", "--dp-depth", "10"])
+        self.assertEqual(rc_fail, 1)
+        self.assertIn("A=False, B=False", buf_fail.getvalue())
+        self.assertIn("C=False, T_diamond15=False, D=False", buf_fail.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()
