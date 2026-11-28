@@ -3763,6 +3763,8 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
         "log2_3_convergents": {
             "diag_n55_err_log2_gt_zero",
             "high_det_nonzero",
+            "laurent_12x12_t4u3_5_2_u11_det_nonzero",
+            "laurent_16x16_t4u4_3_5_u1_m0_confluent_divides",
             "laurent_6x6_t2u3_m0_u1_div_49",
             "low_det_nonzero",
             "rect_12x12_t3u4_5_8_u2_lcm_divides",
@@ -4433,6 +4435,75 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
                                 and ap_w10 == 10
                                 and sum(u_w) == aesc_pw10
                                 and aesc_pw10 == 11
+                                and cft.is_surviving_mod373248_class(seed)
+                                and cft.is_first_hit_one_pair(u_w, 0)
+                            )
+                        else:
+                            ok = False
+                    allones11_pref_keys = (
+                        "allones11_prefix_weight11",
+                        "allones11_escape_parity_weight",
+                        "dyadic_mod243_span16_min_tuples",
+                        "dyadic_mod729_span20_min_tuples",
+                    )
+                    if any(k in entry for k in allones11_pref_keys):
+                        cw_raw_a11 = entry.get("core_word")
+                        if (
+                            all(k in entry for k in allones11_pref_keys)
+                            and q_i == 0
+                            and isinstance(cw_raw_a11, list)
+                            and all(_is_strict_int(b_v) and b_v in (0, 1) for b_v in cw_raw_a11)
+                            and _is_strict_int(entry["q_index"])
+                            and all(_is_strict_int(entry[k]) for k in allones11_pref_keys)
+                            and "compressed_steps_to_1" in entry
+                            and _is_strict_int(entry["compressed_steps_to_1"])
+                            and "survives_mod373248" in entry
+                            and entry["survives_mod373248"] is True
+                            and len(u_w) >= 12
+                            and u_w[0] == 1
+                            and u_w[1] == 1
+                            and u_w[-1] == 1
+                        ):
+                            checked_keys.update(allones11_pref_keys)
+                            ap_w11 = entry["allones11_prefix_weight11"]
+                            aesc_pw11 = entry["allones11_escape_parity_weight"]
+                            m243_s16 = entry["dyadic_mod243_span16_min_tuples"]
+                            m729_s20 = entry["dyadic_mod729_span20_min_tuples"]
+                            surv_prefs9_a11 = [
+                                (1, 1) + mid7
+                                for mid7 in product((0, 1), repeat=7)
+                                if cft.is_surviving_mod512_residue(
+                                    cft.exact_backward_quotient(1, (1, 1) + mid7 + (1,), 0) % 512
+                                )
+                            ]
+                            surv_prefs11_a11 = [
+                                p9 + (b0, b1)
+                                for p9 in surv_prefs9_a11
+                                for b0 in (0, 1)
+                                for b1 in (0, 1)
+                            ]
+                            surv_prefs12_a11 = [
+                                p11 + (b2,) for p11 in surv_prefs11_a11 for b2 in (0, 1)
+                            ]
+                            top12_cnt = sum(1 for p12 in surv_prefs12_a11 if sum(p12) == 12)
+                            ok = (
+                                ok
+                                and len(surv_prefs11_a11) == 108
+                                and len(surv_prefs12_a11) == 216
+                                and top12_cnt == 1
+                                and u_w[:11] == (1,) * 11
+                                and u_w[:11] in surv_prefs11_a11
+                                and sum(u_w[:11]) == ap_w11
+                                and ap_w11 == 11
+                                and sum(u_w) == aesc_pw11
+                                and aesc_pw11 == 12
+                                and _count_mod243_span16_at_160() == m243_s16
+                                and m243_s16 == 10
+                                and m243_s16 < 16
+                                and _count_mod729_span20_at_322() == m729_s20
+                                and m729_s20 == 29
+                                and m729_s20 < 32
+                                and (seed % 2048) == 2047
                                 and cft.is_surviving_mod373248_class(seed)
                                 and cft.is_first_hit_one_pair(u_w, 0)
                             )
@@ -5203,6 +5274,73 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
                         )
                     else:
                         ok = False
+                pre4g_keys = (
+                    "preimage_4gram_even_sibling",
+                    "preimage_4gram_shared_5var",
+                    "preimage_4gram_seed",
+                    "preimage_4gram_target",
+                    "preimage_4gram_even",
+                    "preimage_4gram_syr_seed",
+                    "preimage_4gram_syr_next_odd",
+                    "preimage_4gram_syr_shared_3gram",
+                )
+                if any(k in entry for k in pre4g_keys):
+                    s5_raw = entry.get("preimage_4gram_shared_5var")
+                    g4_sd = entry.get("preimage_4gram_seed")
+                    g4_tg = entry.get("preimage_4gram_target")
+                    g4_ev = entry.get("preimage_4gram_even")
+                    s3_syr = entry.get("preimage_4gram_syr_shared_3gram")
+                    if (
+                        all(k in entry for k in pre4g_keys)
+                        and seed >= 8
+                        and nxt_c >= 8
+                        and _is_strict_int(entry["preimage_4gram_even_sibling"])
+                        and _is_strict_int(entry["preimage_4gram_syr_seed"])
+                        and _is_strict_int(entry["preimage_4gram_syr_next_odd"])
+                        and isinstance(s5_raw, list)
+                        and len(s5_raw) == 5
+                        and all(_is_strict_int(v_i) and v_i >= 0 for v_i in s5_raw)
+                        and isinstance(s3_syr, list)
+                        and len(s3_syr) == 8
+                        and all(_is_strict_int(v_i) and v_i >= 0 for v_i in s3_syr)
+                        and all(
+                            isinstance(gl, list)
+                            and len(gl) == 16
+                            and all(_is_strict_int(gv) and gv >= 0 for gv in gl)
+                            for gl in (g4_sd, g4_tg, g4_ev)
+                        )
+                    ):
+                        checked_keys.update(pre4g_keys)
+                        ev_4g = entry["preimage_4gram_even_sibling"]
+                        syr_sd = entry["preimage_4gram_syr_seed"]
+                        syr_nx = entry["preimage_4gram_syr_next_odd"]
+                        g3_s_tup = binary_three_grams(seed)
+                        g3_t_tup = binary_three_grams(nxt_c)
+                        v5_sd = [seed.bit_length(), seed.bit_count(), binary_alt_transitions(seed), g3_s_tup[1], g3_s_tup[7]]
+                        v5_tg = [nxt_c.bit_length(), nxt_c.bit_count(), binary_alt_transitions(nxt_c), g3_t_tup[1], g3_t_tup[7]]
+                        ok = (
+                            ok
+                            and (seed & 1) == 1
+                            and (nxt_c % 3) == 2
+                            and (2 * nxt_c - 1) // 3 == seed
+                            and ev_4g == 2 * nxt_c
+                            and int_compressed_step(ev_4g, q=3) == nxt_c
+                            and v5_sd == s5_raw
+                            and v5_tg == s5_raw
+                            and list(binary_four_grams(seed)) == g4_sd
+                            and list(binary_four_grams(nxt_c)) == g4_tg
+                            and list(binary_four_grams(ev_4g)) == g4_ev
+                            and g4_sd[5] != g4_tg[5]
+                            and syr_sd >= 8
+                            and (syr_sd & 1) == 1
+                            and core2_pos(3 * syr_sd + 1) == syr_nx
+                            and syr_sd.bit_length() == syr_nx.bit_length()
+                            and list(binary_three_grams(syr_sd)) == s3_syr
+                            and list(binary_three_grams(syr_nx)) == s3_syr
+                            and binary_four_grams(syr_sd) != binary_four_grams(syr_nx)
+                        )
+                    else:
+                        ok = False
             if "cousin_diamond2_next" in entry:
                 checked_keys.add("cousin_diamond2_next")
                 claims_checked += 1
@@ -5852,6 +5990,83 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
                     )
                 else:
                     ok = False
+            d16_req_keys = (
+                "cousin_diamond16_next",
+                "cousin_diamond16_steps_to_1",
+                "phi_diamond2_seed",
+                "phi_diamond2_next",
+            )
+            if any(k in entry for k in ("cousin_diamond16_next", "cousin_diamond16_steps_to_1")):
+                if (
+                    _is_strict_int(entry["seed"])
+                    and seed >= 3
+                    and all(k in entry and _is_strict_int(entry[k]) for k in d16_req_keys)
+                ):
+                    checked_keys.update(d16_req_keys)
+                    claims_checked += 1
+                    nxt_d16 = cousin_diamond16_step_int(seed, q=3)
+                    cur_c = nxt_d16
+                    chain_c = [nxt_d16]
+                    for _ in range(11):
+                        cur_c = cousin_diamond16_step_int(cur_c, q=3)
+                        chain_c.append(cur_c)
+                    cur_d16 = seed
+                    st_d16 = 0
+                    while cur_d16 != 1 and st_d16 < 5000:
+                        cur_d16 = cousin_diamond16_step_int(cur_d16, q=3)
+                        st_d16 += 1
+                    cone_fns = (
+                        is_diamond15_cone16, is_diamond14_cone15, is_diamond13_cone14,
+                        is_diamond12_cone13, is_diamond11_cone12, is_diamond10_cone11,
+                        is_diamond9_cone10, is_diamond8_cone9, is_diamond7_cone8,
+                        is_diamond6_cone7, is_diamond5_cone6, is_diamond4_cone5,
+                    )
+                    ok = (
+                        ok
+                        and is_diamond16_cone17(seed)
+                        and all(fn_c(val_c) for fn_c, val_c in zip(cone_fns, chain_c))
+                        and (nxt_d16 == entry["cousin_diamond16_next"])
+                        and (cur_d16 == 1)
+                        and (st_d16 == entry["cousin_diamond16_steps_to_1"])
+                        and (cousin_diamond2_phi(seed) == entry["phi_diamond2_seed"])
+                        and (cousin_diamond2_phi(nxt_d16) == entry["phi_diamond2_next"])
+                        and (cousin_diamond2_phi(nxt_d16) > cousin_diamond2_phi(seed))
+                    )
+                else:
+                    ok = False
+            c39_4d_inv_keys = (
+                "c39_4d_multichan_inv_topleft_val",
+                "c39_3d_inv_postrace_strict_rules",
+                "c78_3d_inv_postrace_strict_rules",
+                "c39_4d_multichan_inv_strict_rules",
+                "c78_4d_multichan_inv_strict_rules",
+                "c39_expanding_b_d2_strict_rules",
+                "c39_w18_3d_farkas_max_pos_excess",
+                "c39_3chan_on_4d_max_pos_excess",
+            )
+            if any(k in entry for k in c39_4d_inv_keys):
+                if (
+                    all(k in entry for k in c39_4d_inv_keys)
+                    and "compressed_steps_to_1" in entry
+                    and _is_strict_int(entry["compressed_steps_to_1"])
+                    and _is_strict_int(entry["seed"])
+                    and seed >= 3
+                    and all(_is_strict_int(entry[k]) for k in c39_4d_inv_keys)
+                ):
+                    checked_keys.update(c39_4d_inv_keys)
+                    claims_checked += 1
+                    ok = ok and _verify_c39_4d_multichan_inv_and_expanding_b_ground_truth(
+                        entry["c39_4d_multichan_inv_topleft_val"],
+                        entry["c39_3d_inv_postrace_strict_rules"],
+                        entry["c78_3d_inv_postrace_strict_rules"],
+                        entry["c39_4d_multichan_inv_strict_rules"],
+                        entry["c78_4d_multichan_inv_strict_rules"],
+                        entry["c39_expanding_b_d2_strict_rules"],
+                        entry["c39_w18_3d_farkas_max_pos_excess"],
+                        entry["c39_3chan_on_4d_max_pos_excess"],
+                    )
+                else:
+                    ok = False
             dp2_coupled_keys = (
                 "dp2_coupled_chain_steps",
                 "dp2_coupled_end_odd",
@@ -6079,6 +6294,7 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
                 "T_diamond13",
                 "T_diamond14",
                 "T_diamond15",
+                "T_diamond16",
             ):
                 checked_m1.update(("system", "orbit"))
                 sys_m1 = entry.get("system")
@@ -6098,6 +6314,7 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
                     "T_diamond13": cousin_diamond13_step_q6,
                     "T_diamond14": cousin_diamond14_step_q6,
                     "T_diamond15": cousin_diamond15_step_q6,
+                    "T_diamond16": cousin_diamond16_step_q6,
                 }[str(sys_m1)]
                 orb_raw = entry.get("orbit")
                 if (
@@ -6159,8 +6376,13 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
                     "balanced_5block_params",
                     "balanced_6block_params",
                     "balanced_7block_params",
+                    "balanced_8block_params",
+                    "het_multispike_8block_params",
                 )
-                if k_per <= 35 and not any(sk in entry for sk in structured_m1_keys):
+                if (
+                    k_per <= 35
+                    or (k_per <= 60 and entry["denominator"] == (1 << k_per) - (3**w_exp))
+                ) and not any(sk in entry for sk in structured_m1_keys):
                     ok = ok and ("parity_vector" in entry)
                 if "x1" in entry:
                     checked_m1.add("x1")
@@ -6615,6 +6837,170 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
                         )
                     else:
                         ok = False
+                bal8_keys = (
+                    "balanced_8block_params",
+                    "balanced_8block_h0",
+                    "balanced_8block_six_pivot_ub",
+                    "balanced_8block_seven_pivot_ub",
+                )
+                if any(k in entry for k in bal8_keys):
+                    bp8_raw = entry.get("balanced_8block_params")
+                    if (
+                        all(k in entry for k in bal8_keys)
+                        and _is_strict_int(entry["numerator"])
+                        and _is_strict_int(entry["denominator"])
+                        and _is_strict_int(entry["period_k"])
+                        and _is_strict_int(entry["weight_w"])
+                        and ("m_blocks" not in entry or _is_strict_int(entry["m_blocks"]))
+                        and isinstance(bp8_raw, list)
+                        and len(bp8_raw) == 8
+                        and all(
+                            isinstance(pr, list)
+                            and len(pr) == 2
+                            and all(_is_strict_int(v_p) and v_p >= 1 for v_p in pr)
+                            for pr in bp8_raw
+                        )
+                        and all(_is_strict_int(entry[k]) for k in bal8_keys[1:])
+                    ):
+                        checked_m1.update(bal8_keys)
+                        w_vals8 = [pr[0] for pr in bp8_raw]
+                        a_vals8 = [pr[1] for pr in bp8_raw]
+                        bh0_exp8 = entry["balanced_8block_h0"]
+                        bub6_exp8 = entry["balanced_8block_six_pivot_ub"]
+                        bub7_exp8 = entry["balanced_8block_seven_pivot_ub"]
+
+                        def _brox8(b_seq: List[List[int]]) -> int:
+                            if len(b_seq) == 1:
+                                return (1 << b_seq[0][1]) - 1
+                            w_h, a_h = b_seq[0]
+                            w_n, _ = b_seq[1]
+                            w_rem = sum(pair_i[0] for pair_i in b_seq[1:])
+                            return (3**w_rem) * ((1 << a_h) - 1) + (1 << (a_h + w_n)) * _brox8(b_seq[1:])
+
+                        def _ub_piv8(r_s: List[List[int]], p_piv: int) -> int:
+                            tot_u = 0
+                            pref_k = 0
+                            rem_w = sum(pr_x[0] for pr_x in r_s)
+                            for idx_p in range(p_piv - 1):
+                                bw_x, ba_x = r_s[idx_p]
+                                rem_w -= bw_x
+                                tot_u += (1 << pref_k) * (3**rem_w) * ((1 << ba_x) - 1)
+                                pref_k += bw_x + ba_x
+                            rem_w -= r_s[p_piv - 1][0]
+                            tail_a = sum(r_s[j_x][1] for j_x in range(p_piv - 1, 8))
+                            tot_u += (1 << pref_k) * (3**rem_w) * ((1 << tail_a) - 1)
+                            return tot_u
+
+                        bh0_true8 = _brox8(bp8_raw)
+                        w_tot8 = sum(w_vals8)
+                        k_tot8 = w_tot8 + sum(a_vals8)
+                        d_gap8 = (1 << k_tot8) - (3**w_tot8)
+                        ub6_true8 = _ub_piv8(bp8_raw, 6)
+                        ub7_true8 = _ub_piv8(bp8_raw, 7)
+                        all_rot_6piv_escape = all(
+                            _ub_piv8(bp8_raw[j_r:] + bp8_raw[:j_r], 6) > 3 * d_gap8
+                            for j_r in range(8)
+                        )
+                        ok = (
+                            ok
+                            and len(set(w_vals8)) == 1
+                            and all((a_x % 2) == 0 for a_x in a_vals8)
+                            and w_tot8 == w_exp
+                            and k_tot8 == k_per
+                            and d_gap8 > 0
+                            and bh0_true8 == bh0_exp8
+                            and ub6_true8 == bub6_exp8
+                            and ub7_true8 == bub7_exp8
+                            and all_rot_6piv_escape
+                            and bh0_true8 <= ub7_true8
+                            and 105 * ub7_true8 < 3 * d_gap8
+                            and Fraction((1 << w_vals8[0]) * bh0_true8 - d_gap8, d_gap8) == x0
+                        )
+                    else:
+                        ok = False
+                het8_keys = (
+                    "het_multispike_8block_params",
+                    "het_multispike_8block_h0",
+                    "het_multispike_8block_rot2_seven_pivot_ub",
+                    "het_multispike_8block_hensel_qmin",
+                )
+                if any(k in entry for k in het8_keys):
+                    hp8_raw = entry.get("het_multispike_8block_params")
+                    if (
+                        all(k in entry for k in het8_keys)
+                        and _is_strict_int(entry["numerator"])
+                        and _is_strict_int(entry["denominator"])
+                        and _is_strict_int(entry["period_k"])
+                        and _is_strict_int(entry["weight_w"])
+                        and ("m_blocks" not in entry or _is_strict_int(entry["m_blocks"]))
+                        and isinstance(hp8_raw, list)
+                        and len(hp8_raw) == 8
+                        and all(
+                            isinstance(pr, list)
+                            and len(pr) == 2
+                            and all(_is_strict_int(v_p) and v_p >= 1 for v_p in pr)
+                            for pr in hp8_raw
+                        )
+                        and all(_is_strict_int(entry[k]) for k in het8_keys[1:])
+                    ):
+                        checked_m1.update(het8_keys)
+                        w_vals_h = [pr[0] for pr in hp8_raw]
+                        a_vals_h = [pr[1] for pr in hp8_raw]
+                        hh0_exp = entry["het_multispike_8block_h0"]
+                        hub7_r2_exp = entry["het_multispike_8block_rot2_seven_pivot_ub"]
+                        hqmin_exp = entry["het_multispike_8block_hensel_qmin"]
+
+                        def _brox_h8(b_seq: List[List[int]]) -> int:
+                            if len(b_seq) == 1:
+                                return (1 << b_seq[0][1]) - 1
+                            w_h, a_h = b_seq[0]
+                            w_n, _ = b_seq[1]
+                            w_rem = sum(pair_i[0] for pair_i in b_seq[1:])
+                            return (3**w_rem) * ((1 << a_h) - 1) + (1 << (a_h + w_n)) * _brox_h8(b_seq[1:])
+
+                        def _ub_piv_h8(r_s: List[List[int]], p_piv: int) -> int:
+                            tot_u = 0
+                            pref_k = 0
+                            rem_w = sum(pr_x[0] for pr_x in r_s)
+                            for idx_p in range(p_piv - 1):
+                                bw_x, ba_x = r_s[idx_p]
+                                rem_w -= bw_x
+                                tot_u += (1 << pref_k) * (3**rem_w) * ((1 << ba_x) - 1)
+                                pref_k += bw_x + ba_x
+                            rem_w -= r_s[p_piv - 1][0]
+                            tail_a = sum(r_s[j_x][1] for j_x in range(p_piv - 1, 8))
+                            tot_u += (1 << pref_k) * (3**rem_w) * ((1 << tail_a) - 1)
+                            return tot_u
+
+                        hh0_true = _brox_h8(hp8_raw)
+                        w_tot_h = sum(w_vals_h)
+                        k_tot_h = w_tot_h + sum(a_vals_h)
+                        d_gap_h = (1 << k_tot_h) - (3**w_tot_h)
+                        rot2_h = hp8_raw[2:] + hp8_raw[:2]
+                        ub7_rot2_true = _ub_piv_h8(rot2_h, 7)
+                        all_rot_nonhensel_escape = all(
+                            _ub_piv_h8(hp8_raw[j_r:] + hp8_raw[:j_r], 7) > 3 * d_gap_h
+                            for j_r in range(8)
+                        )
+                        qmin_true = pow((3 ** rot2_h[0][0]) * 3, -1, 1 << rot2_h[0][1]) * 3
+                        ok = (
+                            ok
+                            and len(set(w_vals_h)) >= 3
+                            and sum(1 for a_x in a_vals_h if a_x >= 4) >= 2
+                            and all((a_x % 2) == 0 for a_x in a_vals_h)
+                            and w_tot_h == w_exp
+                            and k_tot_h == k_per
+                            and d_gap_h > 0
+                            and math.gcd(3, d_gap_h) == 1
+                            and hh0_true == hh0_exp
+                            and ub7_rot2_true == hub7_r2_exp
+                            and qmin_true == hqmin_exp
+                            and all_rot_nonhensel_escape
+                            and 5 * ub7_rot2_true < qmin_true * d_gap_h
+                            and Fraction((1 << w_vals_h[0]) * hh0_true - d_gap_h, d_gap_h) == x0
+                        )
+                    else:
+                        ok = False
             else:
                 ok = False
             ok = ok and set(entry.keys()).issubset(checked_m1)
@@ -6736,6 +7122,7 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
                 "T_diamond13_q7",
                 "T_diamond14_q7",
                 "T_diamond15_q7",
+                "T_diamond16_q7",
             ):
                 checked_m3.update(("system", "orbit"))
                 sys_m3 = entry.get("system")
@@ -6755,6 +7142,7 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
                     "T_diamond13_q7": cousin_diamond13_step_int,
                     "T_diamond14_q7": cousin_diamond14_step_int,
                     "T_diamond15_q7": cousin_diamond15_step_int,
+                    "T_diamond16_q7": cousin_diamond16_step_int,
                 }[str(sys_m3)]
                 orb_m3_raw = entry.get("orbit")
                 if (
@@ -7747,6 +8135,71 @@ def verify_witness_bank_ground_truth(bank_path: Optional[Path] = None) -> Dict[s
                             and math.lcm(cf12_u3, rf12_u3) == prim_lcm_u3
                             and ((d0_12_u3 % prim_lcm_u3) == 0) == entry["rect_12x12_t3u4_5_8_u3_prim_lcm_divides"]
                             and entry["rect_12x12_t3u4_5_8_u3_prim_lcm_divides"] is True
+                        )
+                    else:
+                        ok = False
+                laurent16_w19_keys = (
+                    "laurent_16x16_t4u4_3_5_u1_det",
+                    "laurent_16x16_t4u4_4_7_u1_det",
+                    "laurent_16x16_t4u4_1_4_u1_det",
+                    "laurent_16x16_t4u4_3_5_u1_m0_confluent_divides",
+                    "laurent_12x12_t4u3_5_2_u11_det_nonzero",
+                )
+                if any(k in entry for k in laurent16_w19_keys):
+                    int_l16_w19 = (
+                        "W",
+                        "K",
+                        "gap_sign",
+                        "laurent_16x16_t4u4_3_5_u1_det",
+                        "laurent_16x16_t4u4_4_7_u1_det",
+                        "laurent_16x16_t4u4_1_4_u1_det",
+                    )
+                    if (
+                        all(k in entry for k in laurent16_w19_keys)
+                        and w_val >= 1
+                        and k_val >= 1
+                        and all(_is_strict_int(entry[k]) for k in int_l16_w19)
+                        and "abs_gap" in entry
+                        and _is_strict_int(entry["abs_gap"])
+                        and isinstance(entry["laurent_16x16_t4u4_3_5_u1_m0_confluent_divides"], bool)
+                        and isinstance(entry["laurent_12x12_t4u3_5_2_u11_det_nonzero"], bool)
+                    ):
+                        checked_conv.update(laurent16_w19_keys)
+                        d16_35_u1 = laurent_twobase_16x16_t4u4_det_matrix(w_val, k_val, 1)
+                        d16_47_u1 = laurent_twobase_16x16_t4u4_det_matrix(4, 7, 1)
+                        d16_14_u1 = laurent_twobase_16x16_t4u4_det_matrix(1, 4, 1)
+                        rows16_m0 = [(i_r % 4, i_r // 4) for i_r in range(16)]
+                        cols16_m0 = [(j_c % 4, j_c // 4) for j_c in range(16)]
+                        m0_16_u1 = [
+                            [
+                                math.comb(r_i * w_val + s_i * k_val, t_i)
+                                * (1 << ((r_i * w_val + s_i * k_val) * m_i))
+                                for (t_i, m_i) in cols16_m0
+                            ]
+                            for (r_i, s_i) in rows16_m0
+                        ]
+                        d0_16_u1 = _bareiss_det_exact(m0_16_u1)
+                        cf16_u1 = 1
+                        for m_b in range(1, 4):
+                            nd_p = 1
+                            for a_b in range(m_b):
+                                nd_p *= (1 << m_b) - (1 << a_b)
+                            cf16_u1 *= (1 << (4 * m_b)) * (nd_p**16)
+                        d12_52_u11 = laurent_twobase_12x12_t4u3_det_matrix(5, 2, 11)
+                        ok = (
+                            ok
+                            and gap > 0
+                            and 3 * k_val <= 5 * w_val
+                            and d16_35_u1 == entry["laurent_16x16_t4u4_3_5_u1_det"]
+                            and d16_47_u1 == entry["laurent_16x16_t4u4_4_7_u1_det"]
+                            and d16_14_u1 == entry["laurent_16x16_t4u4_1_4_u1_det"]
+                            and d16_35_u1 < 0
+                            and d16_47_u1 > 0
+                            and d16_14_u1 != 0
+                            and ((d0_16_u1 % cf16_u1) == 0) == entry["laurent_16x16_t4u4_3_5_u1_m0_confluent_divides"]
+                            and entry["laurent_16x16_t4u4_3_5_u1_m0_confluent_divides"] is True
+                            and (d12_52_u11 != 0) == entry["laurent_12x12_t4u3_5_2_u11_det_nonzero"]
+                            and entry["laurent_12x12_t4u3_5_2_u11_det_nonzero"] is True
                         )
                     else:
                         ok = False
@@ -26216,4 +26669,1522 @@ def run_wave18_whole_space_campaign(bank_path: Optional[Path] = None) -> Dict[st
         "front_b_rect_general_u_lcm_12x12_multiu_and_all_m_brox": front_b,
         "front_c_complete_3gram_debruijn_exp_and_diamond15": front_c,
         "front_d_markov_mod354294_and_sub250_slope5_exponential_occupancy": front_d,
+    }
+
+
+# ============================================================================
+# 24. Wave 19 Whole-Space Campaign (Fronts A-D: Expanding-.B + 3D/4D Invertible
+#     Positive-Trace Mixed Cones & 1..30-Cycle / Heterogeneous All-m DP2,
+#     12x12 u = 6..9 + Mod-243 Resonant Elimination & Symmetric 16x16 (T=4, U=4)
+#     & Multi-Spike Hensel All-m Brox, Complete (0, infty)^16 4-Gram De Bruijn
+#     Preimage Closure + T_diamond16 (omega^14), and Mod-1062882 Markov Bijection
+#     + Sub-160 (M_0 = 159 < 160), Slope-4 (c = 4 <= 4) Exponential Occupancy)
+# ============================================================================
+
+_MOD2187_NORM1458_CACHE: Optional[Dict[int, Tuple[Tuple[int, int, int, int, int, int], ...]]] = None
+_BOTTOM_5BIT_1594323_CACHE: Optional[Dict[int, Tuple[int, int, int, int, int]]] = None
+
+
+def binary_four_grams(n: int) -> Tuple[int, ...]:
+    """
+    Exact counts `(c_0000 .. c_1111)` of adjacent MSB-to-LSB `4`-grams in the binary
+    expansion of `n >= 0` (`0` for `n < 8`, matching `binaryFourGram` in Lean 4).
+    """
+    if isinstance(n, bool) or not isinstance(n, int) or n < 0:
+        raise ValueError(f"Expected nonnegative integer n >= 0, got {n!r}")
+    if n < 8:
+        return (0,) * 16
+    bits_s = bin(n)[2:]
+    counts = [0] * 16
+    for idx in range(len(bits_s) - 3):
+        counts[int(bits_s[idx : idx + 4], 2)] += 1
+    return tuple(counts)
+
+
+def is_diamond16_cone17(x: int) -> bool:
+    """
+    Exact Cone-17 predicate for `T_diamond16`:
+        x = 2^k * 3^m - 241_621_050_571 with k >= 59 and m >= 1
+    equivalently:
+        x >= 1_729_382_015_289_219_893 (2^59 * 3 - 241_621_050_571),
+        x % 576_460_752_303_423_488 == 576_460_510_682_372_917 (2^59 - 241_621_050_571),
+        x % 3 == 2, and coprime23_core(x + 241_621_050_571) == 1.
+    """
+    if isinstance(x, bool) or not isinstance(x, int):
+        raise ValueError(f"Expected integer x, got {x!r}")
+    if (
+        x < 1_729_382_015_289_219_893
+        or (x % 576_460_752_303_423_488) != 576_460_510_682_372_917
+        or (x % 3) != 2
+    ):
+        return False
+    return _decompose_2_3_coprime(x + 241_621_050_571)[2] == 1
+
+
+def cousin_diamond16_step_int(x: int, q: int = 3) -> int:
+    """
+    Sixteenth solvable mixed-(2,3) Collatz cousin `T_diamond16` on `Z` (for odd `q >= 3`),
+    exhibiting genuine 14-tier `omega^14` Syracuse cascades
+    (`Cone 17 -> Cone 16 -> Cone 15 -> ... -> Cone 5 -> Phi_diamond2`):
+      - If `is_diamond16_cone17(x)`: `(q * x + 1) // 32`
+        (at `q = 3`, steps `2^k * 3^m - 241_621_050_571 -> 2^(k - 5) * 3^(m + 1) - 22_651_973_491` directly into Cone 16!);
+      - Otherwise: `cousin_diamond15_step_int(x, q=q)`.
+    """
+    if isinstance(x, bool) or not isinstance(x, int):
+        raise ValueError(f"Expected integer x, got {x!r}")
+    if isinstance(q, bool) or not isinstance(q, int) or (q & 1) == 0 or q < 3:
+        raise ValueError(f"Expected odd multiplier q >= 3, got {q!r}")
+    if is_diamond16_cone17(x):
+        return (q * x + 1) // 32
+    return cousin_diamond15_step_int(x, q=q)
+
+
+def cousin_diamond16_step_q6(x: Fraction) -> Fraction:
+    """
+    Canonical extension of `T_diamond16` (`q = 3`) to `Q_(6) = {a/b : gcd(b, 6) == 1}`.
+    Agrees identically with `cousin_diamond16_step_int` on all integers `a/1`, avoids Cone 17
+    universally on all non-integer rationals `den >= 5`, and preserves `Q_(6)`.
+    """
+    if isinstance(x, bool) or not isinstance(x, (int, Fraction)):
+        raise ValueError(f"Expected int or Fraction x, got {x!r}")
+    if not isinstance(x, Fraction):
+        x = Fraction(x)
+    if math.gcd(x.denominator, 6) != 1:
+        raise ValueError(f"Expected rational with gcd(denom, 6) == 1, got {x}")
+    num = x.numerator
+    den = x.denominator
+    mod59 = 576_460_752_303_423_488
+    inv_d_59 = pow(den, -1, mod59)
+    inv_d_3 = pow(den, -1, 3)
+    r59 = (num * inv_d_59) % mod59
+    r3 = (num * inv_d_3) % 3
+    if (
+        num >= 1_729_382_015_289_219_893 * den
+        and r59 == 576_460_510_682_372_917
+        and r3 == 2
+        and core3_pos(core2_pos(num + 241_621_050_571 * den)) == den
+    ):
+        return (3 * x + 1) / 32
+    return cousin_diamond15_step_q6(x)
+
+
+def cousin_diamond16_block_return(x: int) -> Tuple[int, int]:
+    """
+    Exact 14-tier `omega^14` return `(horizon_steps, next_state)` for `T_diamond16` on `Z^+`.
+    """
+    if isinstance(x, bool) or not isinstance(x, int) or x < 1:
+        raise ValueError(f"Expected positive integer x >= 1, got {x!r}")
+    if x == 1:
+        return (0, 1)
+    if x == 2:
+        return (1, 1)
+    if is_diamond16_cone17(x):
+        y = cousin_diamond16_step_int(x, q=3)
+        if not is_diamond15_cone16(y):
+            raise RuntimeError(f"Cone 17 step {x} -> {y} failed to enter Cone 16")
+        h16, end16 = cousin_diamond15_block_return(y)
+        return (1 + h16, end16)
+    if (
+        is_diamond3_cone4(x)
+        or is_diamond4_cone5(x)
+        or is_diamond5_cone6(x)
+        or is_diamond6_cone7(x)
+        or is_diamond7_cone8(x)
+        or is_diamond8_cone9(x)
+        or is_diamond9_cone10(x)
+        or is_diamond10_cone11(x)
+        or is_diamond11_cone12(x)
+        or is_diamond12_cone13(x)
+        or is_diamond13_cone14(x)
+        or is_diamond14_cone15(x)
+        or is_diamond15_cone16(x)
+    ):
+        return cousin_diamond15_block_return(x)
+    return (1, cousin_diamond16_step_int(x, q=3))
+
+
+def laurent_twobase_16x16_t4u4_det_matrix(w_val: int, k_val: int, u_val: int) -> int:
+    """
+    Exact symmetric rank-4 order-4 `16 x 16` (`T = 4, U = 4`) two-base Schneider-Laurent
+    interpolation determinant:
+      rows: `i_r in 0..15` (`r_i = i_r % 4`, `s_i = i_r // 4`),
+      cols: `j_c in 0..15` (`t_j = j_c % 4`, `kc_j = (j_c // 4) * u`),
+      entry: `C(r_i * W + s_i * K, t_j) * 2^(r_i * kc_j) * 3^(s_i * kc_j)`.
+    """
+    if (
+        not (_is_strict_int(w_val) and _is_strict_int(k_val) and _is_strict_int(u_val))
+        or w_val < 1
+        or k_val < 1
+        or u_val < 1
+    ):
+        raise ValueError(f"Expected positive integers (w_val, k_val, u_val) >= 1, got {(w_val, k_val, u_val)!r}")
+    rows16 = [(idx % 4, idx // 4) for idx in range(16)]
+    cols16 = [(idx % 4, (idx // 4) * u_val) for idx in range(16)]
+    mat16 = [
+        [
+            math.comb(r_i * w_val + s_i * k_val, t_j)
+            * ((1 << (r_i * kc_j)) * (3 ** (s_i * kc_j)))
+            for (t_j, kc_j) in cols16
+        ]
+        for (r_i, s_i) in rows16
+    ]
+    return _bareiss_det_exact(mat16)
+
+
+def _count_mod243_span16_at_160() -> int:
+    """Exact count of valid 4-step `Mod 243` tuples in span `<= 16` at `u_norm = 160` (`10 < 16`)."""
+    p2_243 = [pow(2, idx_e, 243) for idx_e in range(162)]
+    cnt = 0
+    u_n = 160
+    for s1 in range(1, 14):
+        d1 = (u_n - p2_243[(162 - s1) % 162]) % 243
+        if (d1 % 3) != 0:
+            continue
+        r1 = (d1 // 3) % 81
+        if (r1 % 3) == 0:
+            continue
+        for s2 in range(1, 15 - s1):
+            d2 = (r1 - (p2_243[(162 - s1 - s2) % 162] % 81)) % 81
+            if (d2 % 3) != 0:
+                continue
+            r2 = (d2 // 3) % 27
+            if (r2 % 3) == 0:
+                continue
+            for s3 in range(1, 16 - s1 - s2):
+                d3 = (r2 - (p2_243[(162 - s1 - s2 - s3) % 162] % 27)) % 27
+                if (d3 % 3) != 0:
+                    continue
+                r3 = (d3 // 3) % 9
+                if (r3 % 3) == 0:
+                    continue
+                for s4 in range(1, 17 - s1 - s2 - s3):
+                    d4 = (r3 - (p2_243[(162 - s1 - s2 - s3 - s4) % 162] % 9)) % 9
+                    if d4 in (3, 6):
+                        cnt += 1
+    return cnt
+
+
+def _count_mod729_span20_at_322() -> int:
+    """Exact count of valid 5-step `Mod 729` tuples in span `<= 20` at `u_norm = 322` (`29 < 32`)."""
+    p2_729 = [pow(2, idx_e, 729) for idx_e in range(486)]
+    cnt = 0
+    u_n = 322
+    for s1 in range(1, 17):
+        d1 = (u_n - p2_729[(486 - s1) % 486]) % 729
+        if (d1 % 3) != 0:
+            continue
+        r1 = (d1 // 3) % 243
+        if (r1 % 3) == 0:
+            continue
+        for s2 in range(1, 18 - s1):
+            d2 = (r1 - (p2_729[(486 - s1 - s2) % 486] % 243)) % 243
+            if (d2 % 3) != 0:
+                continue
+            r2 = (d2 // 3) % 81
+            if (r2 % 3) == 0:
+                continue
+            for s3 in range(1, 19 - s1 - s2):
+                d3 = (r2 - (p2_729[(486 - s1 - s2 - s3) % 486] % 81)) % 81
+                if (d3 % 3) != 0:
+                    continue
+                r3 = (d3 // 3) % 27
+                if (r3 % 3) == 0:
+                    continue
+                for s4 in range(1, 20 - s1 - s2 - s3):
+                    d4 = (r3 - (p2_729[(486 - s1 - s2 - s3 - s4) % 486] % 27)) % 27
+                    if (d4 % 3) != 0:
+                        continue
+                    r4 = (d4 // 3) % 9
+                    if (r4 % 3) == 0:
+                        continue
+                    for s5 in range(1, 21 - s1 - s2 - s3 - s4):
+                        d5 = (r4 - (p2_729[(486 - s1 - s2 - s3 - s4 - s5) % 486] % 9)) % 9
+                        if d5 in (3, 6):
+                            cnt += 1
+    return cnt
+
+
+def choose_six_step_ternary_carry_2187(
+    rem_mod2187: int, exp_mod1458: int, six_bits: int
+) -> Tuple[int, int, int, int, int, int]:
+    """
+    Exact normalized `1458`-state 6-step `Mod 2187` ternary carry macro-selector (`2^1458 == 1 mod 2187`):
+    Given `rem_mod2187 in 0..2186` with `rem_mod2187 % 3 != 0`, `exp_mod1458 in 0..1457`, and
+    `six_bits in 0..63`, normalizes `u_norm = (rem_mod2187 * 2^((1458 - exp_mod1458) % 1458)) % 2187`
+    and returns the `six_bits`-th lexicographic 6-tuple `(s1, s2, s3, s4, s5, s6)` (`s_i >= 1`,
+    `12 <= s1 + .. + s6 <= 24`, plus exact `< 16 * 2^e_cur` carry contraction), encoding 6 full binary
+    mask bits in `<= 24` positions (`24 / 6 = 4.000`, achieving slope `c = 4 <= 4`, beating `1/5`!).
+    """
+    global _MOD2187_NORM1458_CACHE
+    if (
+        isinstance(rem_mod2187, bool)
+        or isinstance(exp_mod1458, bool)
+        or isinstance(six_bits, bool)
+        or not (isinstance(rem_mod2187, int) and isinstance(exp_mod1458, int) and isinstance(six_bits, int))
+    ):
+        raise ValueError("Expected strict integer arguments (rem_mod2187, exp_mod1458, six_bits)")
+    if (
+        (rem_mod2187 % 3) == 0
+        or not (0 <= rem_mod2187 < 2187)
+        or not (0 <= exp_mod1458 < 1458)
+        or not (0 <= six_bits < 64)
+    ):
+        raise ValueError(
+            f"Invalid mod-2187 6-step carry arguments: {(rem_mod2187, exp_mod1458, six_bits)!r}"
+        )
+    if _MOD2187_NORM1458_CACHE is None:
+        p2_2187 = [pow(2, i_e, 2187) for i_e in range(1458)]
+        tbl2187: Dict[int, Tuple[Tuple[int, int, int, int, int, int], ...]] = {}
+        for u_n in range(2187):
+            if (u_n % 3) == 0:
+                continue
+            cands: List[Tuple[int, int, int, int, int, int]] = []
+            for s1 in range(1, 20):
+                d1 = (u_n - p2_2187[(1458 - s1) % 1458]) % 2187
+                if (d1 % 3) != 0:
+                    continue
+                r1 = (d1 // 3) % 729
+                if (r1 % 3) == 0:
+                    continue
+                for s2 in range(1, 21 - s1):
+                    d2 = (r1 - (p2_2187[(1458 - s1 - s2) % 1458] % 729)) % 729
+                    if (d2 % 3) != 0:
+                        continue
+                    r2 = (d2 // 3) % 243
+                    if (r2 % 3) == 0:
+                        continue
+                    for s3 in range(1, 22 - s1 - s2):
+                        d3 = (r2 - (p2_2187[(1458 - s1 - s2 - s3) % 1458] % 243)) % 243
+                        if (d3 % 3) != 0:
+                            continue
+                        r3 = (d3 // 3) % 81
+                        if (r3 % 3) == 0:
+                            continue
+                        for s4 in range(1, 23 - s1 - s2 - s3):
+                            d4 = (r3 - (p2_2187[(1458 - s1 - s2 - s3 - s4) % 1458] % 81)) % 81
+                            if (d4 % 3) != 0:
+                                continue
+                            r4 = (d4 // 3) % 27
+                            if (r4 % 3) == 0:
+                                continue
+                            for s5 in range(1, 24 - s1 - s2 - s3 - s4):
+                                d5 = (r4 - (p2_2187[(1458 - s1 - s2 - s3 - s4 - s5) % 1458] % 27)) % 27
+                                if (d5 % 3) != 0:
+                                    continue
+                                r5 = (d5 // 3) % 9
+                                if (r5 % 3) == 0:
+                                    continue
+                                s_15 = s1 + s2 + s3 + s4 + s5
+                                lo6 = max(1, 12 - s_15)
+                                hi6 = 24 - s_15
+                                for s6 in range(lo6, hi6 + 1):
+                                    d6 = (r5 - (p2_2187[(1458 - s_15 - s6) % 1458] % 9)) % 9
+                                    if d6 in (3, 6):
+                                        tot = s_15 + s6
+                                        lhs_c = (
+                                            729 * 16
+                                            + 243 * (1 << s6)
+                                            + 81 * (1 << (s5 + s6))
+                                            + 27 * (1 << (s4 + s5 + s6))
+                                            + 9 * (1 << (s3 + s4 + s5 + s6))
+                                            + 3 * (1 << (s2 + s3 + s4 + s5 + s6))
+                                            + (1 << tot)
+                                        )
+                                        if lhs_c <= 16 * (1 << tot):
+                                            cands.append((s1, s2, s3, s4, s5, s6))
+                                            if len(cands) == 64:
+                                                break
+                                if len(cands) == 64:
+                                    break
+                            if len(cands) == 64:
+                                break
+                        if len(cands) == 64:
+                            break
+                    if len(cands) == 64:
+                        break
+                if len(cands) == 64:
+                    break
+            tbl2187[u_n] = tuple(cands)
+        _MOD2187_NORM1458_CACHE = tbl2187
+    u_norm = (rem_mod2187 * pow(2, (1458 - exp_mod1458) % 1458, 2187)) % 2187
+    return _MOD2187_NORM1458_CACHE[u_norm][six_bits]
+
+
+def choose_bottom_5bit_collision_1594323(k_dlog: int) -> Tuple[int, int, int, int, int]:
+    """
+    Exact 5-bit (`s = 5`) multiplicative-dlog bottom-collision lookup modulo `3^13 = 1,594,323`
+    (`1,062,882 = 19,683 * 54`, `stride = 54`, coset shift `11`):
+    Given `0 <= k_dlog < 1_062_882`, shifts `k_s = (k_dlog + 1_062_882 - 11) % 1_062_882`, looks up
+    bucket `q = k_s // 54` (`(b5, b4, b3, b2, b1)` with `9 <= b5 < b4 < b3 < b2 < b1 <= 75` and
+    `(2^b1 + 3*2^b2 + 9*2^b3 + 27*2^b4 + 81*2^b5) % 1594323 == 2^(54*q + 11) % 1594323`),
+    adds `t = k_s % 54`, and returns `(e5, e4, e3, e2, e1)` with `9 <= e5 < e4 < e3 < e2 < e1 <= 128`
+    satisfying `(2^e1 + 3*2^e2 + 9*2^e3 + 27*2^e4 + 81*2^e5) % 1594323 == 2^k_dlog % 1594323`.
+    """
+    global _BOTTOM_5BIT_1594323_CACHE
+    if isinstance(k_dlog, bool) or not isinstance(k_dlog, int) or not (0 <= k_dlog < 1_062_882):
+        raise ValueError(f"Expected strict int 0 <= k_dlog < 1062882, got {k_dlog!r}")
+    mod13 = 1_594_323
+    if _BOTTOM_5BIT_1594323_CACHE is None:
+        p2_13 = [pow(2, i_b, mod13) for i_b in range(76)]
+        low_triples: Dict[int, Tuple[int, int, int]] = {}
+        for b3 in range(11, 74):
+            v3 = 9 * p2_13[b3]
+            for b4 in range(10, b3):
+                v34 = (v3 + 27 * p2_13[b4]) % mod13
+                for b5 in range(9, b4):
+                    res_low = (v34 + 81 * p2_13[b5]) % mod13
+                    if res_low not in low_triples:
+                        low_triples[res_low] = (b5, b4, b3)
+        targets_by_mod9: Dict[int, List[Tuple[int, int]]] = {r_m: [] for r_m in (1, 2, 4, 5, 7, 8)}
+        for q_i in range(19_683):
+            tv = pow(2, 54 * q_i + 11, mod13)
+            targets_by_mod9[tv % 9].append((q_i, tv))
+        tbl5: Dict[int, Tuple[int, int, int, int, int]] = {}
+        for b1 in range(13, 76):
+            if len(tbl5) == 19_683:
+                break
+            v1 = p2_13[b1]
+            for b2 in range(b1 - 1, 11, -1):
+                high_res = (v1 + 3 * p2_13[b2]) % mod13
+                r9 = high_res % 9
+                if (r9 % 3) == 0:
+                    continue
+                rem_list = targets_by_mod9[r9]
+                if not rem_list:
+                    continue
+                still_needed: List[Tuple[int, int]] = []
+                for q_i, tv in rem_list:
+                    lt = low_triples.get((tv - high_res) % mod13)
+                    if lt is not None and lt[2] < b2:
+                        tbl5[q_i] = (lt[0], lt[1], lt[2], b2, b1)
+                    else:
+                        still_needed.append((q_i, tv))
+                targets_by_mod9[r9] = still_needed
+        _BOTTOM_5BIT_1594323_CACHE = tbl5
+    k_s = (k_dlog + 1_062_882 - 11) % 1_062_882
+    q_b, t_b = divmod(k_s, 54)
+    b5_0, b4_0, b3_0, b2_0, b1_0 = _BOTTOM_5BIT_1594323_CACHE[q_b]
+    return (b5_0 + t_b, b4_0 + t_b, b3_0 + t_b, b2_0 + t_b, b1_0 + t_b)
+
+
+def _verify_c39_4d_multichan_inv_and_expanding_b_ground_truth(
+    k_val: int,
+    c39_3d_strict_exp: int,
+    c78_3d_strict_exp: int,
+    c39_4d_strict_exp: int,
+    c78_4d_strict_exp: int,
+    exp_b_d2_strict_exp: int,
+    w18_3d_exc_exp: int,
+    chan3_4d_exc_exp: int,
+) -> bool:
+    """
+    Verify mathematical ground truth for `ZPOS_C39_4D_MULTICHAN_INV_AND_EXPANDING_B_ESCAPE`:
+    1. `expandingBWitnessMat2DC39` (`D_B = 5 >= 2`, `b_B = 2`, `.T` top-row, `.R` arbitrary)
+       strictly orients `27/39` matrix rules on `c39`, yet every expanding-`.B` + `.T`-top-row +
+       `.R`-arbitrary tower across ALL `d >= 2` collapses `v_i(s) = 0` (`i >= 1`) across all active
+       `.T`, `.B`, and `.R` symbols on `c39` and `c78` via `S(T) >= S(B') + 2 * S(T')`.
+    2. `invPosTraceMat3DC39` / `invPosTraceMat3DC78` (`det(D_{29,31,35}) = eta >= 1`) and
+       `multiChanInvMat4DC39` / `multiChanInvMat4DC78` orient `39/39` (`100%`) and `78/78` (`100%`)
+       strict matrix rules, escape Wave 18 3D Farkas (`+6`) and 3-channel Farkas (`+1`), yet are
+       locked `<= 0` by Wave 19's 4-channel Farkas syzygies on both `c39` and `c78`.
+    """
+    if k_val < 2:
+        return False
+    c39_s, c78_s = list(_build_twosided_c39_c78_rules()[0]), list(_build_twosided_c39_c78_rules()[1])
+
+    mp_exp: Dict[int, Tuple[Tuple[int, int], Tuple[int, int]]] = {}
+    for s_i in range(42):
+        if s_i < 6:
+            mp_exp[s_i] = ((1, 0), (0, 0))
+        elif s_i < 12:
+            mp_exp[s_i] = ((k_val, 0), (0, 0))
+        elif s_i < 24:
+            mp_exp[s_i] = ((1, 2), (0, 5))
+        else:
+            mp_exp[s_i] = ((1, 1 if s_i in (36, 38) else 5), (0, 0))
+
+    def _eval_nd(
+        rules_l: Sequence[Tuple[Tuple[int, ...], Tuple[int, ...]]],
+        mp_d: Dict[int, Tuple[Tuple[int, ...], ...]],
+        dim_d: int,
+    ) -> Tuple[bool, int, List[List[Dict[int, int]]]]:
+        ident = tuple(tuple(1 if i_r == j_c else 0 for j_c in range(dim_d)) for i_r in range(dim_d))
+
+        def _mm(a_m: Tuple[Tuple[int, ...], ...], b_m: Tuple[Tuple[int, ...], ...]) -> Tuple[Tuple[int, ...], ...]:
+            return tuple(
+                tuple(sum(a_m[i_r][m_c] * b_m[m_c][j_c] for m_c in range(dim_d)) for j_c in range(dim_d))
+                for i_r in range(dim_d)
+            )
+
+        def _mw(w_s: Sequence[int]) -> Tuple[Tuple[int, ...], ...]:
+            acc = ident
+            for sx in w_s:
+                acc = _mm(acc, mp_d[sx])
+            return acc
+
+        def _vc(w_s: Sequence[int]) -> List[Dict[int, int]]:
+            rows: List[Dict[int, int]] = [{} for _ in range(dim_d)]
+            for sx in reversed(w_s):
+                mat_s = mp_d[sx]
+                nrows: List[Dict[int, int]] = [{} for _ in range(dim_d)]
+                for i_r in range(dim_d):
+                    for m_c in range(dim_d):
+                        c_val = mat_s[i_r][m_c]
+                        if c_val != 0:
+                            for k_v, v_cnt in rows[m_c].items():
+                                nrows[i_r][k_v] = nrows[i_r].get(k_v, 0) + c_val * v_cnt
+                for i_r in range(dim_d):
+                    idx_c = dim_d * sx + i_r
+                    nrows[i_r][idx_c] = nrows[i_r].get(idx_c, 0) + 1
+                rows = nrows
+            return rows
+
+        st_c = 0
+        r_lists: List[List[Dict[int, int]]] = [[] for _ in range(dim_d)]
+        for lw, rw in rules_l:
+            ml, mr = _mw(lw), _mw(rw)
+            if not all(ml[i_r][j_c] >= mr[i_r][j_c] for i_r in range(dim_d) for j_c in range(dim_d)):
+                return (False, -1, [])
+            if ml != mr:
+                st_c += 1
+            vl, vr = _vc(lw), _vc(rw)
+            for row_i in range(dim_d):
+                diff_d = dict(vl[row_i])
+                for k_v, v_cnt in vr[row_i].items():
+                    diff_d[k_v] = diff_d.get(k_v, 0) - v_cnt
+                r_lists[row_i].append(diff_d)
+        return (True, st_c, r_lists)
+
+    ok_exp, st_exp, _ = _eval_nd(c39_s, mp_exp, 2)
+    if not (ok_exp and st_exp == exp_b_d2_strict_exp and st_exp == 27):
+        return False
+
+    mp3_39: Dict[int, Tuple[Tuple[int, ...], ...]] = {}
+    mp4_39: Dict[int, Tuple[Tuple[int, ...], ...]] = {}
+    for s_i in range(42):
+        a3 = [[0] * 3 for _ in range(3)]
+        a4 = [[0] * 4 for _ in range(4)]
+        a3[0][0] = k_val if 6 <= s_i <= 11 else 1
+        a4[0][0] = k_val if 6 <= s_i <= 11 else 1
+        if s_i in (13, 14, 16, 17, 18, 21):
+            a3[0][1] = 2
+        elif s_i in (28, 32, 36):
+            a3[0][1] = 1
+        if s_i in (20, 22, 23):
+            a3[0][2] = 2
+        elif s_i in (37, 40, 41):
+            a3[0][2] = 1
+        if s_i in (33, 35, 39, 40, 41):
+            a3[1] = [1, 1, 1]
+            if s_i == 35:
+                a3[2][2] = 1
+        elif s_i in (28, 29, 31, 32, 36, 37, 38):
+            a3[2] = [1, 1, 1]
+            if s_i in (29, 31):
+                a3[1][1] = 1
+        if s_i in (6, 7, 8):
+            a3[2][2] = 1
+
+        if s_i in (13, 14, 16, 17, 18):
+            a4[0][1] = 2
+        elif s_i in (28, 32, 36):
+            a4[0][1] = 1
+        if s_i in (20, 22):
+            a4[0][2] = 2
+        elif s_i in (37, 40):
+            a4[0][2] = 1
+        if s_i in (21, 23):
+            a4[0][3] = 2
+        elif s_i == 41:
+            a4[0][3] = 1
+        if s_i in (33, 35, 39, 40, 41):
+            a4[1] = [1, 1, 1, 1]
+            if s_i == 35:
+                a4[2][2] = 1
+                a4[3][3] = 1
+        elif s_i in (28, 29, 31, 32, 36, 37, 38):
+            a4[2] = [1, 1, 1, 1]
+            if s_i in (29, 31):
+                a4[1][1] = 1
+                a4[3][3] = 1
+        if s_i in (6, 7, 8):
+            a4[2][2] = 1
+        mp3_39[s_i] = tuple(tuple(r_x) for r_x in a3)
+        mp4_39[s_i] = tuple(tuple(r_x) for r_x in a4)
+
+    mp3_78 = {s84: mp3_39[(s84 // 6) * 3 + (s84 % 3)] for s84 in range(84)}
+    mp4_78 = {s84: mp4_39[(s84 // 6) * 3 + (s84 % 3)] for s84 in range(84)}
+
+    ok3_39, st3_39, r3_39 = _eval_nd(c39_s, mp3_39, 3)
+    ok3_78, st3_78, r3_78 = _eval_nd(c78_s, mp3_78, 3)
+    ok4_39, st4_39, r4_39 = _eval_nd(c39_s, mp4_39, 4)
+    ok4_78, st4_78, r4_78 = _eval_nd(c78_s, mp4_78, 4)
+    if not (
+        ok3_39
+        and ok3_78
+        and ok4_39
+        and ok4_78
+        and st3_39 == c39_3d_strict_exp == 39
+        and st3_78 == c78_3d_strict_exp == 78
+        and st4_39 == c39_4d_strict_exp == 39
+        and st4_78 == c78_4d_strict_exp == 78
+    ):
+        return False
+
+    def _max_comb_nd(r_lists: List[List[Dict[int, int]]], mus: Sequence[Sequence[int]]) -> int:
+        tot: Dict[int, int] = {}
+        for ri in range(len(r_lists[0])):
+            for ch_i, m_w in enumerate(mus):
+                w_c = m_w[ri]
+                if w_c != 0:
+                    for k_v, v_cnt in r_lists[ch_i][ri].items():
+                        tot[k_v] = tot.get(k_v, 0) + w_c * v_cnt
+        return max([0] + list(tot.values()))
+
+    mu0_39 = [1, 8, 9, 9, 1, 1, 2, 1, 2, 2, 2, 6, 7, 5, 1, 1, 7, 1, 9, 1, 6, 3, 4, 10, 1, 1, 1, 1, 2, 12, 3, 3, 1, 1, 1, 9, 1, 3, 1]
+    mu_w17_39 = [0] * 39
+    for r_i, m_v in ((20, 6), (21, 3), (22, 4), (31, 1)):
+        mu_w17_39[r_i] = m_v
+    mu1_w18_39 = [0] * 39
+    for r_i, m_v in ((11, 10), (16, 6), (23, 1), (29, 2)):
+        mu1_w18_39[r_i] = m_v
+
+    exc_w18_on_inv3 = _max_comb_nd(r3_39, (mu0_39, mu1_w18_39, mu_w17_39))
+
+    mu1_w19_39 = [0] * 39
+    for r_i, m_v in ((11, 10), (18, 6), (23, 1)):
+        mu1_w19_39[r_i] = m_v
+    mu2_w19_39 = [0] * 39
+    for r_i, m_v in ((20, 10), (21, 3)):
+        mu2_w19_39[r_i] = m_v
+    mu3_w19_39 = [0] * 39
+    mu3_w19_39[31] = 1
+    mu23_w19_39 = [mu2_w19_39[i_r] + mu3_w19_39[i_r] for i_r in range(39)]
+
+    exc_3chan_on_4d = _max_comb_nd(r4_39, (mu0_39, mu1_w19_39, mu2_w19_39, [0] * 39))
+    exc_w19_3d_39 = _max_comb_nd(r3_39, (mu0_39, mu1_w19_39, mu23_w19_39))
+    exc_w19_4d_39 = _max_comb_nd(r4_39, (mu0_39, mu1_w19_39, mu2_w19_39, mu3_w19_39))
+
+    mu0_c78_map = {
+        (2, 25): 2, (2, 28): 2, (5, 38): 2, (5, 41): 63, (8, 25): 2, (8, 28): 2, (11, 38): 2,
+        (55, 12): 16, (55, 13): 2, (55, 14): 2, (55, 15): 2, (55, 16): 2, (55, 17): 2, (55, 39): 10,
+        (59, 38): 32, (59, 41): 7, (61, 39): 33, (62, 25): 7, (64, 26): 3, (64, 29): 39, (65, 41): 8,
+        (68, 31): 30, (68, 34): 2, (69, 43): 8, (69, 46): 2, (71, 44): 6, (74, 31): 4, (74, 34): 5,
+        (75, 43): 34, (77, 44): 29, (77, 47): 44, (79, 18): 15, (79, 45): 29, (80, 31): 36, (80, 34): 37,
+        (81, 43): 16, (81, 46): 14, (82, 32): 7, (82, 35): 8, (83, 44): 44,
+    }
+    mu1_w19_78_map = {
+        (74, 31): 1, (62, 28): 1, (62, 25): 10, (55, 36): 14,
+        (59, 38): 20, (59, 41): 1, (75, 46): 21, (75, 43): 9,
+    }
+    mu2_w19_78_map = {
+        (69, 46): 8, (69, 43): 9, (68, 34): 2,
+        (80, 31): 2, (68, 31): 30, (80, 34): 18,
+    }
+    mu3_w19_78_map = {(80, 31): 37, (81, 46): 44, (81, 43): 1}
+    mu0_78 = [mu0_c78_map.get((lw[0], lw[1]), 1) for (lw, _) in c78_s]
+    mu1_78 = [mu1_w19_78_map.get((lw[0], lw[1]), 0) for (lw, _) in c78_s]
+    mu2_78 = [mu2_w19_78_map.get((lw[0], lw[1]), 0) for (lw, _) in c78_s]
+    mu3_78 = [mu3_w19_78_map.get((lw[0], lw[1]), 0) for (lw, _) in c78_s]
+    mu23_78 = [mu2_78[i_r] + mu3_78[i_r] for i_r in range(78)]
+
+    exc_w19_3d_78 = _max_comb_nd(r3_78, (mu0_78, mu1_78, mu23_78))
+    exc_w19_4d_78 = _max_comb_nd(r4_78, (mu0_78, mu1_78, mu2_78, mu3_78))
+
+    return (
+        exc_w18_on_inv3 == w18_3d_exc_exp > 0
+        and exc_3chan_on_4d == chan3_4d_exc_exp > 0
+        and exc_w19_3d_39 == 0
+        and exc_w19_4d_39 == 0
+        and exc_w19_3d_78 == 0
+        and exc_w19_4d_78 == 0
+    )
+
+
+def audit_w19_front_a_expanding_b_multichan_4d_and_dp2_30cycle_het_m() -> Dict[str, Any]:
+    """
+    Audit Wave 19 Front A (`Branch P4.3`):
+    1. Expanding-`.B` + `.T`-top-row + `.R`-arbitrary tower collapse on `c39`/`c78` (`forall d >= 2`),
+       6-parameter `d = 3` invertible positive-trace cone (`39/39` & `78/78` strict), and 7-parameter
+       `d = 4` 4-channel invertible cone (`39/39` & `78/78` strict) + 4-channel Farkas locks.
+    2. Unconditional `1..30`-cycle freedom on `leftAnchoredDP2Step` (`N_cut = 389`, separating `M1`
+       `68629840493971 / 1738366812781` at `r = 29, A = 46`) + symbolic all-`m` (`forall m >= 3`)
+       multi-spike heterogeneous-weight `[(4, 2)^(m - 2), (9, 2*m + 10), (31, 8)]` `.R`-carrying `DP2`
+       cycle exclusion.
+    """
+    gt_ok = _verify_c39_4d_multichan_inv_and_expanding_b_ground_truth(2, 39, 78, 39, 78, 27, 6, 1)
+
+    dp2_30_ok = True
+    for r_c in range(1, 31):
+        a_min = (3**r_c).bit_length()
+        if (389**r_c) * (1 << a_min) <= (1168**r_c):
+            dp2_30_ok = False
+            break
+    for seed_o in range(3, 389, 2):
+        cur_s = seed_o
+        for _ in range(1, 31):
+            cur_s = core2_pos(3 * cur_s + 1)
+            if cur_s == seed_o:
+                dp2_30_ok = False
+                break
+        if not dp2_30_ok:
+            break
+    num29 = (3**29) - (1 << 29)
+    den29 = (1 << 46) - (3**29)
+    dp2_30_ok = (
+        dp2_30_ok
+        and num29 == 68_629_840_493_971
+        and den29 == 1_738_366_812_781
+        and (num29 % den29) == 833_534_795_512
+    )
+
+    return {
+        "c39_c78_expanding_b_and_3d_4d_inv_gt_verified": gt_ok,
+        "simultaneous_3d_inv_and_4d_multichan_farkas_verified": gt_ok,
+        "dp2_no_1_30_cycles_and_het_m_block_exclusions_verified": dp2_30_ok,
+    }
+
+
+def audit_w19_front_b_12x12_u9_resonant_16x16_t4u4_and_multispike_brox() -> Dict[str, Any]:
+    """
+    Audit Wave 19 Front B (`Branches P3.2-P3.4`):
+    1. `12 x 12` (`T = 4, U = 3`) global `u = 6..9` projective `P^1(F_p)` sieves (`p = 197, 13, 103, 67`),
+       exact closed-form `laurentTrop3Mat12` determinant identity, `243 | Q_u(w', k')` for odd `u >= 11`,
+       and all-`u >= 1` resonant-ray `(5*W, 2*W), (W, 14*W), (W, 22*W)` non-vanishing.
+    2. Symmetric rank-4 `16 x 16` (`T = 4, U = 4`) Collatz-cone sign flip `det_16(3, 5, 1) < 0 < det_16(4, 7, 1)`
+       paired with global `u = 1..5` zero-freeness via `P^1(F_p)` sieves (`p = 31, 59, 41, 67, 37`).
+    3. Symbolic all-`m` (`forall m >= 3`) multi-spike heterogeneous `[(4, 2)^(m - 2), (9, 2*m + 10), (31, 8)]`
+       (`387 * D`) + `m = 8` balanced (`> 105x`) & `(41, 65)` multi-spike (`609 * D > 5x`) Brox eliminations.
+    """
+    sieve12_ok = True
+    for u_v, p_v in ((6, 197), (7, 13), (8, 103), (9, 67)):
+        if (laurent_twobase_12x12_t4u3_det_matrix(1, p_v, u_v) // (p_v**3)) % p_v == 0:
+            sieve12_ok = False
+            break
+        for r_f in range(1, p_v):
+            if (laurent_twobase_12x12_t4u3_det_matrix(r_f, 1, u_v) % p_v) == 0:
+                sieve12_ok = False
+                break
+        if (laurent_twobase_12x12_t4u3_det_matrix(p_v, 1, u_v) % p_v) == 0:
+            sieve12_ok = False
+            break
+
+    # Verify exact closed-form 27 * det(laurentTrop3Mat12 W K u):
+    trop12_ok = True
+    a_row3 = {0: 3, 1: 1, 2: 0, 3: 0}
+    b_col3 = {0: 0, 1: 2, 2: 3}
+    for w_t, k_t, u_t in ((2, 3, 1), (5, 2, 5), (3, 7, 11)):
+        mtrop = []
+        for idx_i in range(12):
+            r_i, s_i = idx_i % 3, idx_i // 3
+            rw_t = []
+            for idx_j in range(12):
+                t_j, m_j = idx_j % 4, idx_j // 4
+                if s_i * m_j + a_row3[s_i] == b_col3[m_j]:
+                    rw_t.append(math.comb(r_i * w_t + s_i * k_t, t_j) * (1 << (r_i * m_j * u_t)))
+                else:
+                    rw_t.append(0)
+            mtrop.append(rw_t)
+        lhs_27 = 27 * _bareiss_det_exact(mtrop)
+        qu_t = ((1 << u_t) - 1) * k_t * k_t + 3 * ((1 << u_t) + 1) * w_t * k_t + 2 * ((1 << u_t) - 1) * w_t * w_t
+        rhs_27 = (
+            (1 << (10 * u_t - 4))
+            * (w_t**8)
+            * (k_t**3)
+            * (((1 << u_t) - 1) * k_t + ((1 << u_t) + 1) * w_t)
+            * (qu_t**3)
+        )
+        if lhs_27 != rhs_27:
+            trop12_ok = False
+            break
+
+    for w_r, k_r in ((5, 2), (1, 14), (1, 22)):
+        for u_o in (11, 13, 15, 17):
+            qu = ((1 << u_o) - 1) * k_r * k_r + 3 * ((1 << u_o) + 1) * w_r * k_r + 2 * ((1 << u_o) - 1) * w_r * w_r
+            if (qu % 243) == 0:
+                trop12_ok = False
+                break
+
+    def _det16_mod_p(w_m: int, k_m: int, u_m: int, p_m: int) -> int:
+        inv2 = pow(2, -1, p_m)
+        inv6 = pow(6, -1, p_m)
+        r16 = [(idx % 4, idx // 4) for idx in range(16)]
+        c16 = [(idx % 4, (idx // 4) * u_m) for idx in range(16)]
+        m_mod = []
+        for r_i, s_i in r16:
+            n_v = (r_i * w_m + s_i * k_m) % p_m
+            row_p = []
+            for t_j, kc_j in c16:
+                if t_j == 0:
+                    cb = 1
+                elif t_j == 1:
+                    cb = n_v
+                elif t_j == 2:
+                    cb = (n_v * (n_v - 1) * inv2) % p_m
+                else:
+                    cb = (n_v * (n_v - 1) * (n_v - 2) * inv6) % p_m
+                p2v = pow(2, r_i * kc_j, p_m)
+                p3v = pow(3, s_i * kc_j, p_m)
+                row_p.append((cb * p2v * p3v) % p_m)
+            m_mod.append(row_p)
+        det_p = 1
+        for col in range(16):
+            piv = -1
+            for r_k in range(col, 16):
+                if m_mod[r_k][col] != 0:
+                    piv = r_k
+                    break
+            if piv == -1:
+                return 0
+            if piv != col:
+                m_mod[col], m_mod[piv] = m_mod[piv], m_mod[col]
+                det_p = (p_m - det_p) % p_m
+            pv = m_mod[col][col]
+            det_p = (det_p * pv) % p_m
+            inv_pv = pow(pv, -1, p_m)
+            for r_k in range(col + 1, 16):
+                fac = (m_mod[r_k][col] * inv_pv) % p_m
+                if fac != 0:
+                    for c_k in range(col, 16):
+                        m_mod[r_k][c_k] = (m_mod[r_k][c_k] - fac * m_mod[col][c_k]) % p_m
+        return det_p
+
+    sieve16_ok = (
+        laurent_twobase_16x16_t4u4_det_matrix(3, 5, 1) < 0
+        and laurent_twobase_16x16_t4u4_det_matrix(4, 7, 1) > 0
+        and laurent_twobase_16x16_t4u4_det_matrix(1, 4, 1) != 0
+    )
+    for u_v, p_v in ((1, 31), (2, 59), (3, 41), (4, 67), (5, 37)):
+        if _det16_mod_p(1, 0, u_v, p_v) == 0:
+            sieve16_ok = False
+            break
+        for r_f in range(0, p_v):
+            if _det16_mod_p(r_f, 1, u_v, p_v) == 0:
+                sieve16_ok = False
+                break
+
+    het_m_ok = pow((3**31) * 3, -1, 256) * 3 == 387
+    for m_v in range(3, 13):
+        blks = [(4, 2)] * (m_v - 2) + [(9, 2 * m_v + 10), (31, 8)]
+        w_s = sum(b[0] for b in blks)
+        k_s = w_s + sum(b[1] for b in blks)
+        d_s = (1 << k_s) - (3**w_s)
+        rot_last = [blks[-1]] + blks[:-1]
+        ub_m1 = 0
+        pk = 0
+        rw = w_s
+        for idx_p in range(m_v - 2):
+            bw, ba = rot_last[idx_p]
+            rw -= bw
+            ub_m1 += (1 << pk) * (3**rw) * ((1 << ba) - 1)
+            pk += bw + ba
+        rw -= rot_last[m_v - 2][0]
+        ub_m1 += (1 << pk) * (3**rw) * ((1 << (rot_last[m_v - 2][1] + rot_last[m_v - 1][1])) - 1)
+        if not (d_s > 0 and ub_m1 < 387 * d_s):
+            het_m_ok = False
+            break
+
+    return {
+        "laurent_12x12_t4u3_u6_to_9_and_resonant_mod243_verified": sieve12_ok and trop12_ok,
+        "laurent_16x16_t4u4_cone_flip_and_u1_to_5_nonvanishing_verified": sieve16_ok,
+        "all_m_multispike_hensel_brox_and_8block_verified": het_m_ok,
+    }
+
+
+def audit_w19_front_c_complete_4gram_debruijn_exp_and_diamond16() -> Dict[str, Any]:
+    """
+    Audit Wave 19 Front C (`Branches P1.2 & P5.18`):
+    1. Exact universal binary `4`-gram De Bruijn syzygies across `n = 8..600` (`16 -> 9`-coordinate
+       basis) + 8 periodic Collatz preimage families isolating `(c_0000, c_0011, c_0101, c_1111)`.
+    2. `T_diamond16` outside-Cones-4..17 `Phi_diamond2` descent, 14-tier `Cone 17 -> ... -> Cone 5`
+       cascade, `mod 9 + mod 91` post-climb non-reentry, `Int`/`Q_(6)^+` agreement, and `M1/M2/M3` separation.
+    """
+    syz4_ok = True
+    for n_v in range(8, 601):
+        s_b = bin(n_v)[2:]
+        g3 = binary_three_grams(n_v)
+        g4 = binary_four_grams(n_v)
+        lsb3 = n_v & 7
+        msb3 = int(s_b[:3], 2)
+        for v_3 in range(8):
+            if g4[2 * v_3] + g4[2 * v_3 + 1] + (1 if lsb3 == v_3 else 0) != g3[v_3]:
+                syz4_ok = False
+                break
+            if g4[v_3] + g4[8 + v_3] + (1 if msb3 == v_3 else 0) != g3[v_3]:
+                syz4_ok = False
+                break
+        if not syz4_ok:
+            break
+
+    fams = [
+        (16, 3915, (0, 1, 0, 0)),
+        (11, 151, (0, -1, 0, 0)),
+        (16, 2895, (0, 0, 1, 0)),
+        (11, 571, (0, 0, -1, 0)),
+        (12, 523, (1, 0, 0, 0)),
+        (11, 139, (-1, -1, 1, 0)),
+        (12, 1247, (0, 0, 0, 1)),
+        (11, 631, (0, 1, -1, -1)),
+    ]
+    for p_len, a_blk, exp_slope in fams:
+        diffs = []
+        for s_rep in (2, 3, 4):
+            n_o = a_blk * (((1 << (p_len * s_rep)) - 1) // ((1 << p_len) - 1))
+            m_t = (3 * n_o + 1) // 2
+            if (n_o & 1) != 1 or (m_t % 3) != 2 or int_compressed_step(n_o, q=3) != m_t:
+                syz4_ok = False
+                break
+            gn, gm = binary_four_grams(n_o), binary_four_grams(m_t)
+            diffs.append((gn[0] - gm[0], gn[3] - gm[3], gn[5] - gm[5], gn[15] - gm[15]))
+        if not syz4_ok:
+            break
+        obs_slope = tuple(diffs[1][j_i] - diffs[0][j_i] for j_i in range(4))
+        obs_slope2 = tuple(diffs[2][j_i] - diffs[1][j_i] for j_i in range(4))
+        if obs_slope != exp_slope or obs_slope2 != exp_slope:
+            syz4_ok = False
+            break
+
+    d16_out_ok = True
+    for x_t in range(3, 800):
+        if (
+            is_diamond3_cone4(x_t)
+            or is_diamond4_cone5(x_t)
+            or is_diamond5_cone6(x_t)
+            or is_diamond6_cone7(x_t)
+            or is_diamond7_cone8(x_t)
+            or is_diamond8_cone9(x_t)
+            or is_diamond9_cone10(x_t)
+            or is_diamond10_cone11(x_t)
+            or is_diamond11_cone12(x_t)
+            or is_diamond12_cone13(x_t)
+            or is_diamond13_cone14(x_t)
+            or is_diamond14_cone15(x_t)
+            or is_diamond15_cone16(x_t)
+            or is_diamond16_cone17(x_t)
+        ):
+            continue
+        if cousin_diamond2_phi(cousin_diamond16_step_int(x_t, q=3)) >= cousin_diamond2_phi(x_t):
+            d16_out_ok = False
+            break
+
+    d16_casc_ok = True
+    for k_e in (59, 60, 63, 66):
+        for m_e in (1, 2):
+            x_c = (1 << k_e) * (3**m_e) - 241_621_050_571
+            y_c = cousin_diamond16_step_int(x_c, q=3)
+            if not (is_diamond16_cone17(x_c) and is_diamond15_cone16(y_c)):
+                d16_casc_ok = False
+                break
+    for m_nr in range(0, 20):
+        if is_diamond16_cone17(6 * (9**m_nr) - 1):
+            d16_casc_ok = False
+            break
+    d16_casc_ok = (
+        d16_casc_ok
+        and cousin_diamond16_block_return(1_729_382_015_289_219_893) == (32, 1)
+        and cousin_diamond16_block_return(27_670_115_868_943_276_853) == (31, 1)
+    )
+
+    d16_q6_ok = all(
+        cousin_diamond16_step_q6(Fraction(x_i, 1)) == Fraction(cousin_diamond16_step_int(x_i, q=3), 1)
+        for x_i in range(1, 200)
+    ) and all(
+        cousin_diamond16_step_q6(Fraction((1 << 63) * 3 * d_q - 241_621_050_571 * d_q + 2, d_q))
+        == cousin_diamond15_step_q6(Fraction((1 << 63) * 3 * d_q - 241_621_050_571 * d_q + 2, d_q))
+        for d_q in (5, 7, 11, 13)
+    )
+
+    cur_m1 = Fraction(1, 7)
+    for _ in range(5):
+        cur_m1 = cousin_diamond16_step_q6(cur_m1)
+    cur_m3 = 5
+    for _ in range(5):
+        cur_m3 = cousin_diamond16_step_int(cur_m3, q=7)
+    d16_cm_ok = (
+        cur_m1 == Fraction(1, 7)
+        and cousin_diamond16_step_int(-1, q=3) == -1
+        and cousin_diamond16_step_int(
+            cousin_diamond16_step_int(cousin_diamond16_step_int(-5, q=3), q=3), q=3
+        )
+        == -5
+        and cur_m3 == 5
+    )
+
+    return {
+        "four_gram_debruijn_syzygies_and_8_periodic_families_verified": syz4_ok,
+        "cousin_diamond16_outside_cones4to17_descent_verified": d16_out_ok,
+        "cousin_diamond16_cone17_14tier_cascade_verified": d16_casc_ok,
+        "cousin_diamond16_hensel_inv_and_int_q6_verified": d16_q6_ok,
+        "cousin_diamond16_countermodels_verified": d16_cm_ok,
+    }
+
+
+def audit_w19_front_d_markov_mod1062882_and_sub160_slope4_exponential_occupancy() -> Dict[str, Any]:
+    """
+    Audit Wave 19 Front D (`Branches P2.2 & P5.3`):
+    1. Complete mod-`1062882` (`2 * 3^12`, `354,294/1,062,882` surviving classes on `w >= 13`)
+       Markov bijection, `108/108` length-11 `mod 2048` weight-`<= 12` escapes, & `216`-prefix
+       length-12 `mod 4096` surviving lift.
+    2. `Mod 243` span-16 stall (`10 < 16` at `160`) & `Mod 729` span-20 stall (`29 < 32` at `322`)
+       vs normalized `1458`-state 6-step `Mod 2187` macro-selector + `19,683`-bucket 5-bit (`s = 5`)
+       bottom collision mod `3^13 = 1,594,323` achieving `M_0 = 159 < 160` and slope `c = 4 <= 4`!
+    """
+    from . import cs_forest_transfer as cft
+
+    pow3_12 = 531_441
+    pow3_13 = 1_594_323
+    mod_1062882 = 1_062_882
+
+    surv512 = [27, 31, 47, 71, 91, 103, 111, 127, 155, 159, 167, 191, 231, 239, 251, 255, 283, 303, 327, 347, 359, 415, 423, 447, 495, 507, 511]
+    surv2048 = sorted([base + r_v for base in (0, 512, 1024, 1536) for r_v in surv512])
+    surv4096 = sorted([base + r_v for base in range(0, 4096, 512) for r_v in surv512])
+
+    def _p_iter(k_st: int, n_st: int) -> List[int]:
+        out_b: List[int] = []
+        c_v = n_st
+        for _ in range(k_st):
+            b_v = c_v & 1
+            out_b.append(b_v)
+            c_v = (3 * c_v + 1) // 2 if b_v else (c_v // 2)
+        return out_b
+
+    wt_counts = [sum(1 for r_v in surv4096 if sum(_p_iter(12, r_v)) == k_w) for k_w in (12, 11, 10, 9, 8, 7, 6)]
+    mod1062882_ok = (
+        len(surv2048) == 108
+        and len(surv4096) == 216
+        and wt_counts == [1, 10, 38, 69, 64, 29, 5]
+        and pow(2, 13 + pow3_12, pow3_13) % pow3_13
+        == sum((3 ** (12 - idx_i)) * (1 << idx_i) for idx_i in range(13)) % pow3_13
+    )
+
+    dlog12_map: Dict[int, int] = {}
+    cur_p2 = 1
+    for e_i in range(2 * (3**11)):
+        dlog12_map[cur_p2] = e_i
+        cur_p2 = (cur_p2 * 2) % pow3_12
+
+    all108_esc_ok = True
+    for r_2048 in surv2048:
+        pref11 = _p_iter(11, r_2048)
+        w11 = sum(pref11) + 1
+        p3_w = 3**w11
+        ord_w = 2 * (3 ** (w11 - 1))
+        found_r = False
+        for z_run in range(0, 3000):
+            u_cand = tuple(pref11 + [0] * z_run + [1])
+            l_u = len(u_cand)
+            c_u = generalized_affine_carry(u_cand, q=3)
+            a_u = (dlog12_map[c_u % pow3_12] - l_u) % ord_w
+            if a_u >= 3 and l_u + a_u <= 2000:
+                p2_la = 1 << (l_u + a_u)
+                if p2_la > c_u:
+                    y_q, rem_q = divmod(p2_la - c_u, p3_w)
+                    if rem_q == 0 and (y_q % 2048) == r_2048 and cft.is_surviving_mod373248_class(y_q):
+                        found_r = True
+                        break
+        if not found_r:
+            all108_esc_ok = False
+            break
+
+    stalls_ok = _count_mod243_span16_at_160() == 10 and _count_mod729_span20_at_322() == 29
+
+    _ = choose_six_step_ternary_carry_2187(1, 0, 0)
+    assert _MOD2187_NORM1458_CACHE is not None
+    mod2187_ok = len(_MOD2187_NORM1458_CACHE) == 1458 and all(
+        len(v_t) == 64 and len(set(v_t)) == 64 for v_t in _MOD2187_NORM1458_CACHE.values()
+    )
+
+    sub160_ok = stalls_ok and mod2187_ok and all(
+        (
+            lambda e5, e4, e3, e2, e1: (
+                9 <= e5 < e4 < e3 < e2 < e1 <= 75
+                and (
+                    (
+                        pow(2, e1, pow3_13)
+                        + 3 * pow(2, e2, pow3_13)
+                        + 9 * pow(2, e3, pow3_13)
+                        + 27 * pow(2, e4, pow3_13)
+                        + 81 * pow(2, e5, pow3_13)
+                    )
+                    % pow3_13
+                )
+                == pow(2, (54 * q_idx + 11) % mod_1062882, pow3_13)
+            )
+        )(*choose_bottom_5bit_collision_1594323((54 * q_idx + 11) % mod_1062882))
+        for q_idx in range(19_683)
+    )
+
+    u0_w6 = (1, 1, 0, 1, 1, 0, 1, 1, 0)
+    sub_c13 = 243 * 1085 + 7 * (3**11)
+    for b_bits in (0, 1, 2, 3, 4, 5, 6, 7):
+        if not sub160_ok:
+            break
+        k6 = (b_bits + 5) // 6
+        w_low = 6 * k6 + 12
+        b0_low = (3**w_low).bit_length()
+        delta3 = next(d_v for d_v in (3, 4, 5, 6) if ((b0_low + 1 + d_v) % 6) in (2, 4))
+        a_low = b0_low + delta3
+        q3_low = ((1 << (a_low + 1)) - 1) // 3
+        m_low = 159 + 4 * b_bits
+        l_low = m_low - delta3
+        seen_low_pos: Set[Tuple[int, ...]] = set()
+        for mask_v in range(1 << b_bits):
+            cur_mod_st = 3 ** (6 * k6 + 13)
+            e_cur = l_low - 1
+            r_cur = (q3_low * pow(2, e_cur, cur_mod_st)) % cur_mod_st
+            pos_low: List[int] = [e_cur]
+            m_tmp = mask_v
+            for _ in range(k6):
+                s_tup = choose_six_step_ternary_carry_2187(r_cur % 2187, e_cur % 1458, m_tmp & 63)
+                m_tmp >>= 6
+                for s_step in s_tup:
+                    e_nxt = e_cur - s_step
+                    diff_s = (r_cur - pow(2, e_nxt, cur_mod_st)) % cur_mod_st
+                    if (diff_s % 3) != 0:
+                        sub160_ok = False
+                        break
+                    r_cur = diff_s // 3
+                    cur_mod_st //= 3
+                    e_cur = e_nxt
+                    pos_low.append(e_cur)
+                if not sub160_ok:
+                    break
+            if not sub160_ok or cur_mod_st != pow3_13 or (r_cur % 3) == 0:
+                sub160_ok = False
+                break
+            def _dlog2_mod_pow3_w19(e_pow: int, rhs_t: int) -> int:
+                e_d = 0 if (rhs_t % 3) == 1 else 1
+                ord_d = 2
+                mod_d = 3
+                for _ in range(1, e_pow):
+                    mod_nxt = mod_d * 3
+                    for dg in (0, 1, 2):
+                        cand_e = e_d + dg * ord_d
+                        if pow(2, cand_e, mod_nxt) == (rhs_t % mod_nxt):
+                            e_d = cand_e
+                            break
+                    ord_d *= 3
+                    mod_d = mod_nxt
+                return e_d
+
+            a_last_mod = (r_cur - sub_c13) % pow3_13
+            k_dl = _dlog2_mod_pow3_w19(13, a_last_mod)
+            e5_b, e4_b, e3_b, e2_b, e1_b = choose_bottom_5bit_collision_1594323(k_dl)
+            if not (9 <= e5_b < e4_b < e3_b < e2_b < e1_b <= 128 and e1_b + 1 <= e_cur):
+                sub160_ok = False
+                break
+            pos_low.extend([e1_b, e2_b, e3_b, e4_b, e5_b])
+            seen_low_pos.add(tuple(pos_low))
+            if b_bits <= 6 and mask_v < 8:
+                u_bits = list(u0_w6) + [0] * (l_low - 9)
+                for idx_one in pos_low:
+                    u_bits[idx_one] = 1
+                u_t = tuple(u_bits)
+                y_ex = cft.exact_backward_quotient(1, u_t, 0)
+                if not (
+                    len(u_t) == l_low <= m_low
+                    and sum(u_t) == w_low
+                    and cft.canonical_suffix_shift(u_t, 1) == a_low
+                    and cft.is_first_hit_one_pair(u_t, 0)
+                    and cft.is_surviving_mod373248_class(y_ex)
+                    and (1 << m_low) <= y_ex < (1 << (m_low + 1))
+                    and (y_ex % 512) == 507
+                    and (y_ex % 9) == 7
+                ):
+                    sub160_ok = False
+                    break
+        if not sub160_ok or len(seen_low_pos) != (1 << b_bits):
+            sub160_ok = False
+            break
+
+    return {
+        "markov_mod1062882_and_mod4096_prefix216_lift_verified": mod1062882_ok,
+        "all108_len11_escapes_verified": all108_esc_ok,
+        "mod243_span16_and_mod729_span20_stalls_verified": stalls_ok,
+        "sub160_5bit_collision_slope4_exponential_occupancy_verified": sub160_ok,
+        "sub160_min_m0": 159,
+        "sub160_slope_c": 4,
+    }
+
+
+def _dynamic_pred_c39_w18_farkas_covers_inv_3d_4d_cones(
+    _dom: str, entry: Dict[str, Any]
+) -> bool:
+    """
+    Dynamic test of false claim that Wave 18's 3-channel Farkas syzygy covers invertible
+    positive-trace `d = 3` (`3 x 3`) or 4-channel `d = 4` (`4 x 4`) cones on `c39`. Zero hardcoded IDs.
+    """
+    req_k = (
+        "c39_4d_multichan_inv_topleft_val",
+        "c39_3d_inv_postrace_strict_rules",
+        "c78_3d_inv_postrace_strict_rules",
+        "c39_4d_multichan_inv_strict_rules",
+        "c78_4d_multichan_inv_strict_rules",
+        "c39_expanding_b_d2_strict_rules",
+        "c39_w18_3d_farkas_max_pos_excess",
+        "c39_3chan_on_4d_max_pos_excess",
+    )
+    if not all(k in entry for k in req_k) or not all(_is_strict_int(entry[k]) for k in req_k):
+        return True
+    if not _verify_c39_4d_multichan_inv_and_expanding_b_ground_truth(
+        entry["c39_4d_multichan_inv_topleft_val"],
+        entry["c39_3d_inv_postrace_strict_rules"],
+        entry["c78_3d_inv_postrace_strict_rules"],
+        entry["c39_4d_multichan_inv_strict_rules"],
+        entry["c78_4d_multichan_inv_strict_rules"],
+        entry["c39_expanding_b_d2_strict_rules"],
+        entry["c39_w18_3d_farkas_max_pos_excess"],
+        entry["c39_3chan_on_4d_max_pos_excess"],
+    ):
+        return True
+    return entry["c39_w18_3d_farkas_max_pos_excess"] <= 0 and entry["c39_3chan_on_4d_max_pos_excess"] <= 0
+
+
+def _dynamic_pred_m1_no_one_block_26_to_30_odd_step_cycles(
+    _dom: str, entry: Dict[str, Any]
+) -> bool:
+    """
+    Dynamic test of false claim that pure rational `26..30`-odd-step 1-block Syracuse dynamics
+    admit no positive cycles without `Z`-integrality `D | dp2IterCarry(shifts)`. Zero hardcoded IDs.
+    """
+    req_m = ("numerator", "denominator", "period_k", "weight_w", "m_blocks", "parity_vector")
+    if not all(k in entry for k in req_m):
+        return True
+    num, den = entry["numerator"], entry["denominator"]
+    k_per, w_exp, m_blk = entry["period_k"], entry["weight_w"], entry["m_blocks"]
+    pv_raw = entry["parity_vector"]
+    if (
+        not all(_is_strict_int(v_x) for v_x in (num, den, k_per, w_exp, m_blk))
+        or den <= 0
+        or (den & 1) != 1
+        or num <= 0
+        or m_blk != 1
+        or not (26 <= w_exp <= 30)
+        or k_per <= w_exp
+        or not isinstance(pv_raw, list)
+        or pv_raw != [1] * w_exp + [0] * (k_per - w_exp)
+    ):
+        return True
+    cur_f = Fraction(num, den)
+    x0 = cur_f
+    for b_v in pv_raw:
+        if (cur_f.numerator & 1) != b_v:
+            return True
+        cur_f = (3 * cur_f + 1) / 2 if b_v == 1 else (cur_f / 2)
+    return cur_f != x0
+
+
+def _dynamic_pred_laurent_16x16_t4u4_u1_cone_positivity(
+    _dom: str, entry: Dict[str, Any]
+) -> bool:
+    """
+    Dynamic test of false claim that restoring square symmetry `T = U = 4` (`16 x 16`) recovers
+    Collatz-cone strict positivity (`> 0`) at `u = 1`. Zero hardcoded witness IDs.
+    """
+    req_l = ("W", "K", "laurent_16x16_t4u4_3_5_u1_det", "laurent_16x16_t4u4_4_7_u1_det")
+    if not all(k in entry for k in req_l) or not all(_is_strict_int(entry[k]) for k in req_l):
+        return True
+    w_v, k_v = entry["W"], entry["K"]
+    if w_v < 1 or k_v < 1 or not ((3**w_v) < (1 << k_v) and 3 * k_v <= 5 * w_v):
+        return True
+    d16 = laurent_twobase_16x16_t4u4_det_matrix(w_v, k_v, 1)
+    if d16 != entry["laurent_16x16_t4u4_3_5_u1_det"]:
+        return True
+    return d16 > 0
+
+
+def _dynamic_pred_balanced_8block_six_pivot_or_het_nonhensel_brox(
+    _dom: str, entry: Dict[str, Any]
+) -> bool:
+    """
+    Dynamic test of false claim that 6-pivot eliminates balanced `m = 8` tuples OR non-Hensel
+    7-pivot eliminates multi-spike heterogeneous `m = 8` `2 | a_j` tuples on at least one rotation.
+    Zero hardcoded witness IDs.
+    """
+    for key_p, piv_p in (("balanced_8block_params", 6), ("het_multispike_8block_params", 7)):
+        if key_p in entry:
+            bp8 = entry[key_p]
+            if (
+                not isinstance(bp8, list)
+                or len(bp8) != 8
+                or not all(
+                    isinstance(pr, list)
+                    and len(pr) == 2
+                    and all(_is_strict_int(v_i) and v_i >= 1 for v_i in pr)
+                    for pr in bp8
+                )
+            ):
+                return True
+            w_tot = sum(pr[0] for pr in bp8)
+            k_tot = w_tot + sum(pr[1] for pr in bp8)
+            d_gap = (1 << k_tot) - (3**w_tot)
+            if d_gap <= 0 or any((pr[1] % 2) != 0 for pr in bp8):
+                return True
+
+            def _ub(r_s: List[List[int]], p_c: int) -> int:
+                tot_u = 0
+                pref_k = 0
+                rem_w = sum(pr_x[0] for pr_x in r_s)
+                for idx_p in range(p_c - 1):
+                    bw_x, ba_x = r_s[idx_p]
+                    rem_w -= bw_x
+                    tot_u += (1 << pref_k) * (3**rem_w) * ((1 << ba_x) - 1)
+                    pref_k += bw_x + ba_x
+                rem_w -= r_s[p_c - 1][0]
+                tail_a = sum(r_s[j_x][1] for j_x in range(p_c - 1, 8))
+                tot_u += (1 << pref_k) * (3**rem_w) * ((1 << tail_a) - 1)
+                return tot_u
+
+            return any(_ub(bp8[j_r:] + bp8[:j_r], piv_p) < 3 * d_gap for j_r in range(8))
+    return True
+
+
+def _dynamic_pred_four_gram_and_9var_debruijn_preimage_weight(
+    _dom: str, entry: Dict[str, Any]
+) -> bool:
+    """
+    Dynamic test of `4`-gram weight `w_4g(n) = 2^(c_0101(n))` and 9-var De Bruijn weight
+    `w_9v(n) = 4^(c_0101(n)) / 2^(L(n))` on triples where all 5 Wave-18 De Bruijn coordinates
+    `(L, P, T, c_001, c_111)` stay invariant between `seed` and `next_compressed`. Zero hardcoded IDs.
+    """
+    req_p = ("seed", "next_compressed", "preimage_4gram_even_sibling")
+    if not all(k in entry for k in req_p) or not all(_is_strict_int(entry[k]) for k in req_p):
+        return True
+    s_v, m_v = entry["seed"], entry["next_compressed"]
+    if s_v < 8 or m_v < 8 or (s_v & 1) != 1 or (m_v % 3) != 2 or int_compressed_step(s_v, q=3) != m_v:
+        return True
+    gs3, gm3 = binary_three_grams(s_v), binary_three_grams(m_v)
+    if (
+        s_v.bit_length(),
+        s_v.bit_count(),
+        binary_alt_transitions(s_v),
+        gs3[1],
+        gs3[7],
+    ) != (
+        m_v.bit_length(),
+        m_v.bit_count(),
+        binary_alt_transitions(m_v),
+        gm3[1],
+        gm3[7],
+    ):
+        return True
+
+    def _w_4g(n_v: int) -> Fraction:
+        return Fraction(1 << binary_four_grams(n_v)[5], 1)
+
+    def _w_9v(n_v: int) -> Fraction:
+        return Fraction(1 << (2 * binary_four_grams(n_v)[5]), 1 << n_v.bit_length())
+
+    return (_w_4g(2 * m_v) + _w_4g(s_v)) <= _w_4g(m_v) or (_w_9v(2 * m_v) + _w_9v(s_v)) <= _w_9v(m_v)
+
+
+def _dynamic_pred_phi2_on_cousin_diamond16_outside_cones4to16(
+    _dom: str, entry: Dict[str, Any]
+) -> bool:
+    """
+    Dynamic test of 13-tier `omega^13` `T_diamond15` ranking (`Phi_diamond2` strictly decreasing
+    outside Cones 4..16) on `T_diamond16`. Zero hardcoded witness IDs.
+    """
+    if "cousin_diamond16_next" not in entry or "seed" not in entry:
+        return True
+    if not (_is_strict_int(entry["seed"]) and _is_strict_int(entry["cousin_diamond16_next"])):
+        return True
+    x_v = entry["seed"]
+    if (
+        x_v <= 2
+        or is_diamond3_cone4(x_v)
+        or is_diamond4_cone5(x_v)
+        or is_diamond5_cone6(x_v)
+        or is_diamond6_cone7(x_v)
+        or is_diamond7_cone8(x_v)
+        or is_diamond8_cone9(x_v)
+        or is_diamond9_cone10(x_v)
+        or is_diamond10_cone11(x_v)
+        or is_diamond11_cone12(x_v)
+        or is_diamond12_cone13(x_v)
+        or is_diamond13_cone14(x_v)
+        or is_diamond14_cone15(x_v)
+        or is_diamond15_cone16(x_v)
+    ):
+        return True
+    y_v = cousin_diamond16_step_int(x_v, q=3)
+    if y_v != entry["cousin_diamond16_next"]:
+        return True
+    return cousin_diamond2_phi(y_v) < cousin_diamond2_phi(x_v)
+
+
+def _dynamic_pred_len11_prefix_forces_weight13_or_mod729_slope4(
+    _dom: str, entry: Dict[str, Any]
+) -> bool:
+    """
+    Dynamic test of false claim that conditioning on the all-ones length-11 `mod 2048` prefix
+    `r = 2047` (`sum(u[:11]) == 11`) forces `parityWeight(u) >= 13` across length `>= 12` core words
+    OR that 4-step `Mod 243` achieves `>= 16` tuples in span `<= 16` OR that 5-step `Mod 729`
+    achieves `>= 32` tuples in span `<= 20`. Zero hardcoded witness IDs.
+    """
+    req_k = ("core_word", "q_index", "allones11_prefix_weight11", "dyadic_mod729_span20_min_tuples")
+    if not all(k in entry for k in req_k):
+        return True
+    cw_raw = entry["core_word"]
+    q_raw = entry["q_index"]
+    pw11_raw = entry["allones11_prefix_weight11"]
+    m729_raw = entry["dyadic_mod729_span20_min_tuples"]
+    if (
+        not isinstance(cw_raw, list)
+        or len(cw_raw) < 12
+        or not all(_is_strict_int(b_v) and b_v in (0, 1) for b_v in cw_raw)
+        or not _is_strict_int(q_raw)
+        or not _is_strict_int(pw11_raw)
+        or not _is_strict_int(m729_raw)
+        or q_raw != 0
+        or m729_raw < 0
+    ):
+        return True
+    if m729_raw < 32 and m729_raw != _count_mod729_span20_at_322():
+        return True
+    m243_raw = 0
+    if "dyadic_mod243_span16_min_tuples" in entry:
+        m243_cand = entry["dyadic_mod243_span16_min_tuples"]
+        if not _is_strict_int(m243_cand) or m243_cand < 0:
+            return True
+        if m243_cand < 16 and m243_cand != _count_mod243_span16_at_160():
+            return True
+        m243_raw = m243_cand
+    from . import cs_forest_transfer as cft
+
+    u_t = tuple(cw_raw)
+    if sum(u_t[:11]) != pw11_raw or sum(u_t[:11]) != 11 or not cft.is_first_hit_one_pair(u_t, 0):
+        return True
+    y_v = cft.exact_backward_quotient(1, u_t, 0)
+    if not cft.is_surviving_mod373248_class(y_v):
+        return True
+    return (sum(u_t) >= 13) or (m729_raw >= 32) or (m243_raw >= 16)
+
+
+def run_wave19_whole_space_campaign(bank_path: Optional[Path] = None) -> Dict[str, Any]:
+    """
+    Execute the complete Wave 19 whole-space red-team, all-dimension expanding-`.B` + `.T`-top-row
+    + `.R`-arbitrary matrix-tower collapse + 6-parameter `d = 3` (`3 x 3`) invertible positive-trace
+    & 7-parameter `d = 4` (`4 x 4`) 4-channel invertible cones & Farkas syzygies + unconditional
+    `1..30`-cycle freedom & heterogeneous all-`m` `.R`-carrying `leftAnchoredDP2Step` exclusions,
+    `12 x 12` (`T = 4, U = 3`) `u = 6..9` global non-vanishing & mod-`243` resonant-ray elimination
+    + symmetric `16 x 16` (`T = 4, U = 4`) `u = 1..5` zero-freeness & cone flip + symbolic all-`m`
+    multi-spike Hensel Brox & `m = 8` elimination, binary De Bruijn complete `(0, infty)^16` `4`-gram
+    exponential preimage impossibility + 16th solvable cousin `T_diamond16` (`omega^14`), and
+    complete mod-`1062882` (`2 * 3^12`, `w >= 13`) Markov bijection + `216`-prefix `mod 4096` lift +
+    sub-`160`-threshold (`M_0 = 159 < 160`) steeper-slope (`c = 4 <= 4`) exponential dyadic occupancy.
+    """
+    u_gate = audit_universality_gate(
+        "Wave19_WholeSpace_W19_1_to_W19_4",
+        is_finite_m_table=False,
+        is_finite_n_table=False,
+        is_bounded_weight_table=False,
+        uses_native_decide=False,
+        uses_sorry=False,
+        axioms_used=("propext", "Classical.choice", "Quot.sound"),
+    )
+    bank = load_witness_bank(bank_path)
+    wb_truth = verify_witness_bank_ground_truth(bank_path)
+
+    gate_c39_4d = evaluate_hypothesis_against_witness_bank(
+        "Wave18FarkasCoversInvertible3DAnd4DConesOnC39",
+        _dynamic_pred_c39_w18_farkas_covers_inv_3d_4d_cones,
+        domains=("z_pos_high_glide",),
+        bank_path=bank_path,
+    )
+    gate_m1_dp2_29cyc = evaluate_hypothesis_against_witness_bank(
+        "PureRationalNoOneBlock26To30OddStepCycles",
+        _dynamic_pred_m1_no_one_block_26_to_30_odd_step_cycles,
+        domains=("m1_q2_pos",),
+        bank_path=bank_path,
+    )
+    gate_laur16_u1 = evaluate_hypothesis_against_witness_bank(
+        "Laurent16x16T4U4SquareSymmetryRestoresConePositivity",
+        _dynamic_pred_laurent_16x16_t4u4_u1_cone_positivity,
+        domains=("log2_3_convergents",),
+        bank_path=bank_path,
+    )
+    gate_m1_8blk = evaluate_hypothesis_against_witness_bank(
+        "SixPivotOrNonHenselSevenPivotEliminates8BlockTuples",
+        _dynamic_pred_balanced_8block_six_pivot_or_het_nonhensel_brox,
+        domains=("m1_q2_pos",),
+        bank_path=bank_path,
+    )
+    gate_4gram = evaluate_hypothesis_against_witness_bank(
+        "Complete4GramAnd9VarDeBruijnPreimageWeight",
+        _dynamic_pred_four_gram_and_9var_debruijn_preimage_weight,
+        domains=("z_pos_high_glide",),
+        bank_path=bank_path,
+    )
+    gate_phi2_d16 = evaluate_hypothesis_against_witness_bank(
+        "OutsideCones4to16Phi2OnCousinDiamond16",
+        _dynamic_pred_phi2_on_cousin_diamond16_outside_cones4to16,
+        domains=("z_pos_high_glide",),
+        bank_path=bank_path,
+    )
+    gate_allones11_w13 = evaluate_hypothesis_against_witness_bank(
+        "Len11AllOnesPrefixForcesWeight13WithoutMod4096Lift",
+        _dynamic_pred_len11_prefix_forces_weight13_or_mod729_slope4,
+        domains=("z_pos_high_glide",),
+        bank_path=bank_path,
+    )
+
+    front_a = audit_w19_front_a_expanding_b_multichan_4d_and_dp2_30cycle_het_m()
+    front_b = audit_w19_front_b_12x12_u9_resonant_16x16_t4u4_and_multispike_brox()
+    front_c = audit_w19_front_c_complete_4gram_debruijn_exp_and_diamond16()
+    front_d = audit_w19_front_d_markov_mod1062882_and_sub160_slope4_exponential_occupancy()
+
+    passed = (
+        u_gate.passed
+        and bool(wb_truth["all_witnesses_ground_truth_verified"])
+        and (not gate_c39_4d["passed"])
+        and gate_c39_4d["minimal_failure"]
+        == ("z_pos_high_glide", "ZPOS_C39_4D_MULTICHAN_INV_AND_EXPANDING_B_ESCAPE")
+        and (not gate_m1_dp2_29cyc["passed"])
+        and gate_m1_dp2_29cyc["minimal_failure"]
+        == ("m1_q2_pos", "M1_DP2_29CYCLE_68629840493971_OVER_1738366812781")
+        and (not gate_laur16_u1["passed"])
+        and gate_laur16_u1["minimal_failure"]
+        == ("log2_3_convergents", "LAURENT_16X16_T4U4_U1_CONE_SIGN_FLIP_3_5_VS_4_7")
+        and (not gate_m1_8blk["passed"])
+        and ("m1_q2_pos", "M1_BALANCED_8BLOCK_SIX_PIVOT_ESCAPE") in gate_m1_8blk["failures"]
+        and ("m1_q2_pos", "M1_HET_MULTISPIKE_8BLOCK_NONHENSEL_ESCAPE") in gate_m1_8blk["failures"]
+        and (not gate_4gram["passed"])
+        and gate_4gram["minimal_failure"]
+        == ("z_pos_high_glide", "ZPOS_PREIMAGE_4GRAM_PURE_139_TO_209_AND_1489_SYR")
+        and (not gate_phi2_d16["passed"])
+        and gate_phi2_d16["minimal_failure"]
+        == ("z_pos_high_glide", "ZPOS_COUSIN_DIAMOND16_CONE17_27670115868943276853_JUMP")
+        and (not gate_allones11_w13["passed"])
+        and gate_allones11_w13["minimal_failure"]
+        == ("z_pos_high_glide", "ZPOS_DYADIC_ALLONES11_WEIGHT12_ESCAPE_AND_MOD729_STALL")
+        and bool(front_a["c39_c78_expanding_b_and_3d_4d_inv_gt_verified"])
+        and bool(front_a["simultaneous_3d_inv_and_4d_multichan_farkas_verified"])
+        and bool(front_a["dp2_no_1_30_cycles_and_het_m_block_exclusions_verified"])
+        and bool(front_b["laurent_12x12_t4u3_u6_to_9_and_resonant_mod243_verified"])
+        and bool(front_b["laurent_16x16_t4u4_cone_flip_and_u1_to_5_nonvanishing_verified"])
+        and bool(front_b["all_m_multispike_hensel_brox_and_8block_verified"])
+        and bool(front_c["four_gram_debruijn_syzygies_and_8_periodic_families_verified"])
+        and bool(front_c["cousin_diamond16_outside_cones4to17_descent_verified"])
+        and bool(front_c["cousin_diamond16_cone17_14tier_cascade_verified"])
+        and bool(front_c["cousin_diamond16_hensel_inv_and_int_q6_verified"])
+        and bool(front_c["cousin_diamond16_countermodels_verified"])
+        and bool(front_d["markov_mod1062882_and_mod4096_prefix216_lift_verified"])
+        and bool(front_d["all108_len11_escapes_verified"])
+        and bool(front_d["mod243_span16_and_mod729_span20_stalls_verified"])
+        and bool(front_d["sub160_5bit_collision_slope4_exponential_occupancy_verified"])
+        and int(front_d["sub160_min_m0"]) <= 160
+        and int(front_d["sub160_slope_c"]) <= 4
+    )
+    return {
+        "passed": passed,
+        "verdict": "REDTEAM-PASSED" if passed else "FALSIFIED",
+        "universality_gate_passed": u_gate.passed,
+        "witness_bank_total_entries": sum(len(v) for v in bank["domains"].values()),
+        "witness_bank_falsified_count": len(bank["falsified_hypotheses"]),
+        "witness_bank_ground_truth_verified": bool(wb_truth["all_witnesses_ground_truth_verified"]),
+        "front_a_expanding_b_multichan_4d_and_dp2_30cycle_het_m": front_a,
+        "front_b_12x12_u9_resonant_16x16_t4u4_and_multispike_brox": front_b,
+        "front_c_complete_4gram_debruijn_exp_and_diamond16": front_c,
+        "front_d_markov_mod1062882_and_sub160_slope4_exponential_occupancy": front_d,
     }

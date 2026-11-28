@@ -32,4 +32,6 @@ import CollatzFormal.Wave17WholeSpaceCore
 import CollatzFormal.Wave17WholeSpace
 import CollatzFormal.Wave18WholeSpaceCore
 import CollatzFormal.Wave18WholeSpace
+import CollatzFormal.Wave19WholeSpaceCore
+import CollatzFormal.Wave19WholeSpace
 

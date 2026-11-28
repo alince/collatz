@@ -101,7 +101,16 @@
         "seed": 184111,
         "compressed_steps_to_1": 27,
         "odd_weight": 6,
-        "core_word": [1, 1, 1, 1, 0, 1, 0, 1],
+        "core_word": [
+          1,
+          1,
+          1,
+          1,
+          0,
+          1,
+          0,
+          1
+        ],
         "q_index": 0,
         "survives_mod373248": true,
         "kills_mechanisms": [
@@ -115,7 +124,9 @@
         "sibling_seed": 5461,
         "compressed_steps_to_1": 8,
         "odd_weight": 1,
-        "core_word": [1],
+        "core_word": [
+          1
+        ],
         "q_index": 3,
         "v2_pow_seed": 1,
         "v3_pow_seed": 1,
@@ -216,9 +227,47 @@
         "seed": 184111,
         "compressed_steps_to_1": 27,
         "odd_weight": 6,
-        "core_word": [1, 1, 1, 1, 0, 1, 0, 1],
+        "core_word": [
+          1,
+          1,
+          1,
+          1,
+          0,
+          1,
+          0,
+          1
+        ],
         "q_index": 0,
-        "loop_core_word": [1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+        "loop_core_word": [
+          1,
+          1,
+          1,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
         "survives_mod373248": true,
         "kills_mechanisms": [
           "cross-ray injectivity claims (u1, q1) != (u2, q2) => exactBackwardQuotient 1 u1 q1 != exactBackwardQuotient 1 u2 q2 at q = 0 omitting IsFirstHitOnePair inside IsSurvivingMod373248Class"
@@ -232,9 +281,30 @@
         "bit_length_seed": 8,
         "bit_length_target": 8,
         "bit_length_even_sibling": 9,
-        "digit_sig_seed": [3, 3, 4, 3, 2, 3],
-        "digit_sig_target": [3, 2, 3, 4, 3, 4],
-        "digit_sig_even_sibling": [3, 2, 3, 4, 3, 4],
+        "digit_sig_seed": [
+          3,
+          3,
+          4,
+          3,
+          2,
+          3
+        ],
+        "digit_sig_target": [
+          3,
+          2,
+          3,
+          4,
+          3,
+          4
+        ],
+        "digit_sig_even_sibling": [
+          3,
+          2,
+          3,
+          4,
+          3,
+          4
+        ],
         "kills_mechanisms": [
           "non-algebraic Berg-Meinardus preimage weights depending arbitrarily on 6-tuple binary digit invariants (popcount(n), binRuns(n), alt01(n), popcount(n+1), binRuns(n+1), alt01(n+1)): 200 and 400 share (3, 2, 3, 4, 3, 4), forcing w(400) = w(200) and w(133) <= 0",
           "exponential digit-entropy preimage weights B^(alpha*bitLength + beta*popcount + gamma*binRuns) when paired with m = 4 and m = 11 (7 -> 11)",
@@ -257,10 +327,34 @@
         "seed": 9474989262494029914559180158261332877999850457196839609824416569371275282207997551,
         "compressed_steps_to_1": 285,
         "odd_weight": 8,
-        "core_word": [1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 1],
+        "core_word": [
+          1,
+          1,
+          1,
+          1,
+          0,
+          1,
+          1,
+          0,
+          1,
+          0,
+          0,
+          1
+        ],
         "q_index": 0,
         "survives_mod373248": true,
-        "shorter_l10_min_core_word": [1, 1, 1, 1, 1, 0, 1, 1, 0, 1],
+        "shorter_l10_min_core_word": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          1,
+          1,
+          0,
+          1
+        ],
         "kills_mechanisms": [
           "monotone length-growth hypotheses claiming min_{|u|=L} exactBackwardQuotient 1 u 0 increases with core length L inside IsSurvivingMod373248Class (L = 12 min leaf drops > 2.7e11-fold below L = 10 min leaf via Markov shift wrap)"
         ]
@@ -288,9 +382,40 @@
         "next_compressed": 800,
         "even_sibling": 1600,
         "sliding_window_width": 5,
-        "nonzero_windows_seed": [21, 10, 5, 2, 1, 16, 8, 4, 2, 1],
-        "nonzero_windows_target": [16, 8, 4, 18, 25, 12, 6, 3, 1],
-        "nonzero_windows_even_sibling": [16, 8, 4, 18, 25, 12, 6, 3, 1],
+        "nonzero_windows_seed": [
+          21,
+          10,
+          5,
+          2,
+          1,
+          16,
+          8,
+          4,
+          2,
+          1
+        ],
+        "nonzero_windows_target": [
+          16,
+          8,
+          4,
+          18,
+          25,
+          12,
+          6,
+          3,
+          1
+        ],
+        "nonzero_windows_even_sibling": [
+          16,
+          8,
+          4,
+          18,
+          25,
+          12,
+          6,
+          3,
+          1
+        ],
         "kills_mechanisms": [
           "width-5 sliding-window k-gram preimage weights (which separate Wave 7's 200 vs 400 via 01000 vs 10000 yet collide identically on 800 = 25*32 vs 1600 = 25*64)",
           "arbitrary W_win-bit non-zero sliding-window profile preimage weights coupled with non-separable (zeroWindowCount, bitLength) polynomials along m_{W,k} = 3*4^(W+k) + 2^(2W+1)"
@@ -312,9 +437,21 @@
         "seed": 3,
         "compressed_steps_to_1": 5,
         "odd_weight": 2,
-        "core_word": [1, 1],
+        "core_word": [
+          1,
+          1
+        ],
         "q_index": 0,
-        "loop_core_word": [1, 1, 0, 0, 0, 1, 0, 1],
+        "loop_core_word": [
+          1,
+          1,
+          0,
+          0,
+          0,
+          1,
+          0,
+          1
+        ],
         "kills_mechanisms": [
           "cross-scale |u1| < |u2| global q = 0 leaf injectivity claims omitting IsFirstHitOnePair or restricting collisions to single-loop m = 0 extensions (double {1,2}-loop m = 1 extension [1,1,0,0,0,1,0,1] collides with [1,1] at y0 = 3)"
         ]
@@ -347,9 +484,19 @@
         "seed": 5,
         "compressed_steps_to_1": 4,
         "odd_weight": 1,
-        "core_word": [1],
+        "core_word": [
+          1
+        ],
         "q_index": 1,
-        "mixed_q0_unroll_word": [1, 0, 0, 0, 1, 0, 1],
+        "mixed_q0_unroll_word": [
+          1,
+          0,
+          0,
+          0,
+          1,
+          0,
+          1
+        ],
         "kills_mechanisms": [
           "raw cross-regime disjointness claims between q = 0 leaves and q >= 1 rays omitting IsFirstHitOnePair on the q = 0 leaf (loopUnroll([1], 1, 1) = [1,0,0,0,1,0,1] at q = 0 collides with ([1], q = 1) at y = 5)"
         ]
@@ -384,11 +531,25 @@
         "seed": 301,
         "compressed_steps_to_1": 13,
         "odd_weight": 3,
-        "core_word": [1, 0, 0, 1, 0, 1],
+        "core_word": [
+          1,
+          0,
+          0,
+          1,
+          0,
+          1
+        ],
         "q_index": 0,
         "dyadic_window_exp_m": 8,
         "dyadic_partner_seed": 403,
-        "dyadic_partner_core_word": [1, 1, 0, 0, 1, 1],
+        "dyadic_partner_core_word": [
+          1,
+          1,
+          0,
+          0,
+          1,
+          1
+        ],
         "kills_mechanisms": [
           "weight-blind dyadic-window [2^M, 2^(M+1)) shift-pinning claims asserting equal (M, L) alone determines canonicalSuffixShift u 1 without fixing parityWeight w: inside [256, 512) (M = 8) at L = 6, first-hit leaves 301 (w = 3, a = 7) and 403 (w = 4, a = 9) realize distinct odd shifts"
         ]
@@ -422,11 +583,25 @@
         "seed": 69,
         "compressed_steps_to_1": 11,
         "odd_weight": 3,
-        "core_word": [1, 0, 0, 0, 1, 0, 0, 1],
+        "core_word": [
+          1,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          1
+        ],
         "q_index": 0,
         "dyadic_length_window_m": 6,
         "dyadic_length_partner_seed": 75,
-        "dyadic_length_partner_word": [1, 1, 0, 1],
+        "dyadic_length_partner_word": [
+          1,
+          1,
+          0,
+          1
+        ],
         "dyadic_supercritical_seed": 111,
         "dyadic_supercritical_excess": 11,
         "kills_mechanisms": [
@@ -504,11 +679,37 @@
         "seed": 369,
         "compressed_steps_to_1": 15,
         "odd_weight": 4,
-        "core_word": [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+        "core_word": [
+          1,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          1
+        ],
         "q_index": 0,
         "dyadic_subcrit_window_m": 8,
         "dyadic_subcrit_partner_seed": 373,
-        "dyadic_subcrit_partner_word": [1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1],
+        "dyadic_subcrit_partner_word": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
         "dyadic_subcrit_shared_shift": 3,
         "dyadic_subcrit_carry_diff": 324,
         "kills_mechanisms": [
@@ -536,8 +737,18 @@
         "glide_peak": 19682,
         "dp2_coupled_chain_steps": 8,
         "dp2_coupled_end_odd": 13121,
-        "det_nonmonotone_lhs": [2, 2, 2, 2],
-        "det_nonmonotone_rhs": [2, 0, 0, 2],
+        "det_nonmonotone_lhs": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "det_nonmonotone_rhs": [
+          2,
+          0,
+          0,
+          2
+        ],
         "kills_mechanisms": [
           "finite-feature .L-to-.R coupled rankings V(F(u)) (F : List MixedSRSSym -> Fin M_feat, covering arbitrary two-boundary (W_pref, W_suf) windows coupled with global base-2 decode mod P or Q-state two-way automata) on leftAnchoredDP2Step and naive determinant monotonicity A >= B => det(A) >= det(B) on full-rank d = 2 non-triangular matrices: 511 = 2^9 - 1 executes 8 consecutive .R-carrying leftAnchoredDP2Step transitions (511 -> 767 -> ... -> 13121; in general 2^(M_feat+1) - 1 executes M_feat transitions, forcing a pigeonhole collision F(u_i) == F(u_j)), while [[2, 2], [2, 2]] >= [[2, 0], [0, 2]] has det = 0 < 4"
         ]
@@ -546,7 +757,13 @@
         "witness_id": "ZPOS_MOD3K_EVEN_SPINE_4_AND_BASE_5_4_COLLAPSE",
         "seed": 4,
         "compressed_steps_to_1": 2,
-        "even_spine_2step_64x": [4, 16, 256, 1024, 16384],
+        "even_spine_2step_64x": [
+          4,
+          16,
+          256,
+          1024,
+          16384
+        ],
         "base_5_4_collapse_k": 2,
         "base_5_4_collapse_xk": 17,
         "kills_mechanisms": [
@@ -568,9 +785,14 @@
         "witness_id": "ZPOS_DYADIC_M5_EMPTY_WINDOW_VS_M4_27_AND_M6_111_127",
         "seed": 27,
         "compressed_steps_to_1": 70,
-        "dyadic_m4_surviving_leaves": [27],
+        "dyadic_m4_surviving_leaves": [
+          27
+        ],
         "dyadic_m5_empty_window": 5,
-        "dyadic_m6_surviving_leaves": [111, 127],
+        "dyadic_m6_surviving_leaves": [
+          111,
+          127
+        ],
         "kills_mechanisms": [
           "all-scale (forall M >= 4) lower-bound dyadic-window occupancy claims asserting dyadicWindowSurvivingQ0Leaves L_max M is non-empty for every M >= 4: while M = 4 ([16, 32)) contains surviving first-hit q = 0 leaf [27] and M = 6 ([64, 128)) contains [111, 127], dyadic window M = 5 ([32, 64)) contains ZERO IsSurvivingMod373248Class integers and hence 0 surviving leaves across ALL L_max >= 1"
         ]
@@ -616,7 +838,18 @@
         "witness_id": "ZPOS_DYADIC_LEN10_WEIGHT7_LOW_PREFIX_ESCAPE",
         "seed": 8389569697265922310419097925201964118140155424483881568313082174254861915275664592848718987142663691099,
         "compressed_steps_to_1": 353,
-        "core_word": [1, 1, 0, 1, 1, 1, 0, 1, 0, 1],
+        "core_word": [
+          1,
+          1,
+          0,
+          1,
+          1,
+          1,
+          0,
+          1,
+          0,
+          1
+        ],
         "q_index": 0,
         "survives_mod373248": true,
         "low_prefix_weight9": 6,
@@ -629,7 +862,10 @@
         "witness_id": "ZPOS_C39_BOUNDARY_TOPLEFT_GROWTH_VS_INTERIOR_UNIT_LOCK",
         "seed": 27,
         "compressed_steps_to_1": 70,
-        "c39_boundary_pair": [6, 9],
+        "c39_boundary_pair": [
+          6,
+          9
+        ],
         "c39_boundary_topleft_val": 2,
         "c39_active_interior_count": 21,
         "c39_bt_nontri_strict_rules": 24,
@@ -669,7 +905,24 @@
         "witness_id": "ZPOS_DYADIC_LEN16_WEIGHT8_MED_PREFIX_ESCAPE",
         "seed": 1340663463,
         "compressed_steps_to_1": 43,
-        "core_word": [1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1],
+        "core_word": [
+          1,
+          1,
+          1,
+          0,
+          1,
+          1,
+          0,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
         "q_index": 0,
         "survives_mod373248": true,
         "med_prefix_weight9": 7,
@@ -720,7 +973,60 @@
         "witness_id": "ZPOS_DYADIC_LEN11_WEIGHT9_HIGH_PREFIX_ESCAPE",
         "seed": 145023390002129744557057965701200958845287,
         "compressed_steps_to_1": 151,
-        "core_word": [1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+        "core_word": [
+          1,
+          1,
+          1,
+          0,
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
         "q_index": 0,
         "survives_mod373248": true,
         "high8_prefix_weight9": 8,
@@ -752,9 +1058,24 @@
         "preimage_4var_shared_popcount": 5,
         "preimage_4var_seed_one_runs": 2,
         "preimage_4var_target_one_runs": 5,
-        "preimage_2gram_seed": [2, 1, 1, 3],
-        "preimage_2gram_target": [0, 4, 4, 0],
-        "preimage_2gram_even_sibling": [0, 4, 5, 0],
+        "preimage_2gram_seed": [
+          2,
+          1,
+          1,
+          3
+        ],
+        "preimage_2gram_target": [
+          0,
+          4,
+          4,
+          0
+        ],
+        "preimage_2gram_even_sibling": [
+          0,
+          4,
+          5,
+          0
+        ],
         "kills_mechanisms": [
           "coupled 4-variable (binBitLength, binaryPopcount, binaryAltTransitions, binaryOneRuns) and complete 2-gram (c_00, c_01, c_10, c_11) two-sided exponential Berg-Meinardus preimage weights (such as w(n) = 2^(P(n)) / (2^(L(n)) * 4^(R_1(n))) and w(n) = 2^(c_00(n) + c_11(n)) / 4^(c_01(n) + c_10(n)), both of which strictly contract on 4^s + 1 <- (2*4^s + 1)/3): at m = 341 <- (682, 227), binaryPopcount stays invariant at 5 while binaryOneRuns drops 5 -> 2 and 2-grams jump [0, 4, 4, 0] -> [2, 1, 1, 3], refuting all (0, infty)^4 bases via squared-superharmonicity reduction to (L, P, T)"
         ]
@@ -774,7 +1095,173 @@
         "witness_id": "ZPOS_DYADIC_ALLONES9_WEIGHT10_PREFIX_ESCAPE",
         "seed": 6487840627110957342933758367292483113623774926335,
         "compressed_steps_to_1": 178,
-        "core_word": [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+        "core_word": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
         "q_index": 0,
         "survives_mod373248": true,
         "allones9_prefix_weight9": 9,
@@ -804,11 +1291,48 @@
         "seed": 535,
         "next_compressed": 803,
         "preimage_3gram_even_sibling": 1606,
-        "preimage_3gram_shared_4var": [10, 5, 4, 3],
-        "preimage_3gram_shared_2gram": [3, 2, 2, 2],
-        "preimage_3gram_seed": [2, 1, 1, 1, 1, 1, 0, 1],
-        "preimage_3gram_target": [1, 2, 1, 1, 2, 0, 1, 0],
-        "preimage_3gram_even": [1, 2, 1, 1, 2, 0, 2, 0],
+        "preimage_3gram_shared_4var": [
+          10,
+          5,
+          4,
+          3
+        ],
+        "preimage_3gram_shared_2gram": [
+          3,
+          2,
+          2,
+          2
+        ],
+        "preimage_3gram_seed": [
+          2,
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          1
+        ],
+        "preimage_3gram_target": [
+          1,
+          2,
+          1,
+          1,
+          2,
+          0,
+          1,
+          0
+        ],
+        "preimage_3gram_even": [
+          1,
+          2,
+          1,
+          1,
+          2,
+          0,
+          2,
+          0
+        ],
         "kills_mechanisms": [
           "complete 3-gram (c_000, c_001, c_010, c_011, c_100, c_101, c_110, c_111) and 5-variable (L, P, T, c_001, c_111) two-sided exponential Berg-Meinardus preimage weights (such as w_3g(n) = 2^(c_000(n) + c_111(n)) / 4^(c_001(n)) and w_5v(n) = 4^(c_111(n)) / (4^(c_001(n)) * 2^(L(n)))): at m = 803 <- (1606, 535), ALL FOUR coordinates (L, P, T, R_1) = (10, 5, 4, 3) AND ALL FOUR 2-grams (c_00, c_01, c_10, c_11) = (3, 2, 2, 2) stay 100% IDENTICAL between 535 and 803 while BOTH independent De Bruijn 3-grams shift (c_001: 2 -> 1, c_111: 0 -> 1), violating superharmonicity by 17x and 16.5x and motivating the 4 cardinal periodic families closing 100% of (0, infty)^8"
         ]
@@ -828,13 +1352,635 @@
         "witness_id": "ZPOS_DYADIC_ALLONES10_WEIGHT11_PREFIX_ESCAPE",
         "seed": 18045298623953582795729423582265437192090384467670343105690885553942878906000080934174237109098719535103271885410225272309068657920294140666879,
         "compressed_steps_to_1": 490,
-        "core_word": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+        "core_word": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
         "q_index": 0,
         "survives_mod373248": true,
         "allones10_prefix_weight10": 10,
         "allones10_escape_parity_weight": 11,
         "kills_mechanisms": [
           "claims that ANY of the 54 surviving length-10 mod-1024 prefixes (even the unique all-ones prefix r = 1023 = [1]^10) forces parityWeight(u) >= 12 on length >= 11 proper core extensions without lifting to mod 2048: [1]^10 ++ [0]^446 ++ [1] (length 457 >= 11, shift a = 33) produces a surviving Mod373248 first-hit q = 0 leaf with parityWeight(u) = 11 < 12, proving 0/54 length-10 prefixes force w(u) >= 12 and necessitating the mod-2048 (length-11, 108-prefix) lift where r = 2047 ([1]^11) forces w(u) >= 12 on 100% of length >= 12 extensions"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_C39_4D_MULTICHAN_INV_AND_EXPANDING_B_ESCAPE",
+        "seed": 27,
+        "compressed_steps_to_1": 70,
+        "c39_4d_multichan_inv_topleft_val": 2,
+        "c39_3d_inv_postrace_strict_rules": 39,
+        "c78_3d_inv_postrace_strict_rules": 78,
+        "c39_4d_multichan_inv_strict_rules": 39,
+        "c78_4d_multichan_inv_strict_rules": 78,
+        "c39_expanding_b_d2_strict_rules": 27,
+        "c39_w18_3d_farkas_max_pos_excess": 6,
+        "c39_3chan_on_4d_max_pos_excess": 1,
+        "kills_mechanisms": [
+          "claims that invertible positive-trace lower-right 2x2 subblocks D_t (det(D_t) >= 1, tr(D_t) >= 1) on d = 3 (3x3) or 4-channel cross-coupled d = 4 (4x4) mixed zero-diagonal cones cannot strictly orient 100% (39/39 on c39 and 78/78 on c78) of TwoSided SRS rules, OR that Wave 18 3-channel Farkas syzygies cover invertible positive-trace 3D/4D cones (escaped by +6 and +1), OR that expanding-.B + .T-top-row + .R-arbitrary omega^k matrix towers (27/39 strict matrix rules) remove rules"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_PREIMAGE_4GRAM_PURE_139_TO_209_AND_1489_SYR",
+        "seed": 139,
+        "next_compressed": 209,
+        "preimage_4gram_even_sibling": 418,
+        "preimage_4gram_shared_5var": [
+          8,
+          4,
+          4,
+          1,
+          0
+        ],
+        "preimage_4gram_seed": [
+          0,
+          1,
+          1,
+          0,
+          0,
+          1,
+          0,
+          0,
+          1,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        "preimage_4gram_target": [
+          0,
+          1,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          1,
+          0,
+          1,
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        "preimage_4gram_even": [
+          0,
+          1,
+          1,
+          0,
+          1,
+          0,
+          0,
+          0,
+          1,
+          0,
+          1,
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        "preimage_4gram_syr_seed": 1489,
+        "preimage_4gram_syr_next_odd": 1117,
+        "preimage_4gram_syr_shared_3gram": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          1,
+          1
+        ],
+        "kills_mechanisms": [
+          "complete 16-variable binary 4-gram (c_0000 .. c_1111) and 9-variable independent De Bruijn (L, P, T, c_001, c_111, c_0000, c_0011, c_0101, c_1111) Berg-Meinardus preimage weights: 139 -> 209 (even sibling 418 -> 209, 209 % 3 == 2) preserves 100% of all 5 Wave-18 De Bruijn coordinates (8, 4, 4, 1, 0) while flipping c_0101 from 1 to 0, and Syracuse step 1489 -> 1117 preserves all 8 binary 3-grams (1,1,1,1,1,2,1,1) identically while flipping c_0101 from 0 to 1"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_COUSIN_DIAMOND16_CONE17_27670115868943276853_JUMP",
+        "seed": 27670115868943276853,
+        "cousin_diamond16_next": 2594073362713432205,
+        "cousin_diamond16_steps_to_1": 31,
+        "phi_diamond2_seed": 9965931214353624047372120851007875260249748497869638,
+        "phi_diamond2_next": 161630384841531504000907962606386577961152842585573066,
+        "kills_mechanisms": [
+          "13-tier omega^13 Cone-16 -> Cone-15 -> ... -> Cone-5 -> Phi_diamond2 rankings on 16th solvable cousin T_diamond16: Cone 17 (x = 2^63 * 3 - 241621050571 = 27670115868943276853 -> 2594073362713432205 via (3x + 1)//32, v_2(3x + 1) = 5) jumps Phi_diamond2 upward 16.22x directly into Cone 16 -> Cone 15 -> ... -> Cone 5, requiring a genuine 14-tier omega^14 cascade"
+        ]
+      },
+      {
+        "witness_id": "ZPOS_DYADIC_ALLONES11_WEIGHT12_ESCAPE_AND_MOD729_STALL",
+        "seed": 96457887335052302057105093553133662795914732315361207339628815353766224386291940200186116643516461851506700505579860922335084926006500601546929701261444553404415059347866953115588590086309680998347692928142320862865435959416522508693087891142394034963306722471975443762603272515117822291289657432853054582220570254639802213983115541264250416658688231094441674551334005364097015407720635621867184708562221651720440609955883331090864770292875728148373421795243312201536648023695780362908048398335,
+        "compressed_steps_to_1": 1660,
+        "core_word": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1
+        ],
+        "q_index": 0,
+        "survives_mod373248": true,
+        "allones11_prefix_weight11": 11,
+        "allones11_escape_parity_weight": 12,
+        "dyadic_mod243_span16_min_tuples": 10,
+        "dyadic_mod729_span20_min_tuples": 29,
+        "kills_mechanisms": [
+          "claims that conditioning on the unique weight-11 surviving length-11 mod-2048 all-ones prefix r = 2047 ([1]^11) forces parityWeight(u) >= 13 across length >= 12 core words without lifting to mod 4096 (escaped at w(u) = 12 via [1]^11 ++ [0]^27 ++ [1]), OR that 4-step Mod-243 in span <= 16 (min 10 < 16 at u_norm = 160) or 5-step Mod-729 in span <= 20 (min 29 < 32 at u_norm = 322) achieves slope c = 4 without lifting to 6-step Mod-2187"
         ]
       }
     ],
@@ -847,7 +1993,13 @@
         "period_k": 5,
         "weight_w": 3,
         "m_blocks": 1,
-        "parity_vector": [1, 1, 1, 0, 0],
+        "parity_vector": [
+          1,
+          1,
+          1,
+          0,
+          0
+        ],
         "kills_mechanisms": [
           "bounded-modulus mod (2^A * 3^B) LP / Farkas cycle certificates",
           "valuation-archimedean inequality 2^{v_2(x+1)} <= x + 1 (8 > 24/5)",
@@ -862,7 +2014,13 @@
         "period_k": 5,
         "weight_w": 3,
         "m_blocks": 2,
-        "parity_vector": [1, 0, 1, 1, 0],
+        "parity_vector": [
+          1,
+          0,
+          1,
+          1,
+          0
+        ],
         "kills_mechanisms": [
           "2-block modular potential certificates ignoring Z-integrality at prime p = 5"
         ]
@@ -876,7 +2034,16 @@
         "period_k": 8,
         "weight_w": 5,
         "m_blocks": 2,
-        "parity_vector": [1, 1, 1, 0, 1, 1, 0, 0],
+        "parity_vector": [
+          1,
+          1,
+          1,
+          0,
+          1,
+          1,
+          0,
+          0
+        ],
         "kills_mechanisms": [
           "pure Q_{>0} 2-block reciprocal-potential telescoping without Z-divisibility or W >= 6"
         ]
@@ -890,7 +2057,16 @@
         "period_k": 8,
         "weight_w": 5,
         "m_blocks": 2,
-        "parity_vector": [1, 1, 0, 1, 1, 1, 0, 0],
+        "parity_vector": [
+          1,
+          1,
+          0,
+          1,
+          1,
+          1,
+          0,
+          0
+        ],
         "kills_mechanisms": [
           "Dual Brox Cubic Squeeze at W = 5 without 23*D < 3^W or D | H0"
         ]
@@ -903,7 +2079,21 @@
         "period_k": 13,
         "weight_w": 8,
         "m_blocks": 2,
-        "parity_vector": [1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0],
+        "parity_vector": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          0,
+          1,
+          1,
+          1,
+          0,
+          0
+        ],
         "kills_mechanisms": [
           "first-block 2^(w1 + a1) < 3^w1 dichotomy without integer gap x1 - x0 >= 1"
         ]
@@ -916,7 +2106,12 @@
         "period_k": 8,
         "weight_w": 4,
         "m_blocks": 2,
-        "spiral_params": [2, 1, 2, 3],
+        "spiral_params": [
+          2,
+          1,
+          2,
+          3
+        ],
         "denom_gap": 175,
         "brox_h0": 65,
         "brox_h1": 95,
@@ -933,7 +2128,12 @@
         "period_k": 13,
         "weight_w": 8,
         "m_blocks": 2,
-        "spiral_params": [7, 1, 1, 4],
+        "spiral_params": [
+          7,
+          1,
+          1,
+          4
+        ],
         "denom_gap": 1631,
         "brox_h0": 63,
         "brox_h1": 34853,
@@ -948,7 +2148,13 @@
         "numerator": 1,
         "denominator": 7,
         "system": "T_diamond",
-        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "orbit": [
+          "1/7",
+          "5/7",
+          "11/7",
+          "20/7",
+          "2/7"
+        ],
         "kills_mechanisms": [
           "proofs of T_diamond global convergence omitting Z-discreteness at 0 < x <= 2, x % 6 == 2"
         ]
@@ -961,7 +2167,16 @@
         "period_k": 8,
         "weight_w": 5,
         "m_blocks": 1,
-        "parity_vector": [1, 1, 1, 1, 1, 0, 0, 0],
+        "parity_vector": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
         "kills_mechanisms": [
           "antipodal-order prime exclusion claims p nmid D (at p = 13 where 2^6 == -1 mod 13 and 2^2 + 3^2 == 13) omitting Z-integrality D | (2^a1 - 1)"
         ]
@@ -972,7 +2187,13 @@
         "numerator": 1,
         "denominator": 7,
         "system": "T_diamond2",
-        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "orbit": [
+          "1/7",
+          "5/7",
+          "11/7",
+          "20/7",
+          "2/7"
+        ],
         "kills_mechanisms": [
           "proofs of T_diamond2 global convergence omitting Z-discreteness at 0 < x <= 2"
         ]
@@ -983,7 +2204,13 @@
         "numerator": 1,
         "denominator": 7,
         "system": "T_diamond3",
-        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "orbit": [
+          "1/7",
+          "5/7",
+          "11/7",
+          "20/7",
+          "2/7"
+        ],
         "kills_mechanisms": [
           "proofs of T_diamond3 block-return convergence omitting Z-discreteness at 0 < x < 20"
         ]
@@ -994,7 +2221,13 @@
         "numerator": 1,
         "denominator": 7,
         "system": "T_diamond4",
-        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "orbit": [
+          "1/7",
+          "5/7",
+          "11/7",
+          "20/7",
+          "2/7"
+        ],
         "kills_mechanisms": [
           "proofs of T_diamond4 multi-block / ordinal convergence omitting Z-discreteness at 0 < x < 89"
         ]
@@ -1017,7 +2250,13 @@
         "numerator": 1,
         "denominator": 7,
         "system": "T_diamond5",
-        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "orbit": [
+          "1/7",
+          "5/7",
+          "11/7",
+          "20/7",
+          "2/7"
+        ],
         "kills_mechanisms": [
           "proofs of T_diamond5 omega^3 Cone-6 -> Cone-5 convergence omitting Z-discreteness at 0 < x < 2285"
         ]
@@ -1028,7 +2267,13 @@
         "numerator": 1,
         "denominator": 7,
         "system": "T_diamond6",
-        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "orbit": [
+          "1/7",
+          "5/7",
+          "11/7",
+          "20/7",
+          "2/7"
+        ],
         "kills_mechanisms": [
           "proofs of T_diamond6 omega^4 Cone-7 -> Cone-6 -> Cone-5 convergence omitting Z-discreteness at 0 < x < 294101"
         ]
@@ -1039,7 +2284,13 @@
         "numerator": 1,
         "denominator": 7,
         "system": "T_diamond7",
-        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "orbit": [
+          "1/7",
+          "5/7",
+          "11/7",
+          "20/7",
+          "2/7"
+        ],
         "kills_mechanisms": [
           "proofs of T_diamond7 omega^5 Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 convergence omitting Z-discreteness at 0 < x < 12548309"
         ]
@@ -1050,7 +2301,13 @@
         "numerator": 1,
         "denominator": 7,
         "system": "T_diamond8",
-        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "orbit": [
+          "1/7",
+          "5/7",
+          "11/7",
+          "20/7",
+          "2/7"
+        ],
         "kills_mechanisms": [
           "proofs of T_diamond8 omega^6 Cone-9 -> Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 convergence omitting Z-discreteness at 0 < x < 100571021"
         ]
@@ -1061,7 +2318,13 @@
         "numerator": 1,
         "denominator": 7,
         "system": "T_diamond9",
-        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "orbit": [
+          "1/7",
+          "5/7",
+          "11/7",
+          "20/7",
+          "2/7"
+        ],
         "kills_mechanisms": [
           "proofs of T_diamond9 omega^7 Cone-10 -> Cone-9 -> Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 convergence omitting Z-discreteness at 0 < x < 805060301"
         ]
@@ -1075,8 +2338,24 @@
         "weight_w": 6,
         "m_blocks": 2,
         "x1": "761/295",
-        "parity_vector": [1, 0, 0, 1, 1, 1, 1, 1, 0, 0],
-        "spiral_params": [1, 2, 5, 2],
+        "parity_vector": [
+          1,
+          0,
+          0,
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0
+        ],
+        "spiral_params": [
+          1,
+          2,
+          5,
+          2
+        ],
         "denom_gap": 295,
         "brox_h0": 1113,
         "brox_h1": 33,
@@ -1091,7 +2370,13 @@
         "numerator": 1,
         "denominator": 7,
         "system": "T_diamond10",
-        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "orbit": [
+          "1/7",
+          "5/7",
+          "11/7",
+          "20/7",
+          "2/7"
+        ],
         "kills_mechanisms": [
           "proofs of T_diamond10 omega^8 Cone-11 -> Cone-10 -> Cone-9 -> Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 convergence omitting Z-discreteness at 0 < x < 6441794765"
         ]
@@ -1104,7 +2389,20 @@
         "period_k": 81,
         "weight_w": 51,
         "m_blocks": 3,
-        "balanced_3block_params": [[17, 2], [17, 2], [17, 26]],
+        "balanced_3block_params": [
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            26
+          ]
+        ],
         "balanced_3block_h0": 18496978463843981211,
         "balanced_3block_h2": 1122608323627039518084471,
         "balanced_3block_single_pivot_ub": 17906987480702220290215287,
@@ -1118,7 +2416,13 @@
         "numerator": 1,
         "denominator": 7,
         "system": "T_diamond11",
-        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "orbit": [
+          "1/7",
+          "5/7",
+          "11/7",
+          "20/7",
+          "2/7"
+        ],
         "kills_mechanisms": [
           "proofs of T_diamond11 omega^9 Cone-12 -> Cone-11 -> ... -> Cone-5 convergence omitting Z-discreteness at 0 < x < 51537857741"
         ]
@@ -1131,7 +2435,21 @@
         "period_k": 13,
         "weight_w": 8,
         "m_blocks": 1,
-        "parity_vector": [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+        "parity_vector": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
         "kills_mechanisms": [
           "pure rational / modular 6..10-step DP2 cycle arguments omitting Z-integrality D | dp2IterCarry(shifts): at r = 8, A = 13 (D = 2^13 - 3^8 = 1631) and shifts = [1, 1, 1, 1, 1, 1, 1, 6], dp2IterCarry = 3^8 - 2^8 = 6305 yields a valid M1 8-step Syracuse cycle x0 = 6305/1631 while 6305 % 1631 = 1412 != 0 blocks all Z^+ solutions"
         ]
@@ -1144,7 +2462,24 @@
         "period_k": 108,
         "weight_w": 68,
         "m_blocks": 4,
-        "balanced_4block_params": [[17, 2], [17, 2], [17, 2], [17, 34]],
+        "balanced_4block_params": [
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            34
+          ]
+        ],
         "balanced_4block_h0": 2482367497747922022920684049,
         "balanced_4block_two_pivot_ub": 2403435183675007532068340213547537,
         "balanced_4block_three_pivot_ub": 2439395196651420928425295413777,
@@ -1158,7 +2493,13 @@
         "numerator": 1,
         "denominator": 7,
         "system": "T_diamond12",
-        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "orbit": [
+          "1/7",
+          "5/7",
+          "11/7",
+          "20/7",
+          "2/7"
+        ],
         "kills_mechanisms": [
           "proofs of T_diamond12 omega^10 Cone-13 -> Cone-12 -> ... -> Cone-5 convergence omitting Z-discreteness at 0 < x < 1649248777013"
         ]
@@ -1171,7 +2512,26 @@
         "period_k": 18,
         "weight_w": 11,
         "m_blocks": 1,
-        "parity_vector": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+        "parity_vector": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
         "kills_mechanisms": [
           "pure rational / modular 11..15-step DP2 cycle arguments omitting Z-integrality D | dp2IterCarry(shifts): at r = 11, A = 18 (D = 2^18 - 3^11 = 84997) and shifts = [1]*10 + [8], dp2IterCarry = 3^11 - 2^11 = 175099 yields a valid M1 11-step Syracuse cycle x0 = 175099/84997 while 175099 % 84997 = 5105 != 0 blocks all Z^+ solutions"
         ]
@@ -1184,7 +2544,28 @@
         "period_k": 135,
         "weight_w": 85,
         "m_blocks": 5,
-        "balanced_5block_params": [[17, 2], [17, 2], [17, 2], [17, 2], [17, 42]],
+        "balanced_5block_params": [
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            42
+          ]
+        ],
         "balanced_5block_h0": 333144785390585604394144037915158515,
         "balanced_5block_three_pivot_ub": 322583609719872073919596332236742426191859,
         "balanced_5block_four_pivot_ub": 327410048067412752179869743262228375539,
@@ -1198,7 +2579,13 @@
         "numerator": 1,
         "denominator": 7,
         "system": "T_diamond13",
-        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "orbit": [
+          "1/7",
+          "5/7",
+          "11/7",
+          "20/7",
+          "2/7"
+        ],
         "kills_mechanisms": [
           "proofs of T_diamond13 omega^11 Cone-14 -> Cone-13 -> ... -> Cone-5 convergence omitting Z-discreteness at 0 < x < 211105436174549"
         ]
@@ -1211,7 +2598,35 @@
         "period_k": 27,
         "weight_w": 17,
         "m_blocks": 1,
-        "parity_vector": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "parity_vector": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
         "kills_mechanisms": [
           "pure rational / modular 16..20-odd-step 1-block Syracuse cycle exclusion claims omitting Z-integrality D | dp2IterCarry(shifts): at r = 17, A = 27 (2^27 - 3^17 = 5,077,565 > 0), x0 = 129009091/5077565 (~ 25.41 < 147) forms an exact 17-odd-step 1-block cycle in Q_(2)^+, whereas on Z^+ DP2 5077565 does not divide 129009091 and unconditional 1..20-cycle freedom holds across ALL DP2 words"
         ]
@@ -1224,7 +2639,32 @@
         "period_k": 162,
         "weight_w": 102,
         "m_blocks": 6,
-        "balanced_6block_params": [[17, 2], [17, 2], [17, 2], [17, 2], [17, 2], [17, 50]],
+        "balanced_6block_params": [
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            50
+          ]
+        ],
         "balanced_6block_h0": 44709682275083643313232210395882573739158809,
         "balanced_6block_four_pivot_ub": 43296439182388490082095803420153741461962382208281,
         "balanced_6block_five_pivot_ub": 43944228522073784691054633379330111325384043801,
@@ -1238,7 +2678,13 @@
         "numerator": 1,
         "denominator": 7,
         "system": "T_diamond14",
-        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "orbit": [
+          "1/7",
+          "5/7",
+          "11/7",
+          "20/7",
+          "2/7"
+        ],
         "kills_mechanisms": [
           "proofs of T_diamond14 omega^12 Cone-15 -> Cone-14 -> ... -> Cone-5 convergence omitting Z-discreteness at 0 < x < 6755390946565685"
         ]
@@ -1251,7 +2697,43 @@
         "period_k": 35,
         "weight_w": 22,
         "m_blocks": 1,
-        "parity_vector": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        "parity_vector": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
         "kills_mechanisms": [
           "pure rational / modular 21..25-odd-step 1-block Syracuse cycle exclusion claims omitting Z-integrality D | dp2IterCarry(shifts): at r = 22, A = 35 (2^35 - 3^22 = 2,978,678,759 > 0), x0 = 31376865305/2978678759 (~ 10.53 < 147) forms an exact 22-odd-step 1-block cycle in Q_(2)^+, whereas on Z^+ DP2 2978678759 does not divide 31376865305 and unconditional 1..25-cycle freedom holds across ALL DP2 words"
         ]
@@ -1264,7 +2746,36 @@
         "period_k": 189,
         "weight_w": 119,
         "m_blocks": 7,
-        "balanced_7block_params": [[17, 2], [17, 2], [17, 2], [17, 2], [17, 2], [17, 2], [17, 58]],
+        "balanced_7block_params": [
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            58
+          ]
+        ],
         "balanced_7block_h0": 6000282623270487265394426457110142977379717772089099,
         "balanced_7block_five_pivot_ub": 5811149697001010748261415856872602671600638378059853076235,
         "balanced_7block_six_pivot_ub": 5898093961594253332032610881301537104174008156436961035,
@@ -1278,9 +2789,190 @@
         "numerator": 1,
         "denominator": 7,
         "system": "T_diamond15",
-        "orbit": ["1/7", "5/7", "11/7", "20/7", "2/7"],
+        "orbit": [
+          "1/7",
+          "5/7",
+          "11/7",
+          "20/7",
+          "2/7"
+        ],
         "kills_mechanisms": [
           "proofs of T_diamond15 omega^13 Cone-16 -> Cone-15 -> ... -> Cone-5 convergence omitting Z-discreteness at 0 < x < 54043172876472461"
+        ]
+      },
+      {
+        "witness_id": "M1_DP2_29CYCLE_68629840493971_OVER_1738366812781",
+        "x0": "68629840493971/1738366812781",
+        "numerator": 68629840493971,
+        "denominator": 1738366812781,
+        "period_k": 46,
+        "weight_w": 29,
+        "m_blocks": 1,
+        "parity_vector": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "kills_mechanisms": [
+          "pure rational 26..30-odd-step 1-block Syracuse / DP2 cycle exclusion claims omitting Z-integrality carry non-divisibility (2^46 - 3^29 = 1738366812781 does not divide dp2IterCarry([1]^28 ++ [18]) = 68629840493971)"
+        ]
+      },
+      {
+        "witness_id": "M1_BALANCED_8BLOCK_SIX_PIVOT_ESCAPE",
+        "x0": "77591898891382188307290637401485123663160425553643362360015901601/27956890654014342509569580839942897353380349143627317737525816415",
+        "numerator": 77591898891382188307290637401485123663160425553643362360015901601,
+        "denominator": 27956890654014342509569580839942897353380349143627317737525816415,
+        "period_k": 216,
+        "weight_w": 136,
+        "m_blocks": 8,
+        "balanced_8block_params": [
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            2
+          ],
+          [
+            17,
+            66
+          ]
+        ],
+        "balanced_8block_h0": 805273357737705465826875444346832435734106252267995301037153,
+        "balanced_8block_six_pivot_ub": 779959309328420761471876112213087330824362578019164739455366349921,
+        "balanced_8block_seven_pivot_ub": 791628700112384403550461628418453925758982125173061461444281441,
+        "kills_mechanisms": [
+          "6-pivot cross-block Brox telescoping bounds on balanced m = 8 equal-weight 2 | a_j tuples: [(17, 2)^7, (17, 66)] (W = 136, K = 216) escapes 6-pivot (< 3 * D) across all 8 cyclic rotations yet is crushed > 105x by 7-pivot telescoping"
+        ]
+      },
+      {
+        "witness_id": "M1_HET_MULTISPIKE_8BLOCK_NONHENSEL_ESCAPE",
+        "x0": "346544069058782975683/420491770248316829",
+        "numerator": 346544069058782975683,
+        "denominator": 420491770248316829,
+        "period_k": 65,
+        "weight_w": 41,
+        "m_blocks": 8,
+        "het_multispike_8block_params": [
+          [
+            5,
+            2
+          ],
+          [
+            5,
+            2
+          ],
+          [
+            8,
+            8
+          ],
+          [
+            5,
+            2
+          ],
+          [
+            5,
+            2
+          ],
+          [
+            4,
+            4
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            5,
+            2
+          ]
+        ],
+        "het_multispike_8block_h0": 10842642525907227891,
+        "het_multispike_8block_rot2_seven_pivot_ub": 50160848609115096957,
+        "het_multispike_8block_hensel_qmin": 609,
+        "kills_mechanisms": [
+          "non-Hensel (m - 1)-pivot Brox bounds across all m cyclic rotations on convergent (W = 41, K = 65) multi-spike heterogeneous-weight m = 8 tuples: [(5,2),(5,2),(8,8),(5,2),(5,2),(4,4),(4,2),(5,2)] escapes 7-pivot (< 3 * D) across all 8 rotations (and [(4,2)^(m-2),(9,2m+10),(31,8)] escapes at m = 3, 4) yet is crushed > 5x at rotation j = 2 via s = 8 Hensel inverse boost 609 * D"
+        ]
+      },
+      {
+        "witness_id": "M1_COUSIN_DIAMOND16_1_OVER_7",
+        "x0": "1/7",
+        "numerator": 1,
+        "denominator": 7,
+        "system": "T_diamond16",
+        "orbit": [
+          "1/7",
+          "5/7",
+          "11/7",
+          "20/7",
+          "2/7"
+        ],
+        "kills_mechanisms": [
+          "proofs of T_diamond16 omega^14 Cone-17 -> Cone-16 -> ... -> Cone-5 convergence omitting Z-discreteness at 0 < x < 1729382015289219893"
         ]
       }
     ],
@@ -1291,7 +2983,9 @@
         "period_k": 1,
         "weight_w": 1,
         "denom_gap": -1,
-        "orbit": [-1],
+        "orbit": [
+          -1
+        ],
         "kills_mechanisms": [
           "sign-blind 2-adic / 3-adic backward congruence proofs",
           "v_3(x + 1) / core_3(x + 1) potentials without x + 1 > 0 positivity guard"
@@ -1303,7 +2997,11 @@
         "period_k": 3,
         "weight_w": 2,
         "denom_gap": -1,
-        "orbit": [-5, -7, -10],
+        "orbit": [
+          -5,
+          -7,
+          -10
+        ],
         "kills_mechanisms": [
           "unit-denominator |2^K - 3^W| = 1 cycle uniqueness without 2^K > 3^W sign check"
         ]
@@ -1315,7 +3013,19 @@
         "weight_w": 7,
         "denom_gap": -139,
         "carry": 2363,
-        "orbit": [-17, -25, -37, -55, -82, -41, -61, -91, -136, -68, -34],
+        "orbit": [
+          -17,
+          -25,
+          -37,
+          -55,
+          -82,
+          -41,
+          -61,
+          -91,
+          -136,
+          -68,
+          -34
+        ],
         "kills_mechanisms": [
           "sign-blind carry-divisibility (2^K - 3^W) | C_K(v) cycle impossibility claims"
         ]
@@ -1363,7 +3073,13 @@
         "seed": 5,
         "multiplier_q": 7,
         "system": "T_diamond_q7",
-        "orbit": [5, 18, 9, 32, 10],
+        "orbit": [
+          5,
+          18,
+          9,
+          32,
+          10
+        ],
         "kills_mechanisms": [
           "T_diamond nonlocal convergence claims omitting q = 3 carry-shift alignment"
         ]
@@ -1373,7 +3089,13 @@
         "seed": 5,
         "multiplier_q": 7,
         "system": "T_diamond2_q7",
-        "orbit": [5, 18, 9, 32, 10],
+        "orbit": [
+          5,
+          18,
+          9,
+          32,
+          10
+        ],
         "kills_mechanisms": [
           "T_diamond2 2-term valuation convergence claims omitting q = 3 carry-shift alignment"
         ]
@@ -1383,7 +3105,13 @@
         "seed": 5,
         "multiplier_q": 7,
         "system": "T_diamond3_q7",
-        "orbit": [5, 18, 9, 32, 10],
+        "orbit": [
+          5,
+          18,
+          9,
+          32,
+          10
+        ],
         "kills_mechanisms": [
           "T_diamond3 variable-horizon block-return convergence claims omitting q = 3 carry-shift alignment"
         ]
@@ -1393,7 +3121,13 @@
         "seed": 5,
         "multiplier_q": 7,
         "system": "T_diamond4_q7",
-        "orbit": [5, 18, 9, 32, 10],
+        "orbit": [
+          5,
+          18,
+          9,
+          32,
+          10
+        ],
         "kills_mechanisms": [
           "T_diamond4 multi-block spiral / ordinal convergence claims omitting q = 3 carry-shift alignment"
         ]
@@ -1403,7 +3137,13 @@
         "seed": 5,
         "multiplier_q": 7,
         "system": "T_diamond5_q7",
-        "orbit": [5, 18, 9, 32, 10],
+        "orbit": [
+          5,
+          18,
+          9,
+          32,
+          10
+        ],
         "kills_mechanisms": [
           "T_diamond5 omega^3 Cone-6 -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
         ]
@@ -1413,7 +3153,13 @@
         "seed": 5,
         "multiplier_q": 7,
         "system": "T_diamond6_q7",
-        "orbit": [5, 18, 9, 32, 10],
+        "orbit": [
+          5,
+          18,
+          9,
+          32,
+          10
+        ],
         "kills_mechanisms": [
           "T_diamond6 omega^4 Cone-7 -> Cone-6 -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
         ]
@@ -1423,7 +3169,13 @@
         "seed": 5,
         "multiplier_q": 7,
         "system": "T_diamond7_q7",
-        "orbit": [5, 18, 9, 32, 10],
+        "orbit": [
+          5,
+          18,
+          9,
+          32,
+          10
+        ],
         "kills_mechanisms": [
           "T_diamond7 omega^5 Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
         ]
@@ -1433,7 +3185,13 @@
         "seed": 5,
         "multiplier_q": 7,
         "system": "T_diamond8_q7",
-        "orbit": [5, 18, 9, 32, 10],
+        "orbit": [
+          5,
+          18,
+          9,
+          32,
+          10
+        ],
         "kills_mechanisms": [
           "T_diamond8 omega^6 Cone-9 -> Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
         ]
@@ -1443,7 +3201,13 @@
         "seed": 5,
         "multiplier_q": 7,
         "system": "T_diamond9_q7",
-        "orbit": [5, 18, 9, 32, 10],
+        "orbit": [
+          5,
+          18,
+          9,
+          32,
+          10
+        ],
         "kills_mechanisms": [
           "T_diamond9 omega^7 Cone-10 -> Cone-9 -> Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
         ]
@@ -1453,7 +3217,13 @@
         "seed": 5,
         "multiplier_q": 7,
         "system": "T_diamond10_q7",
-        "orbit": [5, 18, 9, 32, 10],
+        "orbit": [
+          5,
+          18,
+          9,
+          32,
+          10
+        ],
         "kills_mechanisms": [
           "T_diamond10 omega^8 Cone-11 -> Cone-10 -> Cone-9 -> Cone-8 -> Cone-7 -> Cone-6 -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
         ]
@@ -1463,7 +3233,13 @@
         "seed": 5,
         "multiplier_q": 7,
         "system": "T_diamond11_q7",
-        "orbit": [5, 18, 9, 32, 10],
+        "orbit": [
+          5,
+          18,
+          9,
+          32,
+          10
+        ],
         "kills_mechanisms": [
           "T_diamond11 omega^9 Cone-12 -> Cone-11 -> ... -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
         ]
@@ -1473,7 +3249,13 @@
         "seed": 5,
         "multiplier_q": 7,
         "system": "T_diamond12_q7",
-        "orbit": [5, 18, 9, 32, 10],
+        "orbit": [
+          5,
+          18,
+          9,
+          32,
+          10
+        ],
         "kills_mechanisms": [
           "T_diamond12 omega^10 Cone-13 -> Cone-12 -> ... -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
         ]
@@ -1483,7 +3265,13 @@
         "seed": 5,
         "multiplier_q": 7,
         "system": "T_diamond13_q7",
-        "orbit": [5, 18, 9, 32, 10],
+        "orbit": [
+          5,
+          18,
+          9,
+          32,
+          10
+        ],
         "kills_mechanisms": [
           "T_diamond13 omega^11 Cone-14 -> Cone-13 -> ... -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
         ]
@@ -1493,7 +3281,13 @@
         "seed": 5,
         "multiplier_q": 7,
         "system": "T_diamond14_q7",
-        "orbit": [5, 18, 9, 32, 10],
+        "orbit": [
+          5,
+          18,
+          9,
+          32,
+          10
+        ],
         "kills_mechanisms": [
           "T_diamond14 omega^12 Cone-15 -> Cone-14 -> ... -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
         ]
@@ -1503,9 +3297,31 @@
         "seed": 5,
         "multiplier_q": 7,
         "system": "T_diamond15_q7",
-        "orbit": [5, 18, 9, 32, 10],
+        "orbit": [
+          5,
+          18,
+          9,
+          32,
+          10
+        ],
         "kills_mechanisms": [
           "T_diamond15 omega^13 Cone-16 -> Cone-15 -> ... -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
+        ]
+      },
+      {
+        "witness_id": "M3_COUSIN_DIAMOND16_7X1_CYCLE5",
+        "seed": 5,
+        "multiplier_q": 7,
+        "system": "T_diamond16_q7",
+        "orbit": [
+          5,
+          18,
+          9,
+          32,
+          10
+        ],
+        "kills_mechanisms": [
+          "T_diamond16 omega^14 Cone-17 -> Cone-16 -> ... -> Cone-5 convergence claims omitting q = 3 carry-shift alignment"
         ]
       }
     ],
@@ -1537,7 +3353,7 @@
         "gap_sign": 1,
         "abs_gap": 420491770248316829,
         "kills_mechanisms": [
-          "naive constant-ratio 2^K - 3^W >= c * 2^K bounds (D / 2^K ≈ 1.14e-2)"
+          "naive constant-ratio 2^K - 3^W >= c * 2^K bounds (D / 2^K \u2248 1.14e-2)"
         ]
       },
       {
@@ -1601,7 +3417,12 @@
       },
       {
         "witness_id": "LAURENT_DET_6X6_12X3_W12_DIP_AND_W41_EXPLOSION",
-        "laurent_grid": [6, 6, 12, 3],
+        "laurent_grid": [
+          6,
+          6,
+          12,
+          3
+        ],
         "low_W": 12,
         "low_K": 19,
         "low_det_nonzero": true,
@@ -1620,7 +3441,12 @@
         "witness_id": "LAURENT_SCALED_W41_CUBIC_GAP_AND_PRIME331_BARRIER",
         "W": 41,
         "K": 65,
-        "laurent_scaled_grid": [8, 8, 16, 4],
+        "laurent_scaled_grid": [
+          8,
+          8,
+          16,
+          4
+        ],
         "det_m0_log2": -697.576803,
         "det_at_cubic_gap_log2": 2382.465789,
         "coprime_order_barrier_prime": 331,
@@ -1684,8 +3510,14 @@
         "abs_gap": 45853,
         "laurent_twobase_6x6_u": 1,
         "laurent_twobase_6x6_det": 0,
-        "cone_flip_u2_neg_pair": [3, 5],
-        "cone_flip_u2_pos_pair": [5, 8],
+        "cone_flip_u2_neg_pair": [
+          3,
+          5
+        ],
+        "cone_flip_u2_pos_pair": [
+          5,
+          8
+        ],
         "kills_mechanisms": [
           "naive odd-u non-vanishing extrapolations from 4x4 to 6x6 two-base Schneider-Laurent grids rows=[(0,0),(1,0),(0,1),(1,1),(0,2),(1,2)], cols=[(0,0),(1,0),(0,u),(1,u),(0,2u),(1,2u)]: linear factor 2^u*(3^(2u)-1)*W - 3^u*(2^(2u)-1)*K vanishes at odd u = 1 on coprime (W, K) = (9, 16) (3^9 < 2^16)",
           "u >= 2 positivity extrapolations inside 3*K <= 5*W on 6x6 two-base grids: at u = 2, det_6(3, 5, 2) = -59,570,380,800 < 0 whereas det_6(5, 8, 2) = +303,641,395,200 > 0, proving strict positivity inside 3*K <= 5*W requires u >= 3 (while det_6 != 0 holds for all u >= 1)"
@@ -1715,8 +3547,14 @@
         "abs_gap": 229,
         "laurent_twobase_6x6_t3u2_u": 2,
         "laurent_twobase_6x6_t3u2_det": 0,
-        "t3u2_cone_pos_pair": [5, 8],
-        "t3u2_outer_neg_pair": [1, 2],
+        "t3u2_cone_pos_pair": [
+          5,
+          8
+        ],
+        "t3u2_outer_neg_pair": [
+          1,
+          2
+        ],
         "kills_mechanisms": [
           "unrestricted even-u non-vanishing extrapolations on rank-2 Vandermonde two-base 6x6 grids rows=[(0,0),(1,0),(0,1),(1,1),(0,2),(1,2)], cols=[(0,0),(1,0),(2,0),(0,u),(1,u),(2,u)]: while odd u >= 1 is non-zero for ALL W, K >= 1 (fixing Wave 10's (9, 16, 1) zero!) and ALL u >= 1 are strictly positive inside 3^W < 2^K and 3*K <= 5*W, even u = 2 vanishes on coprime (W, K) = (3, 8) (3^3 = 27 < 256 = 2^8) and flips negative outside 3*K <= 5*W at (1, 2, 1) (det = -96 < 0)"
         ]
@@ -1748,7 +3586,10 @@
         "abs_gap": 5,
         "laurent_twobase_8x8_t4u2_u1_det": -559794375,
         "laurent_twobase_8x8_t4u2_u4_det": -20487059690701585693359375,
-        "t4u2_cone_pos_u4_pair": [5, 8],
+        "t4u2_cone_pos_u4_pair": [
+          5,
+          8
+        ],
         "kills_mechanisms": [
           "naive extrapolations of Wave 11's 6x6 (T=3, U=2) all-u >= 1 convergent-cone strict positivity (> 0) unchanged to 8x8 two-base rank-2 Vandermonde (T=4, U=2) grids rows=[(r,s): r<2, s<4], cols=[(0..3,0),(0..3,u)]: while 2^(6u)*(2^u - 1)^16 divides det_8(M_0) and (2^K - 3^W) divides det_8(M_0) - det_8(W, K, W*u), inside 3^W < 2^K and 3*K <= 5*W det_8^(T=4,U=2)(3, 5, 1) = -559,794,375 < 0 and at u = 4 det_8 flips sign between (3, 5) (< 0) and (5, 8) (> 0)"
         ]
@@ -1807,7 +3648,16 @@
         "laurent_9x9_row_wu_mersenne": 7,
         "laurent_9x9_m0_u1_mod7": 6,
         "laurent_6x6_t2u3_m0_u1_div_49": true,
-        "laurent_6x6_t3u2_u2_coprime_zeros": [[3, 8], [27, 8]],
+        "laurent_6x6_t3u2_u2_coprime_zeros": [
+          [
+            3,
+            8
+          ],
+          [
+            27,
+            8
+          ]
+        ],
         "kills_mechanisms": [
           "extrapolating U > T finite-difference row-side (2^(W*u) - 1) divisibility (which holds as (2^(W*u) - 1)^2 | det_6(M_0) on rectangular 6x6 (T=2, U=3)) to square U = T >= 2 zero-gap grids such as 9x9 (T=3, U=3): at (W, K, u) = (3, 5, 1), full second-order column confluence extracts 2^18 * 3^9 | det_9(M_0) with exact quotient 1627343939523819077632, yet det_9(M_0(3, 5, 1)) == 6 (mod 7) fails divisibility by 2^(3*1) - 1 = 7 because degrees t in {0, 1, 2} span all 3 row powers r in {0, 1, 2}; meanwhile on 6x6 (T=3, U=2), u = 2 has TWO coprime zero rays (3, 8) and (27, 8) yet NO (W, K) vanishes at >= 2 shifts u"
         ]
@@ -1891,6 +3741,21 @@
         "kills_mechanisms": [
           "claims that odd u >= 3 with forall 1 <= d < U, gcd(W, d) = 1 restores unreduced confluentFactorAllU(U, T, u) * (2^(W*u) - 1)^(T*(U-T)) divisibility on rectangular (U*T) x (U*T) grids: at odd u = 3, U = 4, T = 3, prime W = 5, K = 8, (2^3 - 1)^3 = 343 divides BOTH colFac and rowFac so (det_12(M_0) // colFac) % rowFac == 12,410,843,342,161 != 0, proving unreduced Coprime holds iff u = 1 and gcd(W, d) = 1, whereas factoring out (2^u - 1)^(T*(U-T)) yields exact Nat.lcm = colFac * ((2^(W*u) - 1)/(2^u - 1))^(T*(U-T)) across all u >= 1 with gcd(2^u - 1, W) = 1",
           "claims that u >= 2 restores Collatz-cone strict positivity (> 0) on rank-3 order-4 12x12 (T = 4, U = 3) two-base Schneider-Laurent determinants: although det_12(5, 8, u) > 0 for u = 1..4, det_12(5, 8, 5) < 0 flips negative at u = 5 (while projective F_p sieves at p = 67, 59, 59, 13 prove global ZERO-FREE non-vanishing across 100% of W, K >= 1 for u = 2..5 and 2-adic matrix congruence mod 2^(5*u) bounds multi-u zero multiplicity across all u >= 6)"
+        ]
+      },
+      {
+        "witness_id": "LAURENT_16X16_T4U4_U1_CONE_SIGN_FLIP_3_5_VS_4_7",
+        "W": 3,
+        "K": 5,
+        "gap_sign": 1,
+        "abs_gap": 5,
+        "laurent_16x16_t4u4_3_5_u1_det": -346869345187079025627401176785813504,
+        "laurent_16x16_t4u4_4_7_u1_det": 223551144063582960394327584357593948160000,
+        "laurent_16x16_t4u4_1_4_u1_det": -5480111512833949589330460672000000000000000,
+        "laurent_16x16_t4u4_3_5_u1_m0_confluent_divides": true,
+        "laurent_12x12_t4u3_5_2_u11_det_nonzero": true,
+        "kills_mechanisms": [
+          "claims that restoring square grid symmetry T = U = 4 on rank-4 16x16 (T = 4, U = 4) two-base Schneider-Laurent determinants recovers Wave 14 9x9 (T = U = 3) Collatz-cone strict positivity (> 0): inside 3^W < 2^K and 2^K < 2*3^W (with (3, 5) inside 3*K <= 5*W), det_16(3, 5, 1) < 0 flips sign against det_16(4, 7, 1) > 0, while projective P^1(F_p) sieves (p = 31, 59, 41, 67, 37) prove global ZERO-FREE non-vanishing across 100% of W, K >= 1 for ALL u = 1..5 (eliminating 12x12 K = 4*W zero ray!)"
         ]
       }
     ]
@@ -2179,7 +4044,7 @@
     {
       "hypothesis_id": "W11_H1_GENERAL_MIXED_SIGN_OCN_MODE_AND_SLOPE_PREIMAGE_WEIGHTS",
       "branch": "P1.2",
-      "statement": "There exists a positive rational Berg-Meinardus preimage weight w(n) (theta <= 1) built from ANY Q >= 1 stateful LSB-first or MSB-first zero-testing 1-counter pushdown automaton (OCN, with zero _hinc0/_hinc1 sign-uniformity or slope-positivity/equality assumptions, either via observable zero-test modes (q, c == 0) coupled with (zeroBitCount, bitLength) or via arbitrary raw-counter NatPoly2(c(n), bitLength(n)) / joint NatPoly3(c_LSB(n), c_MSB(n), bitLength(n)) quotients — or more generally ANY wNum(n)/wDen(n) whose denominator is bounded by a polynomial in bitLength(n)), or multi-symbol context-free PDA stack-height modes escape unary 0-run periodicity.",
+      "statement": "There exists a positive rational Berg-Meinardus preimage weight w(n) (theta <= 1) built from ANY Q >= 1 stateful LSB-first or MSB-first zero-testing 1-counter pushdown automaton (OCN, with zero _hinc0/_hinc1 sign-uniformity or slope-positivity/equality assumptions, either via observable zero-test modes (q, c == 0) coupled with (zeroBitCount, bitLength) or via arbitrary raw-counter NatPoly2(c(n), bitLength(n)) / joint NatPoly3(c_LSB(n), c_MSB(n), bitLength(n)) quotients \u2014 or more generally ANY wNum(n)/wDen(n) whose denominator is bounded by a polynomial in bitLength(n)), or multi-symbol context-free PDA stack-height modes escape unary 0-run periodicity.",
       "status": "PROVED_BARRIER",
       "minimal_witness_id": "ZPOS_MIXED_SIGN_Q2_OCN_PREIMAGE_COLLAPSE",
       "secondary_witness_id": "ZPOS_ASYMMETRIC_SLOPE_Q2_OCN_MERSENNE_BYPASS",
@@ -2453,7 +4318,7 @@
       "status": "PROVED_BARRIER",
       "minimal_witness_id": "ZPOS_PREIMAGE_3GRAM_PURE_535_TO_803",
       "secondary_witness_id": "ZPOS_PREIMAGE_4VAR_RUNS_AND_2GRAM_341_TO_227",
-      "failure_diagnosis": "Exact universal binary De Bruijn / Kirchoff vertex-flow conservation identities holding across ALL n >= 4 express all eight 3-grams (2 * c_{ijk}) linearly in the exact 5-coordinate basis (binBitLength, binaryPopcount, binaryAltTransitions, 2 * c_001, 2 * c_111) up to bounded boundary indicators in {0, 1, 2, 3, 4} (`binary_three_gram_debruijn_syzygies` [choice-free]); pairing squared-weight superharmonicity preservation (`preimage_weight_square_preserves_superharmonicity`) with four explicit cardinal periodic Collatz preimage families isolating c_001 and c_111 while keeping (Delta_L, Delta_P, Delta_T) = O(1) — F_pos111 (1303 * (2048^s - 1)/2047: Delta_c001 = 0, Delta_c111 = +(s - 2), killing q_111 < p_111), F_pos001 (581 * (1024^s - 1)/1023: Delta_c001 = +(s + 1), Delta_c111 = 0, killing q_001 < p_001), F_neg111 (653 * (1024^s - 1)/1023: Delta_c001 = +1, Delta_c111 = -(s + 1), killing p_111 < q_111), and F_neg001 (1291 * (2048^s - 1)/2047: Delta_c001 = -s, Delta_c111 = -2, killing p_001 < q_001) — locks p_001 = q_001 and p_111 = q_111 and closes 100% of (0, infty)^5 AND 100% of (0, infty)^8 across ALL M_0 >= 3 (`eventual_five_var_and_complete_3gram_exp_impossibility`, Wave18WholeSpace.lean, zero custom axioms)."
+      "failure_diagnosis": "Exact universal binary De Bruijn / Kirchoff vertex-flow conservation identities holding across ALL n >= 4 express all eight 3-grams (2 * c_{ijk}) linearly in the exact 5-coordinate basis (binBitLength, binaryPopcount, binaryAltTransitions, 2 * c_001, 2 * c_111) up to bounded boundary indicators in {0, 1, 2, 3, 4} (`binary_three_gram_debruijn_syzygies` [choice-free]); pairing squared-weight superharmonicity preservation (`preimage_weight_square_preserves_superharmonicity`) with four explicit cardinal periodic Collatz preimage families isolating c_001 and c_111 while keeping (Delta_L, Delta_P, Delta_T) = O(1) \u2014 F_pos111 (1303 * (2048^s - 1)/2047: Delta_c001 = 0, Delta_c111 = +(s - 2), killing q_111 < p_111), F_pos001 (581 * (1024^s - 1)/1023: Delta_c001 = +(s + 1), Delta_c111 = 0, killing q_001 < p_001), F_neg111 (653 * (1024^s - 1)/1023: Delta_c001 = +1, Delta_c111 = -(s + 1), killing p_111 < q_111), and F_neg001 (1291 * (2048^s - 1)/2047: Delta_c001 = -s, Delta_c111 = -2, killing p_001 < q_001) \u2014 locks p_001 = q_001 and p_111 = q_111 and closes 100% of (0, infty)^5 AND 100% of (0, infty)^8 across ALL M_0 >= 3 (`eventual_five_var_and_complete_3gram_exp_impossibility`, Wave18WholeSpace.lean, zero custom axioms)."
     },
     {
       "hypothesis_id": "W18_H4_LEN10_PREFIX_WEIGHT12_EXHAUSTION_AND_MOD81_SPAN14_STALL",
@@ -2463,6 +4328,42 @@
       "minimal_witness_id": "ZPOS_DYADIC_ALLONES10_WEIGHT11_PREFIX_ESCAPE",
       "secondary_witness_id": "ZPOS_DYADIC_ALLONES9_WEIGHT10_PREFIX_ESCAPE",
       "failure_diagnosis": "All 54/54 surviving length-10 mod-1024 prefixes admit explicit surviving Mod373248 first-hit q = 0 escapes at w(u) <= 11 < 12 (including all-ones r = 1023 via [1]^10 ++ [0]^446 ++ [1]), proving 0/54 length-10 mod-1024 prefixes force w(u) >= 12, whereas lifting to length-11 mod-2048 yields exact 108 = 1 + 9 + 29 + 40 + 24 + 5 surviving prefixes where r = 2047 ([1]^11) forces w(u) >= 12 across 100% of length >= 12 proper extensions alongside complete mod-354294 (2 * 3^11, 118098/354294 surviving classes, pref ++ replicate 12 true % 354294 = 177147) Markov bijectivity and 3^(w - 12) fiber equidistribution (`markovShift_mod354294_bijection_and_mod2048_prefix108_lift`); meanwhile 3-step Mod-81 ternary-carry macro-encoding stalls at 7 < 8 = 2^3 valid branches within span <= 14 (`mod81_span14_stall_and_mod243_four_step_macro_cert` [choice-free]), whereas normalized 162-state 4-step Mod-243 ternary-carry macro-encoding (`chooseFourStepTernaryCarry243`, >= 16 = 2^4 branches in 8 <= span <= 18 <= 19, rate 18/4 = 4.5 < 5!) paired with 4-bit (s = 4) bottom multiplicative-dlog collision lifting modulo 3^12 = 531,441 (`bottom4BitBucket531441` at stride = 81, max b_1 = 101, max e_1 = 181!) proves unconditional sub-250-threshold (M_0 = 210 <= 250, down from 360!) AND strictly steeper-slope (c = 5 <= 5, beating c = 6!) exponential surviving-leaf occupancy >= 2^B (>= 2^((M - 210)/5)) for ALL M >= 210 + 5 * B (M >= 215) at linear horizon L_max >= M (`dyadic_window_sub250_4bit_collision_slope5_exponential_occupancy`, Wave18WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W19_H1_NON_NILPOTENT_3D_MULTICHAN_4D_CONES_EXPANDING_B_AND_OMEGA13_DIAMOND16_BARRIER",
+      "branch": "P4.3",
+      "statement": "Expanding-.B lower-right + .T-top-row + .R-arbitrary omega^k matrix towers (forall d >= 2), invertible positive-trace lower-right d = 3 (3x3) mixed zero-diagonal cones, or 4-channel cross-coupled d = 4 (4x4) invertible cones reduce TwoSided(2x3) c39 or TwoSided(2x6) c78, Wave 18 3-channel Farkas syzygies cover invertible positive-trace 3D/4D cones, .R-carrying leftAnchoredDP2Step admits 26..30-step cycles or multi-spike heterogeneous-weight m-block cycles, or 13-tier omega^13 rankings orient 16th solvable cousin T_diamond16.",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_C39_4D_MULTICHAN_INV_AND_EXPANDING_B_ESCAPE",
+      "secondary_witness_id": "ZPOS_COUSIN_DIAMOND16_CONE17_27670115868943276853_JUMP",
+      "failure_diagnosis": "Across ALL d >= 2, column-expanding .B lower-right blocks (sum_{i >= 1} M_b[i, j] >= 2) + zero .T bottom rows + arbitrary d x d .R matrices in `GenOmegaExpandingBLowerRightAndTTopRowMatTower` satisfy S(T) >= S(B_out) + 2 * S(T_out) on every [T, B] -> [B_out, T_out] rule, forcing v_i(s) = 0 across all i >= 1 and active s on c39 and c78 despite `expandingBWitnessMat2DC39` orienting 27/39 strict matrix rules (`twosided_c39_c78_expanding_b_and_t_toprow_impossibility`), while the 6-parameter d = 3 invertible positive-trace cones `invPosTraceMat3DC39` / `invPosTraceMat3DC78` (det(D_{29,31,35}) = eta >= 1, 39/39 and 78/78 = 100% strict matrix rules, escaping Wave 18 3-channel Farkas by +6) and 7-parameter d = 4 4-channel cones `multiChanInvMat4DC39` / `multiChanInvMat4DC78` (39/39 and 78/78 = 100% strict matrix rules, escaping 3-channel Farkas by +1) admit 0 strict v_0 drops via exact 4-channel (mu_0, beta * mu_1, alpha * mu_2, zeta * mu_3) Farkas syzygies (`simultaneous_d3_invertible_and_d4_multichannel_farkas_locks`); on `leftAnchoredDP2Step`, unconditional 1..30-cycle freedom holds across ALL DP2 words via N_cut = 389 (separating M1 68629840493971/1738366812781 at r = 29, A = 46) alongside symbolic all-m (forall m >= 3) multi-spike heterogeneous-weight + `henselOddInvModPow2` DP2 cycle exclusions ruling out [(4, 2)^(m - 2), (9, 2*m + 10), (31, 8)] across ALL m >= 3 (`leftAnchoredDP2_no_1_to_30_cycles_and_heterogeneous_m_block_exclusions`); meanwhile T_diamond16 adds Cone-17 /32 jumps (27670115868943276853 -> 2594073362713432205, Phi_2 +16.22x) defeating 13-tier omega^13 rankings (`cousin_diamond16_q6_noninteger_avoids_cone17` [choice-free], `cousin_diamond16_counter_model_separation` [`[]` axioms], `cousin_diamond16_global_convergence`, Wave19WholeSpaceCore.lean, Wave19WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W19_H2_SQUARE_16X16_T4U4_CONE_POSITIVITY_12X12_MOD9_RESONANT_ZEROS_AND_NONHENSEL_MULTISPIKE_BROX",
+      "branch": "P3.2",
+      "statement": "Restoring square symmetry T = U = 4 on rank-4 16x16 (T = 4, U = 4) two-base Schneider-Laurent determinants recovers Wave 14 9x9 (T = U = 3) Collatz-cone strict positivity (> 0), rank-3 12x12 (T = 4, U = 3) admits zeros at u = 6..9 or along mod-9 resonant rays (5*W, 2*W), (W, 14*W), (W, 22*W), or non-Hensel (m - 1)-pivot Brox telescoping eliminates multi-spike heterogeneous m-block cycles across all m rotations.",
+      "status": "FALSIFIED",
+      "minimal_witness_id": "LAURENT_16X16_T4U4_U1_CONE_SIGN_FLIP_3_5_VS_4_7",
+      "secondary_witness_id": "M1_HET_MULTISPIKE_8BLOCK_NONHENSEL_ESCAPE",
+      "failure_diagnosis": "On rank-3 order-4 12x12 (T = 4, U = 3), projective P^1(F_p) sieves (p = 197, 13, 103, 67 for u = 6..9) lift global ZERO-FREE non-vanishing across 100% of W, K >= 1 to ALL u = 2..9 (pushing the zero-horizon to u >= 10), while exact closed-form factorization 27 * intDet 12 (laurentTrop3Mat12Explicit W K u) = 2^(10*u - 4) * W^8 * K^3 * ((2^u - 1)*K + (2^u + 1)*W) * Q_u(W, K)^3 forces 27 | Q_u(w', k') for ALL odd u >= 5 and 243 = 3^5 | Q_u(w', k') for ALL odd u >= 11 when 3 nmid w', k', proving complete forall u >= 1 non-vanishing along resonant rays (5*W, 2*W), (W, 14*W), and (W, 22*W) (`laurent_12x12_t4u3_u6_to_9_nonvanishing_and_resonant_mod243_elimination`); on symmetric rank-4 16x16 (T = 4, U = 4), det_16(3, 5, 1) < 0 flips sign against det_16(4, 7, 1) > 0 inside the Collatz cone, yet (2^K - 3^W) congruence + confluentFactorAllU 4 4 u | det(M0_16) + projective P^1(F_p) sieves (p = 31, 59, 41, 67, 37) prove global ZERO-FREE non-vanishing across 100% of W, K >= 1 for ALL u = 1..5, eliminating 12x12's u = 1, K = 4*W zero ray (`laurent_16x16_t4u4_cone_flip_confluent_and_u1_to_5_nonvanishing`); on multi-spike heterogeneous m-block systems, symbolic all-m (forall m >= 3) replicate (m - 2) (w, a) ++ [(w_tl, a_tl), (w_sp, a_sp)] + `henselOddInvModPow2` unconditionally eliminates [(4, 2)^(m - 2), (9, 2*m + 10), (31, 8)] across ALL m >= 3 via 387 * D, concrete m = 8 [(17, 2)^7, (17, 66)] (> 105x), and convergent (41, 65) [(5,2),(5,2),(8,8),(5,2),(5,2),(4,4),(4,2),(5,2)] via s = 8 Hensel 609 * D > 5x (`m_block_all_m_multispike_hensel_brox_and_8block_elimination`, Wave19WholeSpaceCore.lean, Wave19WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W19_H3_COMPLETE_4GRAM_AND_NINE_VAR_DEBRUIJN_EXP_PREIMAGE_WEIGHTS",
+      "branch": "P1.2",
+      "statement": "There exists an eventual (forall M_0 >= 3) positive rational Berg-Meinardus preimage weight w(n) = wNum(n)/wDen(n) (theta <= 1) built either from complete 16-variable binary 4-gram two-sided exponential weights in (c_0000(n) .. c_1111(n)) for SOME (B_0000 .. B_1111) in (0, infty)^16 or from 9-variable independent De Bruijn exponential weights in (binBitLength, binaryPopcount, binaryAltTransitions, c_001, c_111, c_0000, c_0011, c_0101, c_1111) for SOME (B_1 .. B_9) in (0, infty)^9.",
+      "status": "PROVED_BARRIER",
+      "minimal_witness_id": "ZPOS_PREIMAGE_4GRAM_PURE_139_TO_209_AND_1489_SYR",
+      "secondary_witness_id": "ZPOS_PREIMAGE_3GRAM_PURE_535_TO_803",
+      "failure_diagnosis": "Exact universal binary De Bruijn / Kirchoff vertex-flow conservation identities on B(2, 3) holding across ALL n >= 8 reduce all 16 binary 4-grams (2 * c_{abcd}) linearly to the exact 9-coordinate independent basis (binBitLength, binaryPopcount, binaryAltTransitions, 2 * c_001, 2 * c_111, 2 * c_0000, 2 * c_0011, 2 * c_0101, 2 * c_1111) up to bounded boundary indicators (`binary_four_gram_debruijn_syzygies` [choice-free]); pairing squared-weight superharmonicity preservation with eight explicit periodic Collatz preimage families isolating the 4 new free 4-gram coordinates while keeping (Delta_L, Delta_P, Delta_T, Delta_c001, Delta_c111) = O(1) \u2014 F_pos0011 (3915*(65536^s-1)/65535) & F_neg0011 (151*(2048^s-1)/2047) locking p_0011 = q_0011, F_pos0101 (2895*(65536^s-1)/65535) & F_neg0101 (571*(2048^s-1)/2047) locking p_0101 = q_0101, and triangular F_pos0000 (523*(4096^s-1)/4095), F_neg0000 (139*(2048^s-1)/2047), F_pos1111 (1247*(4096^s-1)/4095), & F_neg1111 (631*(2048^s-1)/2047) locking p_0000 = q_0000 and p_1111 = q_1111 \u2014 reduces identically to Wave 18's (0, infty)^5 theorem and closes 100% of (0, infty)^9 AND 100% of (0, infty)^16 across ALL M_0 >= 3 (`eventual_nine_var_and_complete_4gram_exp_impossibility`, Wave19WholeSpace.lean, zero custom axioms)."
+    },
+    {
+      "hypothesis_id": "W19_H4_LEN11_PREFIX_WEIGHT13_EXHAUSTION_AND_MOD243_MOD729_SLOPE4_STALLS",
+      "branch": "P5.3",
+      "statement": "At least one of the 108 surviving length-11 mod-2048 prefixes forces parityWeight(u) >= 13 across length >= 12 proper core extensions without lifting to mod 4096, OR 4-step Mod-243 in span <= 16 or 5-step Mod-729 in span <= 20 achieves rate <= 4.0 (c = 4) ternary-carry macro-encoding across all non-3-divisible states.",
+      "status": "FALSIFIED",
+      "minimal_witness_id": "ZPOS_DYADIC_ALLONES11_WEIGHT12_ESCAPE_AND_MOD729_STALL",
+      "secondary_witness_id": "ZPOS_DYADIC_ALLONES10_WEIGHT11_PREFIX_ESCAPE",
+      "failure_diagnosis": "All 108/108 surviving length-11 mod-2048 prefixes admit explicit surviving Mod373248 first-hit q = 0 escapes at w(u) <= 12 < 13 (including all-ones r = 2047 via [1]^11 ++ [0]^27 ++ [1]), proving 0/108 length-11 mod-2048 prefixes force w(u) >= 13, whereas lifting to length-12 mod-4096 yields exact 216 = 1 + 10 + 38 + 69 + 64 + 29 + 5 surviving prefixes where r = 4095 ([1]^12) forces w(u) >= 13 across 100% of length >= 13 proper extensions alongside complete mod-1062882 (2 * 3^12, 354294/1062882 surviving classes, pref ++ replicate 13 true % 1062882 = 531441) Markov bijectivity and 3^(w - 13) fiber equidistribution (`markovShift_mod1062882_bijection_and_mod4096_prefix216_lift`); meanwhile 4-step Mod-243 stalls at 10 < 16 = 2^4 branches in span <= 16 (u_norm = 160) and 5-step Mod-729 stalls at 29 < 32 = 2^5 branches in span <= 20 (u_norm = 322) (`mod243_span16_and_mod729_span20_stalls_and_mod2187_six_step_macro_cert` [choice-free]), whereas normalized 1458-state 6-step Mod-2187 ternary-carry macro-encoding (`chooseSixStepTernaryCarry2187`, >= 64 = 2^6 branches in 12 <= span <= 24, exact rate 24/6 = 4.000 -> slope c = 4!) paired with 5-bit (s = 5) bottom multiplicative-dlog collision lifting modulo 3^13 = 1,594,323 (`bottom5BitBucket1594323` at stride = 54, coset 11, max b_1 = 75, max e_1 = 128!) proves unconditional sub-160-threshold (M_0 = 159 <= 160, down from 210!) AND strictly steeper-slope (c = 4 <= 4, beating 1/5!) exponential surviving-leaf occupancy >= 2^B (>= 2^((M - 159)/4) across ALL M >= 159, with >= 2 surviving leaves across ALL M >= 163) for ALL B >= 0 and ALL M >= 159 + 4 * B at linear horizon L_max >= M (`dyadic_window_sub160_5bit_collision_slope4_exponential_occupancy`, Wave19WholeSpace.lean, zero custom axioms)."
     }
   ]
 }

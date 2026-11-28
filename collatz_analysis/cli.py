@@ -336,6 +336,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         run_wave16_whole_space_campaign,
         run_wave17_whole_space_campaign,
         run_wave18_whole_space_campaign,
+        run_wave19_whole_space_campaign,
     )
 
     w4 = run_wave4_whole_space_campaign()
@@ -931,6 +932,49 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"T_diamond15={w18_d15_ok}, D={w18_d_ok}"
     )
 
+    w19 = run_wave19_whole_space_campaign()
+    w19a = w19["front_a_expanding_b_multichan_4d_and_dp2_30cycle_het_m"]
+    w19b = w19["front_b_12x12_u9_resonant_16x16_t4u4_and_multispike_brox"]
+    w19c = w19["front_c_complete_4gram_debruijn_exp_and_diamond16"]
+    w19d = w19["front_d_markov_mod1062882_and_sub160_slope4_exponential_occupancy"]
+    w19_a_ok = (
+        bool(w19a["c39_c78_expanding_b_and_3d_4d_inv_gt_verified"])
+        and bool(w19a["simultaneous_3d_inv_and_4d_multichan_farkas_verified"])
+        and bool(w19a["dp2_no_1_30_cycles_and_het_m_block_exclusions_verified"])
+    )
+    w19_b_ok = (
+        bool(w19b["laurent_12x12_t4u3_u6_to_9_and_resonant_mod243_verified"])
+        and bool(w19b["laurent_16x16_t4u4_cone_flip_and_u1_to_5_nonvanishing_verified"])
+        and bool(w19b["all_m_multispike_hensel_brox_and_8block_verified"])
+    )
+    w19_c_ok = bool(w19c["four_gram_debruijn_syzygies_and_8_periodic_families_verified"])
+    w19_d16_ok = (
+        bool(w19c["cousin_diamond16_outside_cones4to17_descent_verified"])
+        and bool(w19c["cousin_diamond16_cone17_14tier_cascade_verified"])
+        and bool(w19c["cousin_diamond16_hensel_inv_and_int_q6_verified"])
+        and bool(w19c["cousin_diamond16_countermodels_verified"])
+    )
+    w19_d_ok = (
+        bool(w19d["markov_mod1062882_and_mod4096_prefix216_lift_verified"])
+        and bool(w19d["all108_len11_escapes_verified"])
+        and bool(w19d["mod243_span16_and_mod729_span20_stalls_verified"])
+        and bool(w19d["sub160_5bit_collision_slope4_exponential_occupancy_verified"])
+    )
+    print(f"\n[Wave 19 Whole-Space Proof Loop] Exp-B + 3D/4D Inv Farkas & 30-Cyc/Het-m DP2, 12x12 u<=9+Res/16x16 T4U4/All-m Hensel Brox, 4-Gram (0,inf)^16/T_diamond16 & Mod-1062882/Sub-160 2^((M-159)/4):")
+    print(
+        f"  - Universality & witness gates ({w19['witness_bank_total_entries']} wits, {w19['witness_bank_falsified_count']} hyps): "
+        f"u-gate={w19['universality_gate_passed']}, ground-truth={w19['witness_bank_ground_truth_verified']}, verdict={w19['verdict']}"
+    )
+    print(
+        f"  - Fronts A & B (Exp-B d>=2 + 3D/4D inv Farkas/30-cyc+het-m DP2, 12x12 u<=9+mod243/16x16 u<=5 & multispike Brox): "
+        f"A={w19_a_ok}, B={w19_b_ok}"
+    )
+    print(
+        f"  - Fronts C & D (Complete 4-gram De Bruijn (0,inf)^16 exp, T_diamond16 omega^14 & mod1062882/2^((M-159)/4) M0=159<160 c=4): "
+        f"C={w19_c_ok}, "
+        f"T_diamond16={w19_d16_ok}, D={w19_d_ok}"
+    )
+
     lean4 = verify_lean4_kernel_proofs()
     print(f"\n[Lean 4 Kernel Verification] CollatzFormal.lean Live Compiler & #print axioms Audit:")
     if lean4["lean_available"]:
@@ -982,6 +1026,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         and bool(w16["passed"])
         and bool(w17["passed"])
         and bool(w18["passed"])
+        and bool(w19["passed"])
         and lean4_ok
     )
     return 0 if summary_ok else 1
